@@ -78,10 +78,25 @@
       when: dry_run is not defined and incremental is not defined
   when: "'2024' in fanout_sonic_version['build_version']"
 
-- name: deploy SONiC fanout with image version 202505
+- debug: msg="{{ fanout_sonic_version['build_version'] }}"
+
+- name: deploy SONiC fanout with image version 202505 or 202511
   block:
     - name: deploy SONiC fanout not incremental and not dry_run with 202505 images
       include_tasks:
         sonic/fanout_sonic_202505.yml
       when: dry_run is not defined and incremental is not defined
-  when: "'2025' in fanout_sonic_version['build_version']"
+  # when: "'2025' in fanout_sonic_version['build_version']"
+
+- name: Configure FEC rs and disable autoneg for trunk ports
+  shell: |
+    config interface shutdown {{ item.key }}
+    config interface fec {{ item.key }} rs
+    config interface autoneg {{ item.key }} disabled
+    sleep 5
+    config interface startup {{ item.key }}
+  become: yes
+  loop: "{{ device_port_vlans[inventory_hostname] | dict2items | selectattr('value.mode', 'equalto', 'Trunk') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: device_port_vlans is defined and inventory_hostname in device_port_vlans

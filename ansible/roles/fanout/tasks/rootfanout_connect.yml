@@ -35,20 +35,29 @@
     dev_vlans: "{{ dev_vlans|default([]) + item.value }}"
   loop: "{{ devinfo['ansible_facts']['device_vlan_range'] | default ({}) | dict2items }}"
 
-- name: Find the root fanout switch
-  set_fact:
-    ansible_host: "{{ item.value['mgmtip'] }}"
-    ansible_connection: switch
-    root_dev: "{{ item.key }}"
-    root_hwsku: "{{ item.value['HwSku'] }}"
-  with_dict: "{{ lab_devices }}"
-  when: item.value['Type'] == 'FanoutRoot'
+- set_fact:
+    root_dut: "{{ dut }}"
+
+- set_fact:
+    root_dev: "{{ (lab.ansible_facts.device_conn[root_dut] | dict2items | first).value.peerdevice }}"
+
+- set_fact:
+    root_hwsku: "{{ lab_devices[root_dev]['HwSku'] }}"
 
 - set_fact:
     root_conn: "{{ lab.ansible_facts['device_conn'][root_dev] }}"
 
-- name: Change root fanout port vlan
-  action: apswitch template=roles/fanout/templates/arista_7260_connect.j2
-  connection: switch
-  args:
-    login: "{{ switch_login['Arista'] }}"
+- name: Propagate root_dev fact to delegate host
+  set_fact:
+    root_dev: "{{ root_dev }}"
+  delegate_to: "{{ root_dev }}"
+  delegate_facts: true
+
+# Deploy SONiC config to root fanout
+- name: Deploy SONiC config to root fanout
+  block:
+    - name: Include SONiC fanout deploy tasks
+      include_tasks: fanout_sonic.yml
+      vars:
+        inventory_hostname: "{{ root_dev }}"
+  delegate_to: "{{ root_dev }}"

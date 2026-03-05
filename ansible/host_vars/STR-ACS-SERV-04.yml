@@ -1,8 +1,8 @@
 mgmt_bridge: br0
 mgmt_prefixlen: 24
-mgmt_gw: 192.168.221.1
-mgmt_gw_v6: 2001:db8:121::1
-vm_mgmt_gw: 192.168.221.1
+mgmt_gw: 192.168.211.1
+mgmt_gw_v6: 2001:db8:124::1 
+vm_mgmt_gw: 192.168.211.1
 external_port: ens25f1
 
 ansible_user: casper
@@ -18,7 +18,7 @@ fanout_sonic_password: "YourPaSsWoRd"
 
 # device_info for fanout switches. Maps from vlan interface name to vlan ID.
 device_vlan_map_list:
-  upscalelab2-spine6:
+  upscalelab2-spine9:
     vlan100: 100
     vlan101: 101
     vlan102: 102
@@ -52,7 +52,7 @@ device_vlan_map_list:
     vlan130: 130
     vlan131: 131
 
-  upscalelab2-spine6-800:
+  upscalelab2-spine9-800:
     vlan100: 100
     vlan101: 101
     vlan102: 102
@@ -79,7 +79,7 @@ device_vlan_map_list:
     vlan123: 123
     vlan124: 124
     vlan125: 125
-    vlan126: 126 
+    vlan126: 126
     vlan127: 127
     vlan128: 128
     vlan129: 129
@@ -88,7 +88,7 @@ device_vlan_map_list:
 
 # Map from host interface id to the vlan interface name on the fanout switch.
 duts_fp_ports:
-  upscalelab2-spine6:
+  upscalelab2-spine9:
     0: vlan100
     1: vlan101
     2: vlan102
@@ -115,14 +115,14 @@ duts_fp_ports:
     23: vlan123
     24: vlan124
     25: vlan125
-    26: vlan126
     27: vlan127
+    26: vlan126
     28: vlan128
     29: vlan129
     30: vlan130
     31: vlan131
-
-  upscalelab2-spine6-800:
+      
+  upscalelab2-spine9-800:
     0: vlan100
     1: vlan101
     2: vlan102
@@ -149,10 +149,9 @@ duts_fp_ports:
     23: vlan123
     24: vlan124
     25: vlan125
-    26: vlan126
     27: vlan127
+    26: vlan126
     28: vlan128
     29: vlan129
     30: vlan130
     31: vlan131
-    

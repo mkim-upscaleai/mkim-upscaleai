@@ -11,7 +11,9 @@
         "Nexus-3064-NX": "Nexus",
         "cisco-8101-p4-32x100-vs" : "Cisco",
         "Force10-S6100": "Force10",
-        "Force10-S6000": "Force10"
+        "Force10-S6000": "Force10",
+        "Mellanox-SN5610-C256S2": "Mellanox",
+        "Mellanox-SN5610-O64S2": "Mellanox"
     },
     "switch_login": {
         "Nexus": {
@@ -33,6 +35,11 @@
             "user": "admin",
             "passwd": ["password"],
             "enable": ["password"]
+        },
+        "Mellanox": {
+            "user": "admin",
+            "passwd": ["YourPaSsWoRd"],
+            "enable": ["YourPaSsWoRd"]
         }
     }
 }

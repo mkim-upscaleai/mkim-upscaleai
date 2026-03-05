@@ -20,6 +20,8 @@ sonic_default_passwords:
  - "admin"
 sonic_password: "password"
 
+sonicadmin_password: "YourPaSsWoRd"
+
 k8s_master_login: "ubuntu"
 k8s_master_password: "use_own_value"
 
@@ -29,3 +31,24 @@ ptf_host_pass: root
 vm_host_user: use_own_value
 vm_host_password: use_own_value
 vm_host_become_password: use_own_value
+
+snmp_rocommunity: "public"
+tacacs_passkey: "testing123"
+radius_passkey: "testing123"
+
+console_login:
+  console_telnet:
+    user: "admin"
+    passwd: ["upscaleai"]
+  console_ssh:
+    user: "admin"
+    passwd: ["upscaleai", "YourPaSsWoRd"]
+  console_ssh_menu_ports:
+    user: "admin"
+    passwd: ["upscaleai", "YourPaSsWoRd"]
+
+# For PDU
+secret_group_vars:
+  pdu:
+    snmp_rocommunity: public
+    snmp_rwcommunity: private

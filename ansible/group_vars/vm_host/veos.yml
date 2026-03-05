@@ -17,4 +17,4 @@ veos_hdd_image_url:
 
 # If the variable is set to true, the code logic will not try to download the image files from the URLs when the files
 # are not available on test server
-skip_veos_image_downloading: false
+skip_veos_image_downloading: true

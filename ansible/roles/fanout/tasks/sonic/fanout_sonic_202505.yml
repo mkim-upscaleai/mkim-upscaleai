@@ -85,8 +85,21 @@
 
 - name: build fanout startup config
   template:
-    src: "sonic_deploy_202505.j2"
+    src: "roles/fanout/templates/sonic_deploy_202505.j2"
     dest: "/tmp/base_config.json"
+
+- name: Set system hostname to match inventory
+  hostname:
+    name: "{{ inventory_hostname }}"
+  become: yes
+
+- name: Ensure hostname is in /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '127\.0\.0\.1\s+{{ inventory_hostname }}'
+    line: "127.0.0.1 {{ inventory_hostname }}"
+    state: present
+  become: yes
 
 - name: generate config_db.json
   shell: sonic-cfggen -H -j /tmp/base_config.json --print-data > /etc/sonic/config_db.json

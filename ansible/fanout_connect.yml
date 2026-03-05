@@ -12,8 +12,10 @@
             server: "{{ inventory_hostname|lower }}"
             server_port: "{{ external_port }}"
 
+        - set_fact: root_fanout_connect=false
+
         - set_fact: root_fanout_connect=true
-          when: root_fanout_connect is not defined
+          when: root_fanout_connect is defined
 
         - debug: msg="Connect {{ server }}:{{ server_port }} to {{ dut }}"
 
@@ -26,7 +28,7 @@
 
         - set_fact: userid={{ calling_username.stdout }}
 
-        - set_fact: connect_leaf=false
+        - set_fact: connect_leaf=true
 
         - include_tasks: roles/fanout/tasks/rootfanout_connect.yml
           when: root_fanout_connect|bool == true

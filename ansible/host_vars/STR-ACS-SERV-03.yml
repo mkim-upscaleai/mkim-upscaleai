@@ -1,8 +1,8 @@
 mgmt_bridge: br0
 mgmt_prefixlen: 24
-mgmt_gw: 192.168.221.1
-mgmt_gw_v6: 2001:db8:121::1
-vm_mgmt_gw: 192.168.221.1
+mgmt_gw: 192.168.223.1
+mgmt_gw_v6: 2001:db8:123::1
+vm_mgmt_gw: 192.168.223.1
 external_port: ens25f1
 
 ansible_user: casper
@@ -18,7 +18,7 @@ fanout_sonic_password: "YourPaSsWoRd"
 
 # device_info for fanout switches. Maps from vlan interface name to vlan ID.
 device_vlan_map_list:
-  upscalelab2-spine6:
+  upscalelab2-spine8:
     vlan100: 100
     vlan101: 101
     vlan102: 102
@@ -51,8 +51,8 @@ device_vlan_map_list:
     vlan129: 129
     vlan130: 130
     vlan131: 131
-
-  upscalelab2-spine6-800:
+  
+  upscalelab2-spine8-800:
     vlan100: 100
     vlan101: 101
     vlan102: 102
@@ -85,10 +85,42 @@ device_vlan_map_list:
     vlan129: 129
     vlan130: 130
     vlan131: 131
+    vlan132: 132
+    vlan133: 133
+    vlan134: 134
+    vlan135: 135
+    vlan136: 136
+    vlan137: 137
+    vlan138: 138
+    vlan139: 139
+    vlan140: 140
+    vlan141: 141
+    vlan142: 142
+    vlan143: 143
+    vlan144: 144
+    vlan145: 145
+    vlan146: 146
+    vlan147: 147
+    vlan148: 148
+    vlan149: 149
+    vlan150: 150
+    vlan151: 151
+    vlan152: 152
+    vlan153: 153
+    vlan154: 154
+    vlan155: 155
+    vlan156: 156
+    vlan157: 157
+    vlan158: 158
+    vlan159: 159
+    vlan160: 160
+    vlan161: 161
+    vlan162: 162
+    vlan163: 163
 
 # Map from host interface id to the vlan interface name on the fanout switch.
 duts_fp_ports:
-  upscalelab2-spine6:
+  upscalelab2-spine8:
     0: vlan100
     1: vlan101
     2: vlan102
@@ -115,14 +147,14 @@ duts_fp_ports:
     23: vlan123
     24: vlan124
     25: vlan125
-    26: vlan126
     27: vlan127
+    26: vlan126
     28: vlan128
     29: vlan129
     30: vlan130
     31: vlan131
 
-  upscalelab2-spine6-800:
+  upscalelab2-spine8-800:
     0: vlan100
     1: vlan101
     2: vlan102
@@ -155,4 +187,36 @@ duts_fp_ports:
     29: vlan129
     30: vlan130
     31: vlan131
-    
+    32: vlan132
+    33: vlan133
+    34: vlan134
+    35: vlan135
+    36: vlan136
+    37: vlan137
+    38: vlan138
+    39: vlan139
+    40: vlan140
+    41: vlan141
+    42: vlan142
+    43: vlan143
+    44: vlan144
+    45: vlan145
+    46: vlan146
+    47: vlan147
+    48: vlan148
+    49: vlan149
+    50: vlan150
+    51: vlan151
+    52: vlan152
+    53: vlan153
+    54: vlan154
+    55: vlan155
+    56: vlan156
+    57: vlan157
+    58: vlan158
+    59: vlan159
+    60: vlan160
+    61: vlan161
+    62: vlan162
+    63: vlan163
+

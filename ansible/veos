@@ -6,381 +6,889 @@ all:
           children:
             vm_host_1:
             vm_host_2:
+            vm_host_3:
+            vm_host_4:
     eos:
       children:
         vms_1:
         vms_2:
+        vms_3:
+        vms_4:
     servers:
       vars:
         topologies:
-          - t1
           - t1-lag
-          - t1-28-lag
-          - t1-48-lag
-          - t1-32-lag
-          - t1-56-lag
           - t1-64-lag
-          - t1-64-lag-clet
-          - t1-backend
-          - t1-f2-d10u8
-          - t1-isolated-d128
-          - t1-isolated-d28u1
-          - t1-isolated-d224u8
-          - t1-isolated-v6-d128
-          - t1-isolated-v6-d224u8
-          - t1-isolated-v6-d28u1
-          - t1-isolated-d448u15-lag
-          - t1-isolated-d56u2
-          - t1-isolated-v6-d448u15-lag
-          - t1-isolated-v6-d56u2
-          - t1-isolated-d56u1-lag
-          - t1-isolated-v6-d56u1-lag
-          - t1-isolated-d510u2
+          - t1
           - t0
-          - t0-d18u8s4
-          - t0-16
-          - t0-56
-          - t0-56-d48c8
-          - t0-52
-          - ptf32
-          - ptf64
+          - t1-64
           - t0-64
-          - t0-64-32
-          - t0-80
-          - t0-116
-          - t0-118
-          - t0-backend
-          - t0-f2-d40u8
-          - t0-standalone-32
-          - t0-standalone-64
-          - t0-standalone-128
-          - t0-standalone-256
-          - t0-isolated-d16u16s1
-          - t0-isolated-d16u16s2
-          - t0-isolated-d128u128s1
-          - t0-isolated-d128u128s2
-          - t0-isolated-d2u254s1
-          - t0-isolated-d2u254s2
-          - t0-isolated-v6-d128u128s1
-          - t0-isolated-v6-d128u128s2
-          - t0-isolated-v6-d16u16s1
-          - t0-isolated-v6-d16u16s2
-          - t0-isolated-v6-d96u32s2
-          - t0-isolated-d256u256s2
-          - t0-isolated-d32u32s2
-          - t0-isolated-v6-d256u256s2
-          - t0-isolated-v6-d32u32s2
-          - t0-isolated-d96u32s2
-          - dualtor
-          - dualtor-56
-          - cable-test
-          - dualtor-120
-          - tgen-t0-3
-          - tgen-t1-3-lag
-          - mgmttor
-          - t2
-          - dualtor-mixed
-          - dualtor-mixed-56
-          - dualtor-mixed-120
-          - m0
-          - m0-2vlan
-          - mc0
-          - mx
-          - m1-48
-          - m1-44
-          - m1-108
-          - m1-128
-          - dpu-1
-          - ft2-64
-          - lt2-p32o64
-          - lt2-o128
       children:
         server_1:
         server_2:
+        server_3:
+        server_4:
+    sonic:
+      hosts:
+        upscalelab2-spine6:
+          ansible_host: 192.168.221.10
+          ansible_hostv6: 2001:db8:121::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-C256S2
+          model: SN5610
+          serial: MT2535601GJN
+          base_mac: E8:9E:49:74:C4:04
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601GJN"
+            "0x24": "E8:9E:49:74:C4:04"
+            "0x25":  "08/30/2025 17:38:48"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x0730628D"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine7:
+          ansible_host: 192.168.222.10
+          ansible_hostv6: 2001:db8:122::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-C256S2
+          model: SN5610
+          serial: MT2535601Q10
+          base_mac: E8:9E:49:78:8D:38
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601Q10"
+            "0x24": "E8:9E:49:78:8D:38"
+            "0x25":  "09/04/2025 17:41:10"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0xE14F02CE"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine8:
+          ansible_host: 192.168.223.10
+          ansible_hostv6: 2001:db8:123::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-C256S2
+          model: SN5610
+          serial: UMT2535601Q8WI
+          base_mac: E8:9E:49:78:D4:50
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "UMT2535601Q8WI"
+            "0x24": "E8:9E:49:78:D4:50"
+            "0x25":  "09/04/2025 14:19:28"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x87C123C8"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine9:
+          ansible_host: 192.168.211.10
+          ansible_hostv6: 2001:db8:124::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-C256S2
+          model: SN5610
+          serial: MT2535601Q8V
+          base_mac: E8:9E:49:78:D3:2E
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601Q8V"
+            "0x24": "E8:9E:49:78:D3:2E"
+            "0x25":  "09/04/2025 14:19:24"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x5EC1B700"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine6-800:
+          ansible_host: 192.168.221.10
+          ansible_hostv6: 2001:db8:121::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O64S2
+          model: SN5610
+          serial: MT2535601GJN
+          base_mac: E8:9E:49:74:C4:04
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601GJN"
+            "0x24": "E8:9E:49:74:C4:04"
+            "0x25":  "08/30/2025 17:38:48"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x0730628D"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine7-800:
+          ansible_host: 192.168.222.10
+          ansible_hostv6: 2001:db8:122::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O64S2
+          model: SN5610
+          serial: MT2535601Q10
+          base_mac: E8:9E:49:78:8D:38
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601Q10"
+            "0x24": "E8:9E:49:78:8D:38"
+            "0x25":  "09/04/2025 17:41:10"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0xE14F02CE"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine8-800:
+          ansible_host: 192.168.223.10
+          ansible_hostv6: 2001:db8:123::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O64S2
+          model: SN5610
+          serial: UMT2535601Q8WI
+          base_mac: E8:9E:49:78:D4:50
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "UMT2535601Q8WI"
+            "0x24": "E8:9E:49:78:D4:50"
+            "0x25":  "09/04/2025 14:19:28"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x87C123C8"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine9-800:
+          ansible_host: 192.168.211.10
+          ansible_hostv6: 2001:db8:124::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O64S2
+          model: SN5610
+          serial: MT2535601Q8V
+          base_mac: E8:9E:49:78:D3:2E
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601Q8V"
+            "0x24": "E8:9E:49:78:D3:2E"
+            "0x25":  "09/04/2025 14:19:24"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x5EC1B700"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
 
+    ptf:
+      hosts:
+        ptf_sp6-t0:
+          ansible_host: 192.168.221.23
+          ansible_hostv6: 2001:db8:121::23
+          ansible_connection: ssh
+        ptf_sp6-t1:
+          ansible_host: 192.168.221.24
+          ansible_hostv6: 2001:db8:121::24
+          ansible_connection: ssh
+        ptf_sp6t1lag:
+          ansible_host: 192.168.221.25
+          ansible_hostv6: 2001:db8:121::25
+          ansible_connection: ssh
+        ptf_sp7-t0:
+          ansible_host: 192.168.222.23
+          ansible_hostv6: 2001:db8:122::23
+          ansible_connection: ssh
+        ptf_sp7-t1:
+          ansible_host: 192.168.222.24
+          ansible_hostv6: 2001:db8:122::24
+          ansible_connection: ssh
+        ptf_sp7t1lag:
+          ansible_host: 192.168.222.25
+          ansible_hostv6: 2001:db8:122::25
+          ansible_connection: ssh
+        ptf_sp8-t0:
+          ansible_host: 192.168.223.23
+          ansible_hostv6: 2001:db8:123::23
+          ansible_connection: ssh
+        ptf_sp8-t1:
+          ansible_host: 192.168.223.24
+          ansible_hostv6: 2001:db8:123::24
+          ansible_connection: ssh
+        ptf_sp8t1lag:
+          ansible_host: 192.168.223.25
+          ansible_hostv6: 2001:db8:123::25
+          ansible_connection: ssh
+        ptf_sp8-t064:
+          ansible_host: 192.168.223.26
+          ansible_hostv6: 2001:db8:123::26
+          ansible_connection: ssh
+        ptf_sp8-t164:
+          ansible_host: 192.168.223.27
+          ansible_hostv6: 2001:db8:123::27
+          ansible_connection: ssh
+        ptf_sp8t164l:
+          ansible_host: 192.168.223.28
+          ansible_hostv6: 2001:db8:123::28
+          ansible_connection: ssh
+        ptf_sp9-t0:
+          ansible_host: 192.168.211.23
+          ansible_hostv6: 2001:db8:124::23
+          ansible_connection: ssh
+        ptf_sp9-t1:
+          ansible_host: 192.168.211.24
+          ansible_hostv6: 2001:db8:124::24
+          ansible_connection: ssh
+        ptf_sp9t1lag:
+          ansible_host: 192.168.211.25
+          ansible_hostv6: 2001:db8:124::25
+          ansible_connection: ssh
+
+    fanout:
+      hosts:
+        fanoutleaf06:
+          ansible_host: 192.168.221.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-C256S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf07:
+          ansible_host: 192.168.222.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-C256S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf08:
+          ansible_host: 192.168.223.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-C256S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf09:
+          ansible_host: 192.168.211.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-C256S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf06-800:
+          ansible_host: 192.168.221.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O64S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf07-800:
+          ansible_host: 192.168.222.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O64S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf08-800:
+          ansible_host: 192.168.223.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O64S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanoutleaf09-800:
+          ansible_host: 192.168.211.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O64S2
+          Platform: x86_64-nvidia_sn5610-r0
+    pdu:
+      hosts:
+        pdu-1-upscalelab2:
+          ansible_host: 192.168.218.211
+          ansible_connection: snmp
+        pdu-2-upscalelab2:
+          ansible_host: 192.168.218.212
+          ansible_connection: snmp
+          secret_group_vars:
+        pdu-3-upscalelab2:
+          ansible_host: 192.168.218.213
+          ansible_connection: snmp
 vm_host_1:
   hosts:
     STR-ACS-SERV-01:
-      ansible_host: 10.251.0.245
+      ansible_host: 192.168.221.12
 
 vm_host_2:
   hosts:
     STR-ACS-SERV-02:
-      ansible_host: 10.251.0.192
+      ansible_host: 192.168.222.12
+
+vm_host_3:
+  hosts:
+    STR-ACS-SERV-03:
+      ansible_host: 192.168.223.12
+
+vm_host_4:
+  hosts:
+    STR-ACS-SERV-04:
+      ansible_host: 192.168.211.12
 
 vms_1:
   hosts:
-    VM0100:
-      ansible_host: 10.250.0.2
     VM0101:
-      ansible_host: 10.250.0.3
+      ansible_host: 192.168.221.101
     VM0102:
-      ansible_host: 10.250.0.4
+      ansible_host: 192.168.221.102
     VM0103:
-      ansible_host: 10.250.0.5
+      ansible_host: 192.168.221.103
     VM0104:
-      ansible_host: 10.250.0.6
+      ansible_host: 192.168.221.104
     VM0105:
-      ansible_host: 10.250.0.7
+      ansible_host: 192.168.221.105
     VM0106:
-      ansible_host: 10.250.0.8
+      ansible_host: 192.168.221.106
     VM0107:
-      ansible_host: 10.250.0.9
+      ansible_host: 192.168.221.107
     VM0108:
-      ansible_host: 10.250.0.10
+      ansible_host: 192.168.221.108
     VM0109:
-      ansible_host: 10.250.0.11
+      ansible_host: 192.168.221.109
     VM0110:
-      ansible_host: 10.250.0.12
+      ansible_host: 192.168.221.110
     VM0111:
-      ansible_host: 10.250.0.13
+      ansible_host: 192.168.221.111
     VM0112:
-      ansible_host: 10.250.0.14
+      ansible_host: 192.168.221.112
     VM0113:
-      ansible_host: 10.250.0.15
+      ansible_host: 192.168.221.113
     VM0114:
-      ansible_host: 10.250.0.16
+      ansible_host: 192.168.221.114
     VM0115:
-      ansible_host: 10.250.0.17
+      ansible_host: 192.168.221.115
     VM0116:
-      ansible_host: 10.250.0.18
+      ansible_host: 192.168.221.116
     VM0117:
-      ansible_host: 10.250.0.19
+      ansible_host: 192.168.221.117
     VM0118:
-      ansible_host: 10.250.0.20
+      ansible_host: 192.168.221.118
     VM0119:
-      ansible_host: 10.250.0.21
+      ansible_host: 192.168.221.119
     VM0120:
-      ansible_host: 10.250.0.22
+      ansible_host: 192.168.221.120
     VM0121:
-      ansible_host: 10.250.0.23
+      ansible_host: 192.168.221.121
     VM0122:
-      ansible_host: 10.250.0.24
+      ansible_host: 192.168.221.122
     VM0123:
-      ansible_host: 10.250.0.25
+      ansible_host: 192.168.221.123
     VM0124:
-      ansible_host: 10.250.0.26
+      ansible_host: 192.168.221.124
     VM0125:
-      ansible_host: 10.250.0.27
+      ansible_host: 192.168.221.125
     VM0126:
-      ansible_host: 10.250.0.28
+      ansible_host: 192.168.221.126
     VM0127:
-      ansible_host: 10.250.0.29
+      ansible_host: 192.168.221.127
     VM0128:
-      ansible_host: 10.250.0.30
+      ansible_host: 192.168.221.128
     VM0129:
-      ansible_host: 10.250.0.31
+      ansible_host: 192.168.221.129
     VM0130:
-      ansible_host: 10.250.0.32
+      ansible_host: 192.168.221.130
     VM0131:
-      ansible_host: 10.250.0.33
+      ansible_host: 192.168.221.131
     VM0132:
-      ansible_host: 10.250.0.34
-    VM0133:
-      ansible_host: 10.250.0.35
-    VM0134:
-      ansible_host: 10.250.0.36
-    VM0135:
-      ansible_host: 10.250.0.37
-    VM0136:
-      ansible_host: 10.250.0.38
-    VM0137:
-      ansible_host: 10.250.0.39
-    VM0138:
-      ansible_host: 10.250.0.40
-    VM0139:
-      ansible_host: 10.250.0.41
-    VM0140:
-      ansible_host: 10.250.0.42
-    VM0141:
-      ansible_host: 10.250.0.43
-    VM0142:
-      ansible_host: 10.250.0.44
-    VM0143:
-      ansible_host: 10.250.0.45
-    VM0144:
-      ansible_host: 10.250.0.46
-    VM0145:
-      ansible_host: 10.250.0.47
-    VM0146:
-      ansible_host: 10.250.0.48
-    VM0147:
-      ansible_host: 10.250.0.49
-    VM0148:
-      ansible_host: 10.250.0.50
-    VM0149:
-      ansible_host: 10.250.0.51
-    VM0150:
-      ansible_host: 10.250.0.52
-    VM0151:
-      ansible_host: 10.250.0.53
-    VM0152:
-      ansible_host: 10.250.0.54
-    VM0153:
-      ansible_host: 10.250.0.55
-    VM0154:
-      ansible_host: 10.250.0.56
-    VM0155:
-      ansible_host: 10.250.0.57
-    VM0156:
-      ansible_host: 10.250.0.58
-    VM0157:
-      ansible_host: 10.250.0.59
-    VM0158:
-      ansible_host: 10.250.0.60
-    VM0159:
-      ansible_host: 10.250.0.61
-    VM0160:
-      ansible_host: 10.250.0.62
-    VM0161:
-      ansible_host: 10.250.0.63
-    VM0162:
-      ansible_host: 10.250.0.64
-    VM0163:
-      ansible_host: 10.250.0.65
-    VM0164:
-      ansible_host: 10.250.0.66
-    VM0165:
-      ansible_host: 10.250.0.67
-    VM0166:
-      ansible_host: 10.250.0.68
-    VM0167:
-      ansible_host: 10.250.0.69
-    VM0168:
-      ansible_host: 10.250.0.70
-    VM0169:
-      ansible_host: 10.250.0.71
-    VM0170:
-      ansible_host: 10.250.0.72
-    VM0171:
-      ansible_host: 10.250.0.73
-    VM0172:
-      ansible_host: 10.250.0.74
-    VM0173:
-      ansible_host: 10.250.0.75
-    VM0174:
-      ansible_host: 10.250.0.76
-    VM0175:
-      ansible_host: 10.250.0.77
-    VM0176:
-      ansible_host: 10.250.0.78
-    VM0177:
-      ansible_host: 10.250.0.79
-    VM0178:
-      ansible_host: 10.250.0.80
-    VM0179:
-      ansible_host: 10.250.0.81
-    VM0180:
-      ansible_host: 10.250.0.82
-    VM0181:
-      ansible_host: 10.250.0.83
-    VM0182:
-      ansible_host: 10.250.0.84
-    VM0183:
-      ansible_host: 10.250.0.85
-    VM0184:
-      ansible_host: 10.250.0.86
-    VM0185:
-      ansible_host: 10.250.0.87
-    VM0186:
-      ansible_host: 10.250.0.88
-    VM0187:
-      ansible_host: 10.250.0.89
-    VM0188:
-      ansible_host: 10.250.0.90
-    VM0189:
-      ansible_host: 10.250.0.91
-    VM0190:
-      ansible_host: 10.250.0.92
-    VM0191:
-      ansible_host: 10.250.0.93
-    VM0192:
-      ansible_host: 10.250.0.94
-    VM0193:
-      ansible_host: 10.250.0.95
-    VM0194:
-      ansible_host: 10.250.0.96
-    VM0195:
-      ansible_host: 10.250.0.97
-    VM0196:
-      ansible_host: 10.250.0.98
-    VM0197:
-      ansible_host: 10.250.0.99
-    VM0198:
-      ansible_host: 10.250.0.100
-    VM0199:
-      ansible_host: 10.250.0.101
-    VM0200:
-      ansible_host: 10.250.0.102
-    VM0201:
-      ansible_host: 10.250.0.103
-    VM0202:
-      ansible_host: 10.250.0.104
-    VM0203:
-      ansible_host: 10.250.0.105
-    VM0204:
-      ansible_host: 10.250.0.106
-    VM0205:
-      ansible_host: 10.250.0.107
-    VM0206:
-      ansible_host: 10.250.0.108
-    VM0207:
-      ansible_host: 10.250.0.109
-    VM0208:
-      ansible_host: 10.250.0.110
-    VM0209:
-      ansible_host: 10.250.0.111
-    VM0210:
-      ansible_host: 10.250.0.112
-    VM0211:
-      ansible_host: 10.250.0.113
-    VM0212:
-      ansible_host: 10.250.0.114
-    VM0213:
-      ansible_host: 10.250.0.115
-    VM0214:
-      ansible_host: 10.250.0.116
-    VM0215:
-      ansible_host: 10.250.0.117
-    VM0216:
-      ansible_host: 10.250.0.118
-    VM0217:
-      ansible_host: 10.250.0.119
-    VM0218:
-      ansible_host: 10.250.0.120
-    VM0219:
-      ansible_host: 10.250.0.121
-    VM0220:
-      ansible_host: 10.250.0.122
-    VM0221:
-      ansible_host: 10.250.0.123
-    VM0222:
-      ansible_host: 10.250.0.124
-    VM0223:
-      ansible_host: 10.250.0.125
-    VM0224:
-      ansible_host: 10.250.0.126
-    VM0225:
-      ansible_host: 10.250.0.127
-    VM0226:
-      ansible_host: 10.250.0.128
-    VM0227:
-      ansible_host: 10.250.0.129
-    VM0228:
-      ansible_host: 10.250.0.130
-    VM0229:
-      ansible_host: 10.250.0.131
+      ansible_host: 192.168.221.132
 
 vms_2:
   hosts:
-    VM0300:
-      ansible_host: 10.250.0.252
+    VM0201:
+      ansible_host: 192.168.222.101
+    VM0202:
+      ansible_host: 192.168.222.102
+    VM0203:
+      ansible_host: 192.168.222.103
+    VM0204:
+      ansible_host: 192.168.222.104
+    VM0205:
+      ansible_host: 192.168.222.105
+    VM0206:
+      ansible_host: 192.168.222.106
+    VM0207:
+      ansible_host: 192.168.222.107
+    VM0208:
+      ansible_host: 192.168.222.108
+    VM0209:
+      ansible_host: 192.168.222.109
+    VM0210:
+      ansible_host: 192.168.222.110
+    VM0211:
+      ansible_host: 192.168.222.111
+    VM0212:
+      ansible_host: 192.168.222.112
+    VM0213:
+      ansible_host: 192.168.222.113
+    VM0214:
+      ansible_host: 192.168.222.114
+    VM0215:
+      ansible_host: 192.168.222.115
+    VM0216:
+      ansible_host: 192.168.222.116
+    VM0217:
+      ansible_host: 192.168.222.117
+    VM0218:
+      ansible_host: 192.168.222.118
+    VM0219:
+      ansible_host: 192.168.222.119
+    VM0220:
+      ansible_host: 192.168.222.120
+    VM0221:
+      ansible_host: 192.168.222.121 
+    VM0222:
+      ansible_host: 192.168.222.122
+    VM0223:
+      ansible_host: 192.168.222.123
+    VM0224:
+      ansible_host: 192.168.222.124
+    VM0225:
+      ansible_host: 192.168.222.125
+    VM0226:
+      ansible_host: 192.168.222.126
+    VM0227:
+      ansible_host: 192.168.222.127
+    VM0228:
+      ansible_host: 192.168.222.128
+    VM0229:
+      ansible_host: 192.168.222.129
+    VM0230:
+      ansible_host: 192.168.222.130
+    VM0231:
+      ansible_host: 192.168.222.131
+    VM0232:
+      ansible_host: 192.168.222.132
+vms_3:
+  hosts:
     VM0301:
-      ansible_host: 10.250.0.253
+      ansible_host: 192.168.223.101
     VM0302:
-      ansible_host: 10.250.0.254
+      ansible_host: 192.168.223.102
     VM0303:
-      ansible_host: 10.250.0.255
+      ansible_host: 192.168.223.103
+    VM0304: 
+      ansible_host: 192.168.223.104
+    VM0305:
+      ansible_host: 192.168.223.105
+    VM0306:
+      ansible_host: 192.168.223.106
+    VM0307:
+      ansible_host: 192.168.223.107
+    VM0308:
+      ansible_host: 192.168.223.108
+    VM0309:
+      ansible_host: 192.168.223.109
+    VM0310:
+      ansible_host: 192.168.223.110
+    VM0311:
+      ansible_host: 192.168.223.111
+    VM0312:
+      ansible_host: 192.168.223.112
+    VM0313:
+      ansible_host: 192.168.223.113
+    VM0314:
+      ansible_host: 192.168.223.114
+    VM0315:
+      ansible_host: 192.168.223.115
+    VM0316:
+      ansible_host: 192.168.223.116
+    VM0317:
+      ansible_host: 192.168.223.117
+    VM0318:
+      ansible_host: 192.168.223.118
+    VM0319:
+      ansible_host: 192.168.223.119
+    VM0320:
+      ansible_host: 192.168.223.120
+    VM0321:
+      ansible_host: 192.168.223.121
+    VM0322:
+      ansible_host: 192.168.223.122
+    VM0323:
+      ansible_host: 192.168.223.123
+    VM0324:
+      ansible_host: 192.168.223.124
+    VM0325:
+      ansible_host: 192.168.223.125
+    VM0326:
+      ansible_host: 192.168.223.126
+    VM0327:
+      ansible_host: 192.168.223.127
+    VM0328:
+      ansible_host: 192.168.223.128
+    VM0329:
+      ansible_host: 192.168.223.129
+    VM0330:
+      ansible_host: 192.168.223.130
+    VM0331:
+      ansible_host: 192.168.223.131
+    VM0332:
+      ansible_host: 192.168.223.132
+    VM0333:
+      ansible_host: 192.168.223.133
+    VM0334:
+      ansible_host: 192.168.223.134
+    VM0335:
+      ansible_host: 192.168.223.135
+    VM0336:
+      ansible_host: 192.168.223.136
+    VM0337:
+      ansible_host: 192.168.223.137
+    VM0338:
+      ansible_host: 192.168.223.138
+    VM0339:
+      ansible_host: 192.168.223.139
+    VM0340:
+      ansible_host: 192.168.223.140
+    VM0341:
+      ansible_host: 192.168.223.141
+    VM0342:
+      ansible_host: 192.168.223.142
+    VM0343:
+      ansible_host: 192.168.223.143
+    VM0344:
+      ansible_host: 192.168.223.144
+    VM0345:
+      ansible_host: 192.168.223.145
+    VM0346:
+      ansible_host: 192.168.223.146
+    VM0347:
+      ansible_host: 192.168.223.147
+    VM0348:
+      ansible_host: 192.168.223.148
+    VM0349:
+      ansible_host: 192.168.223.149
+    VM0350:
+      ansible_host: 192.168.223.150
+    VM0351:
+      ansible_host: 192.168.223.151
+    VM0352:
+      ansible_host: 192.168.223.152
+    VM0353:
+      ansible_host: 192.168.223.153
+    VM0354:
+      ansible_host: 192.168.223.154
+    VM0355:
+      ansible_host: 192.168.223.155
+    VM0356:
+      ansible_host: 192.168.223.156
+    VM0357:
+      ansible_host: 192.168.223.157
+    VM0358:
+      ansible_host: 192.168.223.158
+    VM0359:
+      ansible_host: 192.168.223.159
+    VM0360:
+      ansible_host: 192.168.223.160
+    VM0361:
+      ansible_host: 192.168.223.161
+    VM0362:
+      ansible_host: 192.168.223.162
+    VM0363:
+      ansible_host: 192.168.223.163
+    VM0364:
+      ansible_host: 192.168.223.164
+vms_4:
+  hosts:
+    VM0401:
+      ansible_host: 192.168.211.101
+    VM0402:
+      ansible_host: 192.168.211.102
+    VM0403:
+      ansible_host: 192.168.211.103
+    VM0404:
+      ansible_host: 192.168.211.104
+    VM0405:
+      ansible_host: 192.168.211.105
+    VM0406:
+      ansible_host: 192.168.211.106
+    VM0407:
+      ansible_host: 192.168.211.107
+    VM0408:
+      ansible_host: 192.168.211.108
+    VM0409:
+      ansible_host: 192.168.211.109
+    VM0410:
+      ansible_host: 192.168.211.110
+    VM0411:
+      ansible_host: 192.168.211.111
+    VM0412:
+      ansible_host: 192.168.211.112
+    VM0413:
+      ansible_host: 192.168.211.113
+    VM0414:
+      ansible_host: 192.168.211.114
+    VM0415:
+      ansible_host: 192.168.211.115
+    VM0416:
+      ansible_host: 192.168.211.116
+    VM0417:
+      ansible_host: 192.168.211.117
+    VM0418:
+      ansible_host: 192.168.211.118
+    VM0419:
+      ansible_host: 192.168.211.119
+    VM0420:
+      ansible_host: 192.168.211.120
+    VM0421:
+      ansible_host: 192.168.211.121
+    VM0422:
+      ansible_host: 192.168.211.122
+    VM0423:
+      ansible_host: 192.168.211.123
+    VM0424:
+      ansible_host: 192.168.211.124
+    VM0425:
+      ansible_host: 192.168.211.125
+    VM0426:
+      ansible_host: 192.168.211.126
+    VM0427:
+      ansible_host: 192.168.211.127
+    VM0428:
+      ansible_host: 192.168.211.128
+    VM0429:
+      ansible_host: 192.168.211.129
+    VM0430:
+      ansible_host: 192.168.211.130
+    VM0431:
+      ansible_host: 192.168.211.131
+    VM0432:
+      ansible_host: 192.168.211.132
 
 # The groups below are helper to limit running playbooks to specific server(s) only
 server_1:
@@ -396,3 +904,17 @@ server_2:
   children:
     vm_host_2:
     vms_2:
+
+server_3:
+  vars:
+    host_var_file: host_vars/STR-ACS-SERV-03.yml
+  children:
+    vm_host_3:
+    vms_3:
+
+server_4:
+  vars:
+    host_var_file: host_vars/STR-ACS-SERV-04.yml
+  children:
+    vm_host_4:
+    vms_4:

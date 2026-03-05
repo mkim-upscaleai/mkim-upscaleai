@@ -3,7 +3,7 @@
 # file: group_vars/lab.yml
 
 # ntp variables
-ntp_servers: ['10.11.0.1', '10.11.0.2']
+ntp_servers: ['192.168.218.200'] # made my mini pc an ntp server
 
 # syslog variables
 syslog_servers: ['10.11.0.5', '10.11.0.6']

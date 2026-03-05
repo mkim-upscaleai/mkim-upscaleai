@@ -48,7 +48,7 @@ PORTCONFIG_HEADER = ["# name", "lanes", "alias", "index", "speed"]
 platform_4 = ['x86_64-mlnx_lssn2700-r0', 'x86_64-mlnx_msn2010-r0', 'x86_64-mlnx_msn2100-r0', 'x86_64-mlnx_msn2410-r0',
               'x86_64-mlnx_msn2700-r0', 'x86_64-mlnx_msn2740-r0', 'x86_64-mlnx_msn3700c-r0', 'x86_64-mlnx_msn3700-r0',
               'x86_64-mlnx_msn3800-r0']
-platform_8 = ['x86_64-mlnx_msn4600c-r0', 'x86_64-mlnx_msn4700-r0']
+platform_8 = ['x86_64-mlnx_msn4600c-r0', 'x86_64-mlnx_msn4700-r0', 'x86_64-nvidia_sn5610-r0']
 
 bko_dict_4 = {
     "1x100": {"lanes": 4, "speed": 100000, "step": 4, "bko": 0, "name": "etp"},
@@ -63,11 +63,29 @@ bko_dict_4 = {
 }
 
 bko_dict_8 = {
+    "1x800": {"lanes": 8, "speed": 800000, "step": 8, "bko": 0, "name": "etp"},
     "1x400": {"lanes": 8, "speed": 400000, "step": 8, "bko": 0, "name": "etp"},
+    "1x200": {"lanes": 8, "speed": 200000, "step": 8, "bko": 0, "name": "etp"},
+    "1x100": {"lanes": 8, "speed": 100000, "step": 8, "bko": 0, "name": "etp"},
+    "1x50":  {"lanes": 8, "speed": 50000,  "step": 8, "bko": 0, "name": "etp"},
+    "1x40":  {"lanes": 8, "speed": 40000,  "step": 8, "bko": 0, "name": "etp"},
+    "1x25":  {"lanes": 8, "speed": 25000,  "step": 8, "bko": 0, "name": "etp"},
+    "1x10":  {"lanes": 8, "speed": 10000,  "step": 8, "bko": 0, "name": "etp"},
+    "2x400": {"lanes": 8, "speed": 400000, "step": 4, "bko": 1, "name": "etp"},
     "2x200": {"lanes": 8, "speed": 200000, "step": 4, "bko": 1, "name": "etp"},
     "2x100": {"lanes": 8, "speed": 100000, "step": 4, "bko": 1, "name": "etp"},
+    "2x50":  {"lanes": 8, "speed": 50000,  "step": 4, "bko": 1, "name": "etp"},
+    "2x40":  {"lanes": 8, "speed": 40000,  "step": 4, "bko": 1, "name": "etp"},
+    "2x25":  {"lanes": 8, "speed": 25000,  "step": 4, "bko": 1, "name": "etp"},
+    "2x10":  {"lanes": 8, "speed": 10000,  "step": 4, "bko": 1, "name": "etp"},
+    "4x200": {"lanes": 8, "speed": 200000, "step": 2, "bko": 1, "name": "etp"},
     "4x100": {"lanes": 8, "speed": 100000, "step": 2, "bko": 1, "name": "etp"},
     "4x50":  {"lanes": 8, "speed": 50000,  "step": 2, "bko": 1, "name": "etp"},
+    "8x100": {"lanes": 8, "speed": 100000, "step": 1, "bko": 1, "name": "etp"},
+    "8x50":  {"lanes": 8, "speed": 50000,  "step": 1, "bko": 1, "name": "etp"},
+    "8x25":  {"lanes": 8, "speed": 25000,  "step": 1, "bko": 1, "name": "etp"},
+    "8x10":  {"lanes": 8, "speed": 10000,  "step": 1, "bko": 1, "name": "etp"},
+    # 4-lane breakout support (for mixed 4-lane/8-lane platforms)
     "4x25":  {"lanes": 4, "speed": 25000,  "step": 1, "bko": 1, "name": "etp"},
     "4x10":  {"lanes": 4, "speed": 10000,  "step": 1, "bko": 1, "name": "etp"},
 }

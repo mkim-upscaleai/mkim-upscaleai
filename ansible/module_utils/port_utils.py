@@ -579,7 +579,7 @@ def get_port_alias_to_name_map(hwsku, asic_name=None):
                     alias = "etp{}{}".format(i, split_alias)
                     eth_name = "Ethernet{}".format((i - 1) * 8 + idx * 2)
                     port_alias_to_name_map[alias] = eth_name
-        elif hwsku in ["Mellanox-SN5600-C256S1", "Mellanox-SN5610N-C256S2"]:
+        elif hwsku in ["Mellanox-SN5600-C256S1", "Mellanox-SN5610N-C256S2", "Mellanox-SN5610-C256S2"]:
             split_alias_list = ["a", "b", "c", "d", "e", "f", "g", "h"]
             for i in range(1, 65, 2):
                 for idx, split_alias in enumerate(split_alias_list):
@@ -587,9 +587,17 @@ def get_port_alias_to_name_map(hwsku, asic_name=None):
                     eth_name = "Ethernet{}".format((i - 1) * 8 + idx)
                     port_alias_to_name_map[alias] = eth_name
             port_alias_to_name_map['etp65'] = "Ethernet512"
-            if hwsku == "Mellanox-SN5610N-C256S2":
+            if hwsku in ["Mellanox-SN5610N-C256S2", "Mellanox-SN5610-C256S2"]:
                 port_alias_to_name_map['etp66'] = "Ethernet520"
-        elif hwsku in ["Mellanox-SN5600-C224O8", "Mellanox-SN5610N-C224O8"]:
+        elif hwsku in ["UpscaleAI-S8040-64E-F"]:
+            split_alias_list = ["a", "b", "c", "d", "e", "f", "g", "h"]
+            for i in range(1, 65, 2):
+                for idx, split_alias in enumerate(split_alias_list):
+                    alias = "etp{}{}".format(i, split_alias)
+                    eth_name = "Ethernet{}".format((i - 1) * 8 + idx)
+                    port_alias_to_name_map[alias] = eth_name
+            port_alias_to_name_map['etp65'] = "Ethernet512"
+        elif hwsku in ["Mellanox-SN5600-C224O8", "Mellanox-SN5610N-C224O8", "Mellanox-SN5610N-C224O8"]:
             split_alias_list = ["a", "b", "c", "d", "e", "f", "g", "h"]
             split_alias_list_1 = ["a", "b"]
             split_2_port_indexs = [13, 17, 45, 49]
@@ -605,8 +613,24 @@ def get_port_alias_to_name_map(hwsku, asic_name=None):
                         eth_name = "Ethernet{}".format((i - 1) * 8 + idx)
                         port_alias_to_name_map[alias] = eth_name
             port_alias_to_name_map['etp65'] = "Ethernet512"
-            if hwsku == "Mellanox-SN5610N-C224O8":
+            if hwsku in ["Mellanox-SN5610N-C224O8", "Mellanox-SN5610-C224O8"]:
                 port_alias_to_name_map['etp66'] = "Ethernet520"
+        elif hwsku in ["Mellanox-SN5640-C512S2"]:
+            split_alias_list = ["a", "b", "c", "d", "e", "f", "g", "h"]
+            for i in range(1, 65):
+                for idx, split_alias in enumerate(split_alias_list):
+                    alias = "etp{}{}".format(i, split_alias)
+                    eth_name = "Ethernet{}".format((i - 1) * 8 + idx)
+                    port_alias_to_name_map[alias] = eth_name
+            port_alias_to_name_map['etp65'] = "Ethernet512"
+            port_alias_to_name_map['etp66'] = "Ethernet520"
+        elif hwsku in ["Mellanox-SN5610-O64S2"]:
+            idx = 0
+            for i in range(1, 65):
+                port_alias_to_name_map["etp%d" % i] = "Ethernet%d" % idx
+                idx += 8
+            port_alias_to_name_map['etp65'] = "Ethernet512"
+            port_alias_to_name_map['etp66'] = "Ethernet520"
         elif hwsku in ["Mellanox-SN5640-C512S2"]:
             split_alias_list = ["a", "b", "c", "d", "e", "f", "g", "h"]
             for i in range(1, 65):
