@@ -1,0 +1,16 @@
+bgp/test_bgp_update_replication.py::test_bgp_update_replication_interval_1
+log_fidelity
+mvrf
+nat
+ospf
+route
+srv6
+stress
+sub_port_interfaces
+voq
+vrf
+vxlan
+bgp/test_bgp_router_id.py
+bgp/test_bgp_session.py
+bgp/test_bgp_stress_link_flap.py
+bgp/test_bgp_update_timer.py

@@ -1,0 +1,14 @@
+# Will revisit, skipped because of https://github.com/sonic-net/sonic-mgmt/issues/16997
+syslog/test_syslog_source_ip.py
+
+# only for supervisor node
+telemetry/test_telemetry_poll.py::test_poll_mode_default_route_supervisor
+
+# Requires ptp-256 topology
+transceiver/cli/show/test_transceiver_info_cli.py
+
+# Disabling until we have images to test upgrading
+upgrade_path
+
+# Requires mx or m0 topology
+wol

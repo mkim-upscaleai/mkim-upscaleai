@@ -1,0 +1,257 @@
+name: TriggerNightlyTests
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: string
+        description: Comma separated DUT Host names in testbed file
+        default: "upscalelab2-spine6-800,upscalelab2-spine7-800,upscalelab2-spine8-800,upscalelab2-spine9-800"
+      testbed:
+        type: string
+        description: Comma separated testbed names to run test on
+        default: "caspian_testbed_t0_spine6-800,caspian_testbed_t0_spine7-800,caspian_testbed_t0-64_spine8-800,caspian_testbed_t0_spine9-800"
+      fanoutip:
+        type: string
+        description: Comma separated fanout IPs (must match order of hosts/testbeds)
+        required: true
+      switch_user:
+        type: string
+        default: admin
+        required: true
+      test_files:
+        type: string
+        description: Comma separated test files to run
+        default: "base_suite_tests_1.txt,base_suite_tests_2.txt,base_suite_tests_3.txt,base_suite_tests_4.txt,base_suite_tests_5.txt,base_suite_tests_6.txt,base_suite_tests_7.txt,l2_suite_tests_1.txt,l2_suite_tests_2.txt,mgmt_suite_tests.txt,l3_suite_tests_1.txt,l3_suite_tests_2.txt,l3_suite_tests_3.txt"
+        required: true
+      runner_labels:
+        type: string
+        description: Comma separated runner labels (must match order of hosts/testbeds)
+        default: "server-6-runner,server-7-runner,server-8-runner,server-9-runner"
+        required: true
+      install_image:
+        type: boolean
+        description: Install the latest switch image before running tests
+        default: true
+        required: false
+      ALLURE_PROJECT_ID:
+        type: string
+        description: Allure project ID - 144 for TO caspian, 210 for T1 caspian
+        required: true
+      ALLURE_JOB_RUN_ID:
+        description: "ALLURE_JOB_RUN_ID service parameter. Leave blank."
+        required: false
+      ALLURE_USERNAME:
+        description: "ALLURE_USERNAME service parameter. Leave blank"
+        required: false
+
+env:
+  ALLURE_ENDPOINT: https://upscaleai.testops.cloud
+
+jobs:
+  setup-shared-allure:
+    runs-on: ubuntu-latest
+    outputs:
+      allure-job-run-id: ${{ steps.allure-context.outputs.allure-job-run-id }}
+      allure-env: ${{ steps.allure-context.outputs.allure-env }}
+    steps:
+      - name: Install and configure allurectl
+        uses: allure-framework/setup-allurectl@v1.0.0
+        with:
+          allure-endpoint: ${{ env.ALLURE_ENDPOINT }}
+          allure-token: ${{ secrets.ALLURE_TOKEN }}
+          allure-project-id: ${{ inputs.ALLURE_PROJECT_ID }}
+          github-token: ${{ secrets.GH_PAT }}
+
+      - name: Create shared Allure job run
+        id: allure-context
+        run: |
+          echo "Creating shared Allure job run for all parallel test executions..."
+          # Set launch name to include hosts
+          hosts_str="${{ inputs.host }}"
+          export ALLURE_LAUNCH_NAME="Nightly Tests - ${hosts_str}"
+          allurectl job-run start
+          export $(allurectl job-run env)
+          printenv | grep ALLURE_
+
+          # Extract ALLURE_JOB_RUN_ID from the environment
+          ALLURE_JOB_RUN_ID=$(allurectl job-run env | grep ALLURE_JOB_RUN_ID | cut -d '=' -f2)
+          echo "allure-job-run-id=$ALLURE_JOB_RUN_ID" >> $GITHUB_OUTPUT
+          echo "allure-env=$(allurectl job-run env | base64 -w 0)" >> $GITHUB_OUTPUT
+
+          echo "Shared Allure Job Run ID: $ALLURE_JOB_RUN_ID"
+          echo "All parallel test executions will upload to this shared launch"
+
+  check-testbed-availability:
+    runs-on: ubuntu-latest
+    outputs:
+      available_hosts: ${{ steps.check.outputs.available_hosts }}
+      available_testbeds: ${{ steps.check.outputs.available_testbeds }}
+      available_fanoutips: ${{ steps.check.outputs.available_fanoutips }}
+      available_runner_labels: ${{ steps.check.outputs.available_runner_labels }}
+    steps:
+      - name: Check testbed availability
+        id: check
+        run: |
+          # Parse comma-separated inputs
+          IFS=',' read -ra HOSTS <<< "${{ inputs.host }}"
+          IFS=',' read -ra TESTBEDS <<< "${{ inputs.testbed }}"
+          IFS=',' read -ra FANOUTIPS <<< "${{ inputs.fanoutip }}"
+          IFS=',' read -ra RUNNER_LABELS <<< "${{ inputs.runner_labels }}"
+
+          # For now, mark all testbeds as available
+          # TODO: Add actual availability check logic here
+          available_hosts=()
+          available_testbeds=()
+          available_fanoutips=()
+          available_runner_labels=()
+          for i in "${!HOSTS[@]}"; do
+            host=$(echo "${HOSTS[$i]}" | xargs)
+            testbed=$(echo "${TESTBEDS[$i]}" | xargs)
+            fanoutip=$(echo "${FANOUTIPS[$i]}" | xargs)
+            runner_label=$(echo "${RUNNER_LABELS[$i]}" | xargs)
+
+            # Placeholder: mark all as available
+            # In the future, add actual check here
+            available_hosts+=("$host")
+            available_testbeds+=("$testbed")
+            available_fanoutips+=("$fanoutip")
+            available_runner_labels+=("$runner_label")
+          done
+
+          # Output as comma-separated strings
+          echo "available_hosts=$(IFS=','; echo "${available_hosts[*]}")" >> $GITHUB_OUTPUT
+          echo "available_testbeds=$(IFS=','; echo "${available_testbeds[*]}")" >> $GITHUB_OUTPUT
+          echo "available_fanoutips=$(IFS=','; echo "${available_fanoutips[*]}")" >> $GITHUB_OUTPUT
+          echo "available_runner_labels=$(IFS=','; echo "${available_runner_labels[*]}")" >> $GITHUB_OUTPUT
+          echo "Available hosts: $(IFS=','; echo "${available_hosts[*]}")"
+          echo "Available testbeds: $(IFS=','; echo "${available_testbeds[*]}")"
+          echo "Available runner labels: $(IFS=','; echo "${available_runner_labels[*]}")"
+          echo "Available fanout IPs: $(IFS=','; echo "${available_fanoutips[*]}")"
+
+  distribute-test-files:
+    needs: [check-testbed-availability, setup-shared-allure]
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.distribute.outputs.matrix }}
+    steps:
+      - name: Distribute test files across available testbeds
+        id: distribute
+        run: |
+          # Parse available testbeds
+          IFS=',' read -ra HOSTS <<< "${{ needs.check-testbed-availability.outputs.available_hosts }}"
+          IFS=',' read -ra TESTBEDS <<< "${{ needs.check-testbed-availability.outputs.available_testbeds }}"
+          IFS=',' read -ra FANOUTIPS <<< "${{ needs.check-testbed-availability.outputs.available_fanoutips }}"
+          IFS=',' read -ra RUNNER_LABELS <<< "${{ needs.check-testbed-availability.outputs.available_runner_labels }}"
+          IFS=',' read -ra TEST_FILES <<< "${{ inputs.test_files }}"
+
+          num_testbeds=${#HOSTS[@]}
+          num_test_files=${#TEST_FILES[@]}
+
+          # Distribute test files evenly across testbeds
+          matrix_json='{"include":['
+          for i in "${!HOSTS[@]}"; do
+            host=$(echo "${HOSTS[$i]}" | xargs)
+            testbed=$(echo "${TESTBEDS[$i]}" | xargs)
+            fanoutip=$(echo "${FANOUTIPS[$i]}" | xargs)
+            runner_label=$(echo "${RUNNER_LABELS[$i]}" | xargs)
+
+            # Calculate which test files to assign to this testbed
+            files_per_testbed=$((num_test_files / num_testbeds))
+            remainder=$((num_test_files % num_testbeds))
+
+            # Calculate start index for this testbed
+            if [ $i -lt $remainder ]; then
+              start_idx=$((i * (files_per_testbed + 1)))
+              end_idx=$((start_idx + files_per_testbed + 1))
+            else
+              start_idx=$((remainder * (files_per_testbed + 1) + (i - remainder) * files_per_testbed))
+              end_idx=$((start_idx + files_per_testbed))
+            fi
+
+            # Collect test files for this testbed
+            test_files_for_testbed=()
+            for ((j=start_idx; j<end_idx; j++)); do
+              if [ $j -lt $num_test_files ]; then
+                test_files_for_testbed+=("$(echo "${TEST_FILES[$j]}" | xargs)")
+              fi
+            done
+
+            # Create matrix entry
+            if [ $i -gt 0 ]; then
+              matrix_json+=','
+            fi
+
+            test_files_str=$(IFS=','; echo "${test_files_for_testbed[*]}")
+            matrix_json+="{\"host\":\"$host\",\"testbed\":\"$testbed\",\"fanoutip\":\"$fanoutip\",\"test_files\":\"$test_files_str\",\"runner_label\":\"$runner_label\"}"
+
+            echo "Testbed $testbed ($host) assigned files: $test_files_str"
+          done
+
+          matrix_json+=']}'
+          echo "matrix=$matrix_json" >> $GITHUB_OUTPUT
+          echo "$matrix_json" | jq .
+
+  install-switch-image:
+    needs: distribute-test-files
+    if: ${{ inputs.install_image != false }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.distribute-test-files.outputs.matrix) }}
+    uses: ./.github/workflows/install-switch-image.yml
+    with:
+      host: ${{ matrix.host }}
+      testbed: ${{ matrix.testbed }}
+      ansible_inventory: veos
+      fanoutip: ${{ matrix.fanoutip }}
+      switch_user: ${{ inputs.switch_user }}
+      runner_label: ${{ matrix.runner_label }}
+      aws_bucket: ${{ vars.AWS_BUCKET }}
+    secrets:
+      PAT_TOKEN: ${{ secrets.GH_PAT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SWITCH_PASSWORD: ${{ secrets.SWITCH_PASSWORD }}
+
+  call-reusable-workflow:
+    needs: [distribute-test-files, setup-shared-allure, install-switch-image]
+    if: always() && needs.distribute-test-files.result == 'success' && needs.setup-shared-allure.result == 'success' && (needs.install-switch-image.result == 'success' || needs.install-switch-image.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.distribute-test-files.outputs.matrix) }}
+    uses: ./.github/workflows/run-nightly-tests.yml
+    with:
+      host: ${{ matrix.host }}
+      testbed: ${{ matrix.testbed }}
+      ansible_inventory: veos
+      fanoutip: ${{ matrix.fanoutip }}
+      switch_user: ${{ inputs.switch_user }}
+      test_files: ${{ matrix.test_files }}
+      runner_label: ${{ matrix.runner_label }}
+      ALLURE_ENV: ${{ needs.setup-shared-allure.outputs.allure-env }}
+    secrets:
+      ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
+      GH_PAT: ${{ secrets.GH_PAT }}
+      TESTSERVER_PWD: ${{ secrets.TESTSERVER_PWD }}
+      SWITCH_PASSWORD: ${{ secrets.SWITCH_PASSWORD }}
+
+  cleanup-shared-allure:
+    needs: [setup-shared-allure, call-reusable-workflow]
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Install and configure allurectl
+        uses: allure-framework/setup-allurectl@v1.0.0
+        with:
+          allure-endpoint: ${{ env.ALLURE_ENDPOINT }}
+          allure-token: ${{ secrets.ALLURE_TOKEN }}
+          allure-project-id: ${{ inputs.ALLURE_PROJECT_ID }}
+          github-token: ${{ secrets.GH_PAT }}
+
+      - name: Stop shared Allure job run
+        run: |
+          echo "Stopping shared Allure job run..."
+          # Decode and export allure environment variables
+          echo "${{ needs.setup-shared-allure.outputs.allure-env }}" | base64 -d > /tmp/allure-env
+          export $(cat /tmp/allure-env)
+          allurectl job-run stop
+          echo "Shared Allure job run stopped successfully"

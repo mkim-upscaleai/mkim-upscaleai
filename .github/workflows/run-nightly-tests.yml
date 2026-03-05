@@ -1,0 +1,492 @@
+name: RunNightlyTests
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      host:
+        type: string
+        description: DUT Host name in testbed file
+        required: true
+      testbed:
+        type: string
+        description: Testbed name to run test on
+        required: true
+      ansible_inventory:
+        type: string
+        description: Inventory file to use for ansible commands
+        required: true
+      fanoutip:
+        type: string
+        required: true
+      switch_user:
+        type: string
+        description: User name to login to switch
+        required: true
+      test_files:
+        type: string
+        description: Comma separated test files to run
+        required: true
+      runner_label:
+        type: string
+        description: Runner label to use for jobs
+        required: true
+      ALLURE_JOB_RUN_ID:
+        type: string
+        description: "ALLURE_JOB_RUN_ID service parameter. Leave blank."
+        required: false
+      ALLURE_USERNAME:
+        type: string
+        description: "ALLURE_USERNAME service parameter. Leave blank"
+        required: false
+      ALLURE_ENV:
+        type: string
+        description: "Base64-encoded Allure environment variables from shared job run. Leave blank if not using shared job run."
+        required: false
+    secrets:
+      ALLURE_TOKEN:
+        required: true
+      GH_PAT:
+        required: true
+      TESTSERVER_PWD:
+        required: true
+      SWITCH_PASSWORD:
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      host:
+        type: choice
+        description: DUT Host name in testbed file
+        options:
+          - upscalelab2-spine6
+          - upscalelab2-spine7
+          - upscalelab2-spine8
+          - upscalelab2-spine9
+          - upscalelab2-spine6-800
+          - upscalelab2-spine7-800
+          - upscalelab2-spine8-800
+          - upscalelab2-spine9-800
+        default: upscalelab2-spine7
+        required: true
+      testbed:
+        type: choice
+        description: Testbed name to run test on
+        options:
+          - caspian_testbed_t0_spine6
+          - caspian_testbed_t0_spine7
+          - caspian_testbed_t0_spine8
+          - caspian_testbed_t0_spine9
+          - caspian_testbed_t0_spine6-800
+          - caspian_testbed_t0_spine7-800
+          - caspian_testbed_t0_spine8-800
+          - caspian_testbed_t0_spine9-800
+        default: caspian_testbed_t0_spine7
+        required: true
+      ansible_inventory:
+        type: choice
+        description: Inventory file to use for ansible commands
+        options:
+          - veos
+          - inventory
+        default: veos
+        required: true
+      fanoutip:
+        type: string
+        required: true
+      switch_user:
+        type: string
+        description: User name to login to switch
+        default: admin
+        required: true
+      test_files:
+        type: string
+        description: Comma separated test files to run
+        default: "base_suite_tests.txt,mgmt_suite_tests.txt,l2_suite_tests.txt,l3_suite_tests.txt"
+      runner_label:
+        type: string
+        required: true
+      ALLURE_JOB_RUN_ID:
+        description: "ALLURE_JOB_RUN_ID service parameter. Leave blank."
+        required: false
+      ALLURE_USERNAME:
+        description: "ALLURE_USERNAME service parameter. Leave blank"
+        required: false
+      ALLURE_ENV:
+        description: "Base64-encoded Allure environment variables from shared job run. Leave blank if not using shared job run."
+        required: false
+env:
+  SSH_OPTS: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  ALLURE_PROJECT_ID: 78
+  ALLURE_ENDPOINT: https://upscaleai.testops.cloud
+  ALLURE_RESULTS: tests/allure-results
+
+jobs:
+  normalize-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      host: ${{ inputs.host || github.event.inputs.host || 'upscalelab2-spine7' }}
+      testbed: ${{ inputs.testbed || github.event.inputs.testbed || github.event.client_payload.testbed || 'caspian_testbed_t0_spine7' }}
+      fanout_ip: ${{ inputs.fanoutip || github.event.inputs.fanoutip || github.event.client_payload.fanout_ip || '192.168.222.11' }}
+      switch_user: ${{ inputs.switch_user || github.event.inputs.switch_user || github.event.client_payload.switch_user || 'admin' }}
+      ansible_inventory: ${{ inputs.ansible_inventory || github.event.inputs.ansible_inventory || github.event.client_payload.ansible_inv || 'veos' }}
+      test_files: ${{ inputs.test_files || github.event.inputs.test_files || github.event.client_payload.test_files || 'base_suite_tests.txt,mgmt_suite_tests.txt,l2_suite_tests.txt,l3_suite_tests.txt' }}
+      runner_label: ${{ inputs.runner_label || github.event.inputs.runner_label }}
+    steps:
+      - name: Set outputs
+        run: echo "Normalizing inputs"
+
+  setup-allure:
+    needs: normalize-inputs
+    runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
+    outputs:
+      allure-env: ${{ steps.allure-context.outputs.allure-env }}
+    steps:
+      - name: install and configure allurectl
+        uses: allure-framework/setup-allurectl@v1.0.0
+        with:
+          allure-endpoint: ${{ env.ALLURE_ENDPOINT }}
+          allure-token: ${{ secrets.ALLURE_TOKEN }}
+          allure-project-id: ${{ env.ALLURE_PROJECT_ID }}
+          github-token: ${{ secrets.GH_PAT }}
+
+      - name: get context for allurectl
+        id: allure-context
+        run: |
+          # Check if ALLURE_ENV is provided (shared job run from parent workflow)
+          if [ -n "${{ inputs.ALLURE_ENV }}" ]; then
+            echo "Using shared Allure job run from parent workflow"
+            # Use the provided base64-encoded environment variables directly
+            echo "allure-env=${{ inputs.ALLURE_ENV }}" >> $GITHUB_OUTPUT
+            # Decode to show what we're using
+            echo "${{ inputs.ALLURE_ENV }}" | base64 -d > /tmp/allure-env-decoded
+            echo "Environment variables from shared job run:"
+            cat /tmp/allure-env-decoded
+          else
+            echo "Creating new Allure job run for this workflow execution"
+            allurectl job-run start
+            export $(allurectl job-run env)
+            printenv | grep ALLURE_
+            echo "allure-env=$(allurectl job-run env | base64 -w 0)" >> $GITHUB_OUTPUT
+            echo "allurectl job-run env"
+            echo "$(allurectl job-run env)"
+          fi
+
+  setup:
+    needs: [normalize-inputs, setup-allure]
+    runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
+    outputs:
+      rpc_pull_success: ${{ steps.rpc-pull-status.outputs.rpc_pull_success }}
+    timeout-minutes: 180
+    env:
+      HOST: ${{ needs.normalize-inputs.outputs.host }}
+      TESTBED: ${{ needs.normalize-inputs.outputs.testbed }}
+      FANOUT_IP: ${{ needs.normalize-inputs.outputs.fanout_ip }}
+      SWITCH_USER: ${{ needs.normalize-inputs.outputs.switch_user }}
+      ANSIBLE_INVENTORY: ${{ needs.normalize-inputs.outputs.ansible_inventory }}
+      TEST_FILES: ${{ needs.normalize-inputs.outputs.test_files }}
+    steps:
+      - name: Fix permissions before checkout
+        run: |
+          sudo chown -R $USER:$USER ansible tests allure-history allure-report tests/allure-results sanity/__pycache__ .pytest_cache || true
+          echo "TESTBEDFILE=testbed.yaml" >> $GITHUB_ENV
+          TOPO=$(cut -d "_" -f 3 <<< "${{ env.TESTBED }}")
+          echo "TOPO=$TOPO" >> $GITHUB_ENV
+          # Map topology variants to base topology for run_tests.sh command, but keep original TOPO for container naming
+          if [[ "$TOPO" == t1-* ]]; then
+            TOPO_FOR_TESTS="t1"
+          elif [[ "$TOPO" == t0-* ]]; then
+            TOPO_FOR_TESTS="t0"
+          else
+            TOPO_FOR_TESTS="$TOPO"
+          fi
+          echo "TOPO_FOR_TESTS=$TOPO_FOR_TESTS" >> $GITHUB_ENV
+          echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-${TOPO}" >> $GITHUB_ENV
+
+      - name: Stop ${{ env.SONIC_MGMT_CONTAINER }} docker container
+        run: docker stop ${{ env.SONIC_MGMT_CONTAINER }} && docker rm ${{ env.SONIC_MGMT_CONTAINER }} || true
+
+      - name: Checkout sonic-mgmt repo
+        uses: actions/checkout@v4
+
+      - name: Get the IP address(es) from ansible inventory file
+        run: |
+          echo "SWITCH_IP=$(ansible -i ansible/${{ env.ANSIBLE_INVENTORY }} -m debug -a 'var=ansible_host' ${{ env.HOST }} | grep 'ansible_host' | sed -E 's/.*\"ansible_host"\: \"(.*)\"/\1/')" >> $GITHUB_ENV
+
+      - name: Setup test environment
+        run: |
+          echo "SONIC_ROOT=$(pwd)" >> $GITHUB_ENV
+          echo "Get management IP address of server"
+          DEFAULT_INTERFACE=$(ip route | awk '/default/ { print $5 }')
+          DEFAULT_IP=$(ip -4 addr show "$DEFAULT_INTERFACE" | awk '/inet/ {print $2}' | cut -d'/' -f1)
+
+          # Decode and export allure environment variables
+          echo "${{ needs.setup-allure.outputs.allure-env }}" | base64 -d > /tmp/allure-env
+          echo "Echoing /tmp/allure-env"
+          cat /tmp/allure-env
+          export $(cat /tmp/allure-env)
+
+          # Bring up docker-sonic-mgmt container
+          echo "Bring up docker-sonic-mgmt container"
+          # Pass all Allure environment variables to the container via --env-file
+          # Also explicitly set key variables to ensure they're available
+          docker run -it -d --name ${{ env.SONIC_MGMT_CONTAINER }} \
+            --network host \
+            --cap-add=NET_ADMIN \
+            --privileged \
+            -e ALLURE_ENDPOINT=${{ env.ALLURE_ENDPOINT }} \
+            -e ALLURE_PROJECT_ID=${{ env.ALLURE_PROJECT_ID }} \
+            -e ALLURE_TOKEN=${{ secrets.ALLURE_TOKEN }} \
+            --env-file /tmp/allure-env \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $PWD:/var/AzDevOps \
+            docker-sonic-mgmt-allure:latest bash
+
+          echo "Delete previously added ssh keys from nightly workflow"
+          cp ~/.ssh/authorized_keys ~/.ssh/authorized_keys_copy
+          sed -i '/Nightly_github_workflow/d' ~/.ssh/authorized_keys
+
+          echo "Generate SSH keypair inside container"
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "rm -f /root/.ssh/id_rsa /root/.ssh/id_rsa.pub && ssh-keygen -t rsa -b 4096 -C 'Nightly_github_workflow' -f /root/.ssh/id_rsa -N '' -q"
+
+          echo "Copy public key from container to host"
+          docker cp ${{ env.SONIC_MGMT_CONTAINER }}:/root/.ssh/id_rsa.pub ./id_rsa.pub
+
+          echo "Install public key on remote server"
+          cat ./id_rsa.pub | /usr/bin/sshpass -p ${{ secrets.TESTSERVER_PWD }} ssh ${{ env.SSH_OPTS }} ${USER}@${DEFAULT_IP} "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+
+          echo "Remove T0 and T1 topo"
+          testbed=${{ env.TESTBED }}
+          # Remove T0, T1 topo
+          if [ "${{ env.TOPO }}" == "t1" ]; then
+              testbed="${testbed},${testbed/t1/t0}"
+          elif [ "${{ env.TOPO }}" == "t0" ]; then
+              testbed="${testbed},${testbed/t0/t1}"
+          elif [ "${{ env.TOPO }}" == "t1-lag" ]; then
+              testbed="${testbed},${testbed/t1-lag/t0},${testbed/t1-lag/t1}"
+          elif [ "${{ env.TOPO }}" == "t1-64" ]; then
+              testbed="${testbed},${testbed/t1-64/t0},${testbed/t1-64/t1},${testbed/t1-64/t0-64}"
+          elif [ "${{ env.TOPO }}" == "t0-64" ]; then
+              testbed="${testbed},${testbed/t0-64/t0},${testbed/t0-64/t1},${testbed/t0-64/t1-64}"
+          fi
+          remove_topo_filelist=($(echo "${testbed}" | tr "," "\n"))
+          for tb_name in ${remove_topo_filelist[@]}; do
+            echo "Running remove-topo for ${tb_name}"
+            docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${tb_name} ./password.txt -vvvv"
+          done
+
+          # Bring up PTF container
+          echo "Add topo"
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv"
+
+          echo "Deploy minigraph"
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
+
+          echo "Run pretest"
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${{ env.HOST }} -n ${{ env.TESTBED }} -f ../ansible/${{ env.TESTBEDFILE }} -i ../ansible/${{ env.ANSIBLE_INVENTORY }} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--skip_sanity' -t ${TOPO_FOR_TESTS},any"
+
+          echo "Pull rpc image"
+          NEXTHOP=$(echo "${{ env.SWITCH_IP }}" | cut -d'.' -f1-3).1
+          echo "Extracted nexthop from SWITCH_IP (${{ env.SWITCH_IP }}): $NEXTHOP"
+          /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "sudo config route add prefix 192.168.218.0/24 nexthop ${NEXTHOP}"
+          /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "echo '{\"insecure-registries\": [\"192.168.218.28:5000\"] }' | sudo tee /etc/docker/daemon.json"
+          /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "sudo reboot"
+          sleep 60 # wait for switch to reboot
+          until /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} 'echo "Switch is back online"'; do
+            echo "Switch not yet available, retrying in 30 seconds..."
+            sleep 30
+          done
+
+          max_attempts=10
+          attempt=0
+          rpc_pull_success=false
+          while [ $attempt -lt $max_attempts ]; do
+            if /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "docker pull 192.168.218.28:5000/docker-syncd-mlnx-rpc && docker tag 192.168.218.28:5000/docker-syncd-mlnx-rpc:latest docker-syncd-mlnx-rpc:latest"; then
+              echo "RPC image pulled successfully on attempt $((attempt + 1))"
+              rpc_pull_success=true
+              break
+            else
+              attempt=$((attempt + 1))
+              if [ $attempt -lt $max_attempts ]; then
+                echo "RPC image pull failed, attempt $attempt/$max_attempts. Retrying in 30 seconds..."
+                sleep 30
+              fi
+            fi
+          done
+          if [ "$rpc_pull_success" == "false" ]; then
+            echo "WARNING: RPC image couldn't be pulled after $max_attempts attempts. Proceeding with tests anyway."
+          fi
+          # Save RPC pull status to file for use in output step
+          echo "$rpc_pull_success" > /tmp/rpc_pull_status.txt
+
+      - name: Set RPC pull status output
+        id: rpc-pull-status
+        run: |
+          RPC_STATUS=$(cat /tmp/rpc_pull_status.txt)
+          echo "rpc_pull_success=$RPC_STATUS" >> $GITHUB_OUTPUT
+          echo "RPC pull status: $RPC_STATUS"
+
+      - name: Send error message to slack channel if setup fails
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\": \"Nightly Test Aborted as setup failed\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  run-test-and-generate-report:
+    needs: [normalize-inputs, setup]
+    timeout-minutes: 7200
+    runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
+    env:
+      HOST: ${{ needs.normalize-inputs.outputs.host }}
+      TESTBED: ${{ needs.normalize-inputs.outputs.testbed }}
+      FANOUT_IP: ${{ needs.normalize-inputs.outputs.fanout_ip }}
+      SWITCH_USER: ${{ needs.normalize-inputs.outputs.switch_user }}
+      ANSIBLE_INVENTORY: ${{ needs.normalize-inputs.outputs.ansible_inventory }}
+      TEST_FILES: ${{ needs.normalize-inputs.outputs.test_files }}
+    steps:
+      - name: Export env vars
+        run: |
+          TOPO=$(cut -d "_" -f 3 <<< "${{ env.TESTBED }}")
+          echo "TOPO=$TOPO" >> $GITHUB_ENV
+          # Map topology variants to base topology for run_tests.sh command, but keep original TOPO for container naming
+          if [[ "$TOPO" == t1-* ]]; then
+            TOPO_FOR_TESTS="t1"
+          elif [[ "$TOPO" == t0-* ]]; then
+            TOPO_FOR_TESTS="t0"
+          else
+            TOPO_FOR_TESTS="$TOPO"
+          fi
+          echo "TOPO_FOR_TESTS=$TOPO_FOR_TESTS" >> $GITHUB_ENV
+          echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-${TOPO}" >> $GITHUB_ENV
+          echo "TESTBEDFILE=testbed.yaml" >> $GITHUB_ENV
+          echo "SWITCH_IP=$(ansible -i ansible/${{ env.ANSIBLE_INVENTORY }} -m debug -a 'var=ansible_host' ${{ env.HOST }} | grep 'ansible_host' | sed -E 's/.*\"ansible_host"\: \"(.*)\"/\1/')" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: |
+          filelist=($(echo ${{ env.TEST_FILES }} | tr "," "\n"))
+
+          # Check if RPC image pull failed - if so, filter out qos test files
+          rpc_pull_success="${{ needs.setup.outputs.rpc_pull_success }}"
+          if [ "$rpc_pull_success" == "false" ]; then
+            echo "RPC image pull failed - filtering out qos test files"
+            filtered_filelist=()
+            for file in "${filelist[@]}"; do
+              file_trimmed=$(echo "$file" | xargs)
+              if [[ ! "$file_trimmed" =~ [qQ][oO][sS] ]]; then
+                filtered_filelist+=("$file_trimmed")
+              else
+                echo "Skipping test file containing 'qos': $file_trimmed (RPC image not available)"
+              fi
+            done
+            filelist=("${filtered_filelist[@]}")
+          else
+            echo "RPC image pull succeeded - including all test files including qos"
+          fi
+          num_files=${#filelist[@]}
+
+          for i in "${!filelist[@]}"; do
+            file="${filelist[$i]}"
+            parseout=($(echo ${file} | tr "." "\n"))
+            suite_name="${parseout[0]}"
+            deselect_file="${suite_name}_deselect.txt"
+
+            echo "echo env vars"
+            docker exec ${{ env.SONIC_MGMT_CONTAINER }} env
+
+            echo "Start running testfile ${file}"
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Start running testfile ${file}" >> test_status.json
+
+            TEST_EXIT_CODE=0
+            extra_flags="--skip_sanity --run-stress-tests --deselect-file=${deselect_file} --alluredir=allure-results/${suite_name}"
+            if grep -q 'copp' tests/${file}; then
+              extra_flags="${extra_flags} --copp_swap_syncd"
+            fi
+            if grep -q 'sflow' tests/${file}; then
+              extra_flags="${extra_flags} --enable_sflow_feature"
+            fi
+            docker exec ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${{ env.HOST }}  -f ../ansible/${{ env.TESTBEDFILE }} -i ../ansible/${{ env.ANSIBLE_INVENTORY }} -k debug -l debug -p test_logs/logs-${suite_name} -F ${file} -t "${TOPO_FOR_TESTS},any" -n ${{ env.TESTBED }} -e '${extra_flags}' -u" || TEST_EXIT_CODE=$?
+
+            if [ $TEST_EXIT_CODE -ne 0 ]; then
+              echo "ERROR: Test file ${file} failed with exit code $TEST_EXIT_CODE"
+              echo "[$(date +'%Y-%m-%d %H:%M:%S')] Test file ${file} failed" >> test_status.json
+            fi
+
+            docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && find allure-results/${suite_name} -type f -name '*-attachment.txt' -size +2M -delete" || true
+            docker exec ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && /usr/local/bin/allurectl upload allure-results/${suite_name}" || true
+            echo "[$(date +'%Y-%m-%d %H:%M:%S')] Uploaded results for ${file}" >> test_status.json
+
+            if [[ $i -lt $((num_files - 1)) ]]; then
+                # Check if current and next suite names share the same prefix
+                should_skip_cleanup=false
+                next_file="${filelist[$((i + 1))]}"
+                next_parseout=($(echo ${next_file} | tr "." "\n"))
+                next_suite_name="${next_parseout[0]}"
+
+                if [[ -n "$next_suite_name" ]]; then
+                    # Extract prefix by removing trailing number pattern (e.g., _1, _2, etc.)
+                    # Use extended regex to match one or more digits after underscore
+                    current_prefix=$(echo "$suite_name" | sed -E 's/_[0-9]+$//')
+                    next_prefix=$(echo "$next_suite_name" | sed -E 's/_[0-9]+$//')
+                    if [[ "$current_prefix" == "$next_prefix" && -n "$current_prefix" ]]; then
+                        should_skip_cleanup=true
+                        echo "Skipping cleanup: ${suite_name} and ${next_suite_name} share the same prefix (${current_prefix})"
+                    fi
+                fi
+
+                if [[ "$should_skip_cleanup" == "false" ]]; then
+                    echo "Run cleanup between suites"
+                    echo "Remove topo"
+                    docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${{ env.TESTBED }} ./password.txt -vvvv"
+
+                    # Bring up PTF container
+                    echo "Add topo"
+                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv"
+
+                    echo "Deploy minigraph"
+                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
+                fi
+            fi
+          done
+
+  upload-logs:
+    needs: [normalize-inputs, setup, run-test-and-generate-report]
+    runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
+    if: always()
+    env:
+      HOST: ${{ needs.normalize-inputs.outputs.host }}
+      TESTBED: ${{ needs.normalize-inputs.outputs.testbed }}
+    steps:
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-${{ env.HOST }}-${{ env.TESTBED }}
+          path: tests/test_logs
+
+  cleanup-allure:
+    needs: [normalize-inputs, setup-allure, setup, run-test-and-generate-report]
+    runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
+    if: always()
+    steps:
+      - name: install and configure allurectl
+        uses: allure-framework/setup-allurectl@v1.0.0
+        with:
+          allure-endpoint: ${{ env.ALLURE_ENDPOINT }}
+          allure-token: ${{ secrets.ALLURE_TOKEN }}
+          allure-project-id: ${{ env.ALLURE_PROJECT_ID }}
+          github-token: ${{ secrets.GH_PAT }}
+      - name: stop allure job run
+        run: |
+          # Only stop the job run if we created it (not if using shared job run)
+          if [ -z "${{ inputs.ALLURE_ENV }}" ]; then
+            echo "Stopping Allure job run created by this workflow..."
+            # Decode and export allure environment variables
+            echo "${{ needs.setup-allure.outputs.allure-env }}" | base64 -d > /tmp/allure-env
+            export $(cat /tmp/allure-env)
+            allurectl job-run stop
+            echo "Allure job run stopped"
+          else
+            echo "Using shared Allure job run - cleanup will be handled by parent workflow"
+            echo "Skipping job run stop (using shared job run from parent workflow)"
+          fi

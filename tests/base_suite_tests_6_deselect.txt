@@ -1,0 +1,140 @@
+# Test is not supported for 202012 and newer image versions!
+monit/test_monit_status.py::test_monit_reporting_message
+
+# Not multi asic and not T1 or T2 topology
+override_config_table/test_override_config_table_masic.py::test_load_minigraph_with_golden_config
+
+# Packet-trimming tests are only supported on certain Mellanox SN5640 and Arista 7060X6 SKUs, may not be available on spectrum 4
+packet_trimming
+
+# Need to test if this applies to our topology
+performance_meter
+
+# These tests take over 4 hours to fail.
+platform_tests/test_advanced_reboot.py
+
+# Written for Cisco Servers
+platform_tests/test_auto_negotiation.py::test_verify_portspeed_configuration_across_reboot
+
+# Only m0, mx
+platform_tests/test_idle_driver.py
+
+# Mellanox does not support this API: "WARNING pmon#platform_api_server.py: API 'get_status' not implemented"
+platform_tests/api/test_psu.py::TestPsuApi::test_get_status
+
+# Only T2
+platform_tests/api/test_module.py
+platform_tests/test_link_down.py
+platform_tests/test_thermal_state_db.py
+platform_tests/test_power_budget_info.py
+platform_tests/test_chassis_reboot.py
+
+# Only for Snappi topology
+platform_tests/test_reboot.py::test_soft_reboot
+
+# Restarting Syncd not supported yet
+platform_tests/test_sequential_restart.py::test_restart_syncd
+
+# Skipped on mellanox and nvidia asic from 202411 and later
+platform_tests/test_service_warm_restart.py::test_service_warm_restart
+
+# Tests disabled or not supported on Mellanox
+platform_tests/test_platform_info.py::test_thermal_control_fan_status
+platform_tests/test_platform_info.py::test_thermal_control_load_invalid_value_json
+platform_tests/test_platform_info.py::test_thermal_control_load_invalid_format_json
+platform_tests/test_platform_info.py::test_show_platform_fanstatus_mocked
+platform_tests/test_platform_info.py::test_show_platform_temperature_mocked
+
+# TEMPORARY: Expects all PSU to be connected
+platform_tests/test_platform_info.py::test_turn_on_off_psu_and_check_psustatus
+
+# TEMPORARY: Need to build a secure image for this test to work
+platform_tests/test_secure_upgrade.py
+
+# Not implemented in Chassis API: https://github.com/sonic-net/sonic-buildimage/blob/202505/platform/mellanox/mlnx-platform-api/sonic_platform/chassis.py
+platform_tests/api/test_chassis.py::TestChassisApi::test_get_supervisor_slot
+platform_tests/api/test_chassis.py::TestChassisApi::test_get_my_slot
+platform_tests/api/test_chassis.py::TestChassisApi::test_get_presence
+platform_tests/api/test_chassis.py::TestChassisApi::test_get_status
+platform_tests/api/test_chassis.py::TestChassisApi::test_status_led
+
+# No components
+platform_tests/api/test_chassis.py::TestChassisApi::test_components
+
+# No fans on device, on fan drawers
+platform_tests/api/test_chassis.py::TestChassisApi::test_fans
+
+# No modules bc we are not modular chassis
+platform_tests/api/test_chassis.py::TestChassisApi::test_modules
+
+# No fans, only fan drawers
+platform_tests/api/test_chassis_fans.py
+platform_tests/api/test_fan_drawer_fans.py::TestFanDrawerFans::test_set_fans_speed
+
+# Not implemented in Component API: https://github.com/sonic-net/sonic-buildimage/blob/202505/platform/mellanox/mlnx-platform-api/sonic_platform/component.py
+platform_tests/api/test_component.py::TestComponentApi::test_get_model
+platform_tests/api/test_component.py::TestComponentApi::test_get_position_in_parent
+platform_tests/api/test_component.py::TestComponentApi::test_get_presence
+platform_tests/api/test_component.py::TestComponentApi::test_get_serial
+platform_tests/api/test_component.py::TestComponentApi::test_get_status
+platform_tests/api/test_component.py::TestComponentApi::test_is_replaceable
+
+# (redundant) we have no components
+platform_tests/api/test_component.py
+
+# No firmware to test installing
+platform_tests/api/test_component.py::TestComponentApi::test_install_firmware
+platform_tests/api/test_component.py::TestComponentApi::test_update_firmware
+
+# Not implemented in Fan Drawer API: https://github.com/sonic-net/sonic-buildimage/blob/202505/platform/mellanox/mlnx-platform-api/sonic_platform/fan_drawer.py
+# Or, Not implemented in Fan API: https://github.com/sonic-net/sonic-buildimage/blob/202505/platform/mellanox/mlnx-platform-api/sonic_platform/fan.py
+platform_tests/api/test_fan_drawer.py::TestFanDrawerApi::test_get_serial
+platform_tests/api/test_fan_drawer.py::TestFanDrawerApi::test_get_maximum_consumed_power
+platform_tests/api/test_fan_drawer.py::TestFanDrawerApi::test_get_model
+platform_tests/api/test_fan_drawer.py::TestFanDrawerApi::test_get_status
+platform_tests/api/test_fan_drawer.py::TestFanDrawerApi::test_set_fan_drawers_led
+platform_tests/api/test_fan_drawer_fans.py::TestFanDrawerFans::test_get_serial
+platform_tests/api/test_fan_drawer_fans.py::TestFanDrawerFans::test_set_fans_led
+platform_tests/api/test_fan_drawer_fans.py::TestFanDrawerFans::test_get_model
+platform_tests/api/test_psu_fans.py::TestPsuFans::test_get_serial
+platform_tests/api/test_psu_fans.py::TestPsuFans::test_get_model
+
+# Seems like PSU firmware overwrites our changes
+platform_tests/api/test_psu_fans.py::TestPsuFans::test_get_fans_target_speed
+
+# Not implemented in SFP API:
+platform_tests/api/test_sfp.py::TestSfpApi::test_tx_disable
+platform_tests/api/test_sfp.py::TestSfpApi::test_tx_disable_channel
+platform_tests/api/test_sfp.py::TestSfpApi::test_get_serial
+platform_tests/api/test_sfp.py::TestSfpApi::test_get_name
+# Dummy implementation provided, will always return ‘false’ due to limitation
+platform_tests/api/test_sfp.py::TestSfpApi::test_get_tx_fault
+# Dummy implementation provided, will always return ‘false’ due to limitation
+platform_tests/api/test_sfp.py::TestSfpApi::test_get_rx_los 
+platform_tests/api/test_sfp.py::TestSfpApi::test_get_model
+# Seems to be unsupported and is purposefully skipped for mlnx platforms
+platform_tests/api/test_sfp.py::TestSfpApi::test_get_reset_status
+
+# Mellanox does not support this API:
+platform_tests/api/test_thermal.py::TestThermalApi::test_set_low_threshold
+platform_tests/api/test_thermal.py::TestThermalApi::test_set_high_threshold
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_status
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_serial
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_presence
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_model
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_minimum_recorded
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_maximum_recorded
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_low_threshold
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_low_critical_threshold
+
+# TEMPORARY: Need to debug this API
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_high_threshold
+platform_tests/api/test_thermal.py::TestThermalApi::test_get_high_critical_threshold
+
+# Mellanox does not support this API:
+# platform_tests/api/test_psu.py::TestPsuApi::test_power
+# platform_tests/api/test_psu.py::TestPsuApi::test_led
+platform_tests/api/test_psu.py::TestPsuApi::test_get_status
+# platform_tests/api/test_psu.py::TestPsuApi::test_get_serial
+# platform_tests/api/test_psu.py::TestPsuApi::test_get_model
+# platform_tests/api/test_psu.py::TestPsuApi::test_fans

@@ -1,0 +1,94 @@
+#########################################################################################
+### Acl deselect tests due to unsupported platform, topology or parameter permutation ###
+### test_acl.py
+
+# TODO: need to add back once qinq fanout is available
+acl/test_acl_outer_vlan
+
+# Deselect as dualtor topo is needed
+acl/test_acl.py::TestMultiBindingAcl
+
+# Deselect ingress paramater for egress tests
+acl/test_acl.py::TestBasicAcl::test_egress_unmatched_forwarded[ipv4-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_egress_unmatched_forwarded[ipv4-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_egress_unmatched_forwarded[ipv4-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_egress_unmatched_forwarded[ipv4-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestBasicAcl::test_egress_unmatched_forwarded[ipv4-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_egress_unmatched_forwarded[ipv4-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_egress_unmatched_forwarded[ipv4-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_egress_unmatched_forwarded[ipv4-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestBasicAcl::test_egress_unmatched_forwarded[ipv6-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_egress_unmatched_forwarded[ipv6-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_egress_unmatched_forwarded[ipv6-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_egress_unmatched_forwarded[ipv6-ingress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestBasicAcl::test_egress_unmatched_forwarded[ipv6-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_egress_unmatched_forwarded[ipv6-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_egress_unmatched_forwarded[ipv6-ingress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_egress_unmatched_forwarded[ipv6-ingress-uplink->downlink-default-Vlan1000]
+
+# Deselect egress parameter for ingress tests
+acl/test_acl.py::TestBasicAcl::test_ingress_unmatched_blocked[ipv4-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_ingress_unmatched_blocked[ipv4-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_ingress_unmatched_blocked[ipv4-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_ingress_unmatched_blocked[ipv4-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestBasicAcl::test_ingress_unmatched_blocked[ipv4-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_ingress_unmatched_blocked[ipv4-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_ingress_unmatched_blocked[ipv4-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_ingress_unmatched_blocked[ipv4-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestBasicAcl::test_ingress_unmatched_blocked[ipv6-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_ingress_unmatched_blocked[ipv6-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_ingress_unmatched_blocked[ipv6-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_ingress_unmatched_blocked[ipv6-egress-downlink->uplink-default-Vlan1000]
+acl/test_acl.py::TestBasicAcl::test_ingress_unmatched_blocked[ipv6-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestIncrementalAcl::test_ingress_unmatched_blocked[ipv6-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithReboot::test_ingress_unmatched_blocked[ipv6-egress-uplink->downlink-default-Vlan1000]
+acl/test_acl.py::TestAclWithPortToggle::test_ingress_unmatched_blocked[ipv6-egress-uplink->downlink-default-Vlan1000]
+
+###################################################################
+### Everflow deselect tests
+### test_everflow_testbed.py
+# Test is not ready for dualtor and not stable on Non-T2 platform
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclIngressMirror::test_everflow_frwd_with_bkg_trf
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclEgressMirror::test_everflow_frwd_with_bkg_trf
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclIngressMirror::test_everflow_frwd_with_bkg_trf
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclEgressMirror::test_everflow_frwd_with_bkg_trf
+
+# ingress ACL w/ egress Mirroring not supported
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclEgressMirror
+
+# egress ACL w/ ingress Mirroring not supported
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclIngressMirror
+
+# Test not supported on Mellanox platforms
+everflow/test_everflow_testbed.py::EverflowIPv4Tests::test_everflow_dscp_with_policer
+
+# Test not supported on non broadcom-dnx and non voq platforms
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclEgressMirror::test_everflow_fwd_recircle_port_queue_check
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclIngressMirror::test_everflow_fwd_recircle_port_queue_check
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclEgressMirror::test_everflow_fwd_recircle_port_queue_check
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclIngressMirror::test_everflow_fwd_recircle_port_queue_check
+
+# EverflowPolicerTest does not support IPv6
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclEgressMirror::test_everflow_dscp_with_policer[erspan_ipv6-cli-downstream-default]
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclIngressMirror::test_everflow_dscp_with_policer[erspan_ipv6-cli-downstream-default]
+everflow/test_everflow_testbed.py::TestEverflowV4EgressAclEgressMirror::test_everflow_dscp_with_policer[erspan_ipv6-cli-upstream-default]
+everflow/test_everflow_testbed.py::TestEverflowV4IngressAclIngressMirror::test_everflow_dscp_with_policer[erspan_ipv6-cli-upstream-default]
+
+### test_everflow_per_interface.py
+# Skip everflow packet integrity IPv6 test on unsupported platforms
+everflow/test_everflow_per_interface.py::test_everflow_packet_format[ipv6-erspan_ipv4-default]
+everflow/test_everflow_per_interface.py::test_everflow_packet_format[ipv6-erspan_ipv6-default]
+
+# Skip everflow per interface IPv6 test on unsupported platforms
+everflow/test_everflow_per_interface.py::test_everflow_per_interface[ipv6-erspan_ipv4-default]
+everflow/test_everflow_per_interface.py::test_everflow_per_interface[ipv6-erspan_ipv6-default]
+
+###################################################################
+### restapi deselect tests
+### test_restapi.py
+# Only supported on Mellanox T1 https://github.com/sonic-net/sonic-mgmt/pull/14231
+restapi/test_restapi.py::test_create_vrf
+
+# Only supported on cisco 8102, 8101 and mlnx 4600C T1 https://github.com/sonic-net/sonic-mgmt/pull/14282
+# Will try for T1 topo if this platform supports it
+restapi/test_restapi_vxlan_ecmp.py

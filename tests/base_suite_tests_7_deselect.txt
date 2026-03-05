@@ -1,0 +1,2 @@
+platform_tests/test_advanced_reboot.py::test_warm_reboot[dual-*]
+platform_tests/test_advanced_reboot.py::test_fast_reboot_from_other_vendor

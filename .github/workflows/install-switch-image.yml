@@ -1,0 +1,213 @@
+name: install-image
+permissions:
+  contents: read
+on:
+  workflow_call:
+    inputs:
+      host:
+        type: string
+        description: DUT Host name in testbed file
+        required: true
+      testbed:
+        type: string
+        description: Testbed name to run test on
+        required: true
+      ansible_inventory:
+        type: string
+        description: Inventory file to use for ansible commands
+        default: veos
+        required: true
+      fanoutip:
+        type: string
+        default: 192.168.213.11
+        required: true
+      switch_user:
+        type: string
+        description: User name to login to switch
+        default: admin
+        required: true
+      runner_label:
+        type: string
+        description: Runner label to use for jobs
+        required: true
+      aws_bucket:
+        type: string
+        description: aws bucket with builds
+        required: true
+    secrets:
+      PAT_TOKEN:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      SWITCH_PASSWORD:
+        required: true
+
+env:
+  HOST: ${{ inputs.host }}
+  TESTBED: ${{ inputs.testbed }}
+  FANOUT_IP: ${{ inputs.fanoutip }}
+  SWITCH_USER: ${{ inputs.switch_user }}
+  ANSIBLE_INVENTORY: ${{ inputs.ansible_inventory }}
+  SONIC_MGMT_CONTAINER: sonic-mgmt-install-image
+  IMAGE_URL: ${{  inputs.image_url  || 'latest' }}
+  AWS_BUCKET: ${{ inputs.aws_bucket || 'upscale-ai-sonic-builds' }}
+
+jobs:
+  install-image:
+    runs-on: ${{ inputs.runner_label }}
+    steps:
+      - name: Fix permissions before checkout
+        run: |
+          sudo chown -R $USER:$USER ansible tests allure-history allure-report tests/allure-results sanity/__pycache__ .pytest_cache || true
+          docker stop ${{ env.SONIC_MGMT_CONTAINER }} && docker rm ${{ env.SONIC_MGMT_CONTAINER }} || true
+
+      - name: Checkout sonic-mgmt repo
+        uses: actions/checkout@v4
+        with:
+         repository: upscale-ai-network/caspian-sonic-mgmt
+         token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2  # Change this to your region of your bucket
+
+      - name: Get branch name and switch IP
+        run: |
+          # Get current branch name
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD || echo "default")
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "Current branch: $BRANCH_NAME"
+
+          # Get switch IP from ansible inventory (matrix ensures single host per call)
+          switch_ip=$(ansible -i ansible/${{ env.ANSIBLE_INVENTORY }} -m debug -a "var=ansible_host" "${{ env.HOST }}" 2>/dev/null | grep 'ansible_host' | sed -E 's/.*"ansible_host": "([^"]*)".*/\1/' | head -n1)
+
+          if [ -z "$switch_ip" ]; then
+            echo "Error: Could not find switch IP for host ${{ env.HOST }}"
+            exit 1
+          fi
+
+          echo "SWITCH_IP=$switch_ip" >> $GITHUB_ENV
+          echo "Switch IP: $switch_ip"
+
+      - name: Copy the latest installer from s3 onto device
+        run: |
+          if ${{ env.IMAGE_URL == 'latest' }}; then
+              echo "Install latest image for caspian from branch ${{ env.BRANCH_NAME }}"
+              # List timestamp directories under caspian/${BRANCH_NAME}/
+              # Path structure: caspian/${BRANCH_NAME}/YYYY-MM-DD-HH_MM_SS/build_artifacts/
+              DIRECTORIES=$(aws s3api list-objects-v2 \
+                --bucket "${{ env.AWS_BUCKET }}" \
+                --prefix "caspian/${{ env.BRANCH_NAME }}/" \
+                --delimiter "/" \
+                --query "reverse(sort_by(CommonPrefixes, &Prefix))[*].Prefix" \
+                --output text | tr '\t' '\n')
+
+              for dir in $DIRECTORIES; do
+                  # Look for the specific bin file in build_artifacts subdirectory
+                  # Pattern: sonic-mellanox-YYYY-MM-DD-HH_MM_SS.bin
+                  S3_FILE=$(aws s3api list-objects-v2 \
+                  --bucket "${{ env.AWS_BUCKET }}" \
+                  --prefix "${dir}build_artifacts/" \
+                  --query "Contents[?contains(Key, 'sonic-mellanox-')].Key" \
+                  --output text | grep '\.bin$' | head -n1)
+                  echo "S3_FILE: ${S3_FILE}"
+                  if [ -n "$S3_FILE" ]; then
+                      S3_PATH="s3://${{ env.AWS_BUCKET }}/$S3_FILE"
+                      break
+                  fi
+              done
+          else
+              echo "Install image from ${{ env.IMAGE_URL }}"
+              aws s3 ls ${{ env.IMAGE_URL }}
+              if [ $? -eq 0 ]; then
+                  S3_PATH=${{ env.IMAGE_URL }}
+              fi
+          fi
+          if [ -n "$S3_PATH" ]; then
+              echo "Downloading file: $S3_PATH"
+              aws s3 cp "$S3_PATH" .
+              BIN_FILE=$(basename "$S3_PATH")
+              echo "BIN_FILE=$BIN_FILE" >> $GITHUB_ENV
+              echo "BIN_FILE: ${BIN_FILE}"
+              /usr/bin/sshpass -v -p ${{ secrets.SWITCH_PASSWORD }} scp  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BIN_FILE ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE
+            else
+              if ${{ env.IMAGE_URL == 'latest' }}; then
+                echo "Unable to find sonic-mellanox-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
+              else
+                echo "Invalid image URL: ${{ env.IMAGE_URL }}"
+              fi
+              exit 1
+            fi
+
+      - name: Run SSH Commands on Switch
+        uses: appleboy/ssh-action@v0.1.10 # Use the latest version
+        env:
+          BIN_FILE: ${{ env.BIN_FILE }}
+        with:
+          host: ${{ env.SWITCH_IP }}
+          username: ${{ env.SWITCH_USER }}
+          password: ${{ secrets.SWITCH_PASSWORD }}
+          port: 22 # Default SSH port, adjust if needed
+          envs: BIN_FILE
+          script: |
+            export BINFILE=$BIN_FILE
+            show interface status
+            sudo sonic-installer install -y /tmp/$BINFILE
+            sudo reboot || true
+
+      - name: Wait for switch to come back online
+        run: |
+          sleep 60
+          echo 'Waiting for ${{ env.SWITCH_IP }} to come back online...'
+          until /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} 'echo "Server is back online"'; do
+            echo "Server not yet available, retrying in 30 seconds..."
+            sleep 30
+          done
+          echo 'Status check: Switch is online after upgrade'
+
+      - name: Run sanity tests
+        run: |
+          # Bring up docker-sonic-mgmt container
+          echo "Bring up docker-sonic-mgmt container"
+          docker run -it -d --name ${{ env.SONIC_MGMT_CONTAINER }} \
+            --network host \
+            --cap-add=NET_ADMIN \
+            --privileged \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $PWD:/var/AzDevOps \
+            docker-sonic-mgmt bash
+
+          max_attempts=10
+          attempts=0
+          while [[ "$status" == "FAIL" && attempts -le $max_attempts ]]; do
+            if ! docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }}  bash -c "cd /var/AzDevOps/ && /usr/bin/python3.8 -m pytest sanity/test_cli_commands.py --dut-ip ${{ env.SWITCH_IP }} --dut-user ${{ env.SWITCH_USER }} --dut-pass ${{ secrets.SWITCH_PASSWORD }}"; then
+              status=FAIL
+            else
+              status=PASS
+              sleep 30
+            fi
+          done
+          if [ "$status" == "FAIL" ]; then
+            echo "Sanity tests failed"
+            curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\": \" Sanity tests failed. Aborting tests \"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+            exit 1
+          else
+            echo "Sanity tests passed"
+          fi
+
+      - name: Cleanup older images
+        uses: appleboy/ssh-action@v0.1.10 # Use the latest version
+        with:
+          host: ${{ env.SWITCH_IP }}
+          username: ${{ env.SWITCH_USER }}
+          password: ${{ secrets.SWITCH_PASSWORD }}
+          port: 22 # Default SSH port, adjust if needed
+          script: |
+            sudo sonic-installer cleanup -y

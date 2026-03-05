@@ -1,0 +1,17 @@
+platform_tests/broadcom
+platform_tests/cli
+platform_tests/counterpoll
+platform_tests/daemon
+platform_tests/fwutil
+platform_tests/link_flap
+platform_tests/mellanox
+platform_tests/sfp
+platform_tests/test_first_time_boot_password_change
+process_monitoring
+radv
+read_mac
+reset_factory
+scp
+show_techsupport
+smartswitch
+snmp

@@ -1,0 +1,213 @@
+# TEMPORARY: Deselecting auditd since we may or may not support
+auditd
+
+# Temporary: Need reachable NTP Servers
+clock/test_clock.py::test_config_clock_date
+
+# Deselecting all containers that are NOT running bc they will be skipped.
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-dhcp_relay]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-dhcp_server]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-iccpd]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-macsec]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-mux]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-nat]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-radv]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-sflow]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-telemetry]
+
+container_checker/test_container_checker.py::test_container_checker[*-None-dhcp_relay]
+container_checker/test_container_checker.py::test_container_checker[*-None-dhcp_server]
+container_checker/test_container_checker.py::test_container_checker[*-None-iccpd]
+container_checker/test_container_checker.py::test_container_checker[*-None-macsec]
+container_checker/test_container_checker.py::test_container_checker[*-None-mux]
+container_checker/test_container_checker.py::test_container_checker[*-None-nat]
+container_checker/test_container_checker.py::test_container_checker[*-None-radv]
+container_checker/test_container_checker.py::test_container_checker[*-None-sflow]
+container_checker/test_container_checker.py::test_container_checker[*-None-telemetry]
+
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-dhcp_relay]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-dhcp_server]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-iccpd]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-macsec]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-mux]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-nat]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-pmon]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-radv]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-sflow]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-swss]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-syncd]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-telemetry]
+
+# Will need to revisit to support
+container_upgrade
+
+# Requires DPU or smartswitch T1
+dash/test_dash_acl.py
+dash/test_dash_disable_enable_eni.py
+dash/test_dash_privatelink.py
+dash/test_dash_smartswitch_vnet.py
+dash/test_dash_vnet.py
+dash/test_relaxed_match_negative.py
+
+# Requires DPU
+dash/crm/test_dash_crm.py
+
+# Static ip configured, will not use dynamic ip
+dns/static_dns/test_static_dns.py::TestDynamicMgmtPortIP
+
+# Requires T2 topology
+dut_console/test_console_chassis_conn.py
+
+# Requires console switch to be running SONiC
+dut_console/test_console_baud_rate.py::test_baud_rate_sonic_connect
+
+# Unsupported platform (Arista, Nokia)
+dut_console/test_console_baud_rate.py::test_baud_rate_boot_connect 
+
+# For ('t0', 'm0', 'mx', 'm1', 't2') Topology
+generic_config_updater/test_bgpl.py
+
+# For ('t0')
+generic_config_updater/test_bgp_speaker.py
+
+# For ('t0', 'm0')
+generic_config_updater/test_dhcp_relay.py
+
+# For ('t0', 'm0')
+generic_config_updater/test_dynamic_acl.py
+
+# These tests are labeled as not production scenarios and are not very necessary (waste time)
+generic_config_updater/test_eth_interface.py::test_replace_lanes
+generic_config_updater/test_eth_interface.py::test_update_invalid_index
+generic_config_updater/test_eth_interface.py::test_update_valid_index
+generic_config_updater/test_eth_interface.py::test_update_speed
+
+# TEMPORARY: Need Buffer Profile Config info from Nvidia before proceeding
+generic_config_updater/test_ecn_config_update.py
+generic_config_updater/test_incremental_qos.py
+generic_config_updater/test_mmu_dynamic_threshold_config_update.py
+generic_config_updater/test_pfcwd_interval.py
+generic_config_updater/test_pfcwd_status.py
+
+# For ('t0', 'm0', 'mx', 'm1')
+generic_config_updater/test_lo_interface.py
+
+# For multi asic System
+generic_config_updater/test_multiasic_addcluster.py
+generic_config_updater/test_multiasic_idf.py
+generic_config_updater/test_multiasic_linkcrc.py
+
+# Packet trimming not supported in 202505 image
+generic_config_updater/test_packet_trimming_config_symmetric.py
+generic_config_updater/test_packet_trimming_config_asymmetric.py
+
+# For ('t0', 'm0', 'm1')
+generic_config_updater/test_portchannel_interface.py
+
+# For ('t0', 'm0', 'mx')
+generic_config_updater/test_vlan_interface.py
+
+# From test_mark_conditions.yaml: The test refers to a stale implementation of GNOI.System.Reboot.
+gnmi/test_gnmi_configdb.py::test_gnmi_configdb_full_01
+
+# From test_mark_conditions.yaml: Test noisy due to restart issue not relevant to GNOI. Disabling them to rewrite
+gnmi/test_gnoi_killprocess.py
+
+# Only on smartswitch
+gnmi/test_gnmi_smartswitch.py::test_gnmi_appldb_01
+
+# Warm reboot should only run on T0 topology (per test skip message)
+gnmi/test_gnoi_system_reboot.py::test_gnoi_system_reboot_warm
+
+# From test skip case: This case is not supported on many platforms and often encounters issues. We can still run it, but we won’t rely on or validate the results
+hash
+
+# Not supported on Mellanox leaf-fanout running sonic
+iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_port_flap
+iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_reload
+iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_basic
+
+# Needs portchannels (T1 has none)
+iface_namingmode/test_iface_namingmode.py::TestShowInterfaces::test_show_interfaces_portchannel
+
+# For ('t0', 'm0')
+iface_namingmode/test_iface_namingmode.py::TestShowVlan
+
+# Not supported port speeds
+iface_namingmode/test_iface_namingmode.py::TestConfigInterface::test_config_interface_speed_40G_100G
+
+# Kubesonic test cases are not supported on public image
+kubesonic
+
+# For PTP topology
+layer1/test_port_error.py
+
+# Temporary: Skipping for 100G mode, calculations for fec error are not working (issue in counters db)
+layer1/test_fec_error.py
+
+# Test is not supported for 202012 and newer image versions!
+monit/test_monit_status.py::test_monit_reporting_message
+
+# Not multi asic
+override_config_table/test_override_config_table_masic.py::test_load_minigraph_with_golden_config
+
+# Packet-trimming tests are only supported on certain Mellanox SN5640 and Arista 7060X6 SKUs, may not be available on spectrum 4
+packet_trimming
+
+# Need to test if this applies to our topology
+performance_meter
+
+# Broadcomm test
+platform_tests/broadcom
+
+# TEMPORARY: Will skip all platform tests for T1, already running and passed for T0
+platform_tests
+
+# Not required for T1 topologies
+process_monitoring/test_critical_process_monitoring.py::test_orchagent_heartbeat
+
+# For ('t0', 'm0', 'mx')
+radv/test_radv_ipv6_ra.py
+
+# For ('t0')
+radv/test_radv_run.py
+
+# Will remove until we are supporting installing different images during testing
+read_mac
+
+# Skipped in test_mark_conditions
+reset_factory
+
+# Not DPU
+show_techsupport/test_techsupport.py::test_techsupport_on_dpu
+
+# not smartswitch topology
+smartswitch
+
+# For ('t0', 'm0', 'mx', 'm1')
+snmp/test_snmp_fdb.py::test_snmp_fdb_send_tagged
+
+# No swap
+snmp/test_snmp_memory.py::test_snmp_swap
+
+# TEMPORARY: Expects DUT to be running with only 1 psu connected (or n-1)
+snmp/test_snmp_phy_entity.py::test_turn_off_psu_and_check_psu_info
+
+# only for supervisor node
+snmp/test_snmp_phy_entity.py::test_psu_info
+telemetry/test_telemetry_poll.py::test_poll_mode_default_route_supervisor
+
+# Will revisit, skipped because of https://github.com/sonic-net/sonic-mgmt/issues/16997
+syslog/test_syslog_source_ip.py
+
+# For ('t0', 'm0', 'mx')
+testbed_setup/test_populate_fdb.py::test_populate_fdb
+
+# Requires ptp-256 topology
+transceiver/cli/show/test_transceiver_info_cli.py
+
+# Disabling until we have images to test upgrading
+upgrade_path
+
+# Requires mx or m0 topology
+wol

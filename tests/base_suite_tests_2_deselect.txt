@@ -1,0 +1,52 @@
+# TEMPORARY: Need Buffer Profile Config info from Nvidia before proceeding
+generic_config_updater/test_incremental_qos.py
+generic_config_updater/test_mmu_dynamic_threshold_config_update.py
+generic_config_updater/test_pfcwd_interval.py
+generic_config_updater/test_pfcwd_status.py
+
+# For multi asic System
+generic_config_updater/test_multiasic_addcluster.py
+generic_config_updater/test_multiasic_idf.py
+generic_config_updater/test_multiasic_linkcrc.py
+
+# Packet trimming not supported in 202505 image
+generic_config_updater/test_packet_trimming_config_symmetric.py
+generic_config_updater/test_packet_trimming_config_asymmetric.py
+
+# From test_mark_conditions.yaml: The test refers to a stale implementation of GNOI.System.Reboot.
+gnmi/test_gnmi_configdb.py::test_gnmi_configdb_full_01
+
+# From test_mark_conditions.yaml: Test noisy due to restart issue not relevant to GNOI. Disabling them to rewrite
+gnmi/test_gnoi_killprocess.py
+
+# Only on smartswitch
+gnmi/test_gnmi_smartswitch.py::test_gnmi_appldb_01
+
+# From test skip case: This case is not supported on many platforms and often encounters issues. We can still run it, but we won’t rely on or validate the results
+hash
+
+# Not supported on Mellanox leaf-fanout running sonic
+iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_port_flap
+iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_reload
+iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_basic
+
+# unsupported for T0 topology
+iface_namingmode/test_iface_namingmode.py::TestConfigInterface
+iface_namingmode/test_iface_namingmode.py::TestNeighbors
+iface_namingmode/test_iface_namingmode.py::TestShowIP
+iface_namingmode/test_iface_namingmode.py::test_show_acl_table
+iface_namingmode/test_iface_namingmode.py::test_show_interfaces_neighbor_expected
+
+# for azure optic (40m, 5m) cables
+iface_namingmode/test_iface_namingmode.py::TestShowQueue::test_show_queue_counters_interface
+iface_namingmode/test_iface_namingmode.py::TestShowInterfaces::test_show_interfaces_status
+iface_namingmode/test_iface_namingmode.py::TestShowInterfaces::test_show_interfaces_description
+
+# Kubesonic test cases are not supported on public image
+kubesonic
+
+# For PTP topology
+layer1/test_port_error.py
+
+# Temporary: Skipping for 100G mode, calculations for fec error are not working (issue in counters db)
+layer1/test_fec_error.py

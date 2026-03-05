@@ -1,0 +1,198 @@
+###################################################################
+### arp deselect tests
+
+# Skipped: test requires topology in Mark(name='topology', args=('dualtor',), kwargs={})
+arp/test_arp_dualtor.py
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0',), kwargs={})
+arp/test_arp_extended.py
+arp/test_arp_update.py
+arp/test_stress_arp.py
+arp/test_tagged_arp.py
+arp/test_unknown_mac.py
+arp/test_wr_arp.py
+
+###################################################################
+### bgp deselect tests
+
+# Skipped: test requires topology in Mark(name='topology', args=('t2',), kwargs={})
+bgp/test_4-byte_asn_community.py
+bgp/test_bgp_4-byte_as_trans.py
+bgp/test_bgp_authentication.py
+bgp/test_bgp_azng_migration.py
+bgp/test_bgpmon_v6.py::test_bgpmon_v6
+bgp/test_ipv6_nlri_over_ipv4.py
+bgp/test_passive_peering.py
+bgp/test_prefix_list.py
+bgp/test_seq_idf_isolation.py
+bgp/test_startup_tsa_tsb_service.py
+bgp/test_traffic_shift_lc.py
+bgp/test_traffic_shift_sup.py
+bgp/reliable_tsa/test_reliable_tsa_flaky.py
+bgp/reliable_tsa/test_reliable_tsa_stable.py
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0',), kwargs={})
+bgp/test_bgp_dual_asn.py
+bgp/test_bgp_route_neigh_learning.py
+bgp/test_bgp_slb.py
+bgp/test_bgp_speaker.py
+
+# Skipped: Skipping test not a multi-ASIC device.
+bgp/test_ping_bgp_neighbor.py
+
+# Skipped: test requires topology in Mark(name='topology', args=('m1',), kwargs={})
+bgp/test_bgp_establish_combo.py
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0-isolated-d2u254s1', 't0-isolated-d2u254s2', 't0-isolated-d2u510', 't0-isolated-d2u510s2', 't1-isolated-d254u2s1', 't1-isolated-d254u2s2', 't1-isolated-d510u2', 't1-isolated-d254u2', 't1-isolated-d510u2s2'), kwargs={})
+bgp/test_ipv6_bgp_scale.py
+
+# Skipped: Not applicable for passive bgpmon_v6
+bgp/test_bgpmon_v6.py::test_bgpmon_no_ipv6_resolve_via_default
+
+# Skipped: Feature is reverted and pending enhancement
+bgp/test_bgp_operation_in_ro.py
+
+# Skipped: Not supperted on master or 202505
+bgp/test_bgp_port_disable.py
+
+# Skipped: BGPMonV6 is not supported on this image
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-no-export-BGPMonV6-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-no-export-BGPMonV6-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-no-export-BGPMonV6-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-None-BGPMonV6-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-None-BGPMonV6-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-None-BGPMonV6-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-None-BGPMonV6-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-None-BGPMonV6-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-None-BGPMonV6-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-no-export-BGPMonV6-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-no-export-BGPMonV6-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-no-export-BGPMonV6-hard]
+
+###################################################################
+### bmp deselect tests
+
+# Skipped: https://github.com/sonic-net/sonic-buildimage/issues/23777
+bmp
+
+###################################################################
+### decap deselect tests
+
+# Skipped: Skip on mellanox all releases
+decap/test_decap.py
+
+# Skipped: Supported only on T0 topology with KVM or broadcom td3 asic or mellanox asic, and available for 202405 release and later, need to skip on KVM testbed since subnet_decap feature haven't been added into yang model. Skip on t1-isolated-d32/128 topos
+decap/test_subnet_decap.py
+
+###################################################################
+### ip deselect tests
+
+# Skipped: "Mellanox, Broadcom, Cisco, Barefoot, and Marvell Asic will tolerate IP packets with 0xffff checksum
+ip/test_ip_packet.py::TestIPPacket::test_forward_ip_packet_with_0xffff_chksum_drop
+
+# Skipped: New test case, failing badly, need owner to enhance
+ip/link_local/test_link_local_ip.py
+
+###################################################################
+### ipfwd deselect tests
+
+# Skipped: Unsupported topology
+ipfwd/test_dir_bcast.py
+
+###################################################################
+### mpls deselect tests
+
+# Skipped: mpls sai not implemented
+# WARNING syncd#SDK: [SAI_INTERFACE_QUERY_ETH.WARNING] ./src/mlnx_sai_interfacequery_eth.c[202]- sai_api_query_eth: SAI_API_MPLS not implemented
+mpls
+
+###################################################################
+### mvrf deselect tests
+
+# Skipped: mvrf is not supported in x86_64-nokia_ixr7250e_36x400g-r0 platform, M* topo, kvm testbed, mellanox and nvidia asic from 202411 and later
+mvrf/test_mgmtvrf.py
+
+###################################################################
+### nat deselect tests
+
+# Skipped: Nat feature is not enabled with image version, skipped on mellanox and nvidia asic from 202411 and later
+nat/test_dynamic_nat.py
+nat/test_static_nat.py
+
+###################################################################
+### ospf deselect tests
+
+# Skipped: Neighbor type must be sonic (neighbor is currently veos)
+ospf
+
+###################################################################
+### route deselect tests
+
+# Skipped: No IP configured on any Vlan
+route/test_duplicate_route.py::test_duplicate_routes[4-Vlan*]
+route/test_duplicate_route.py::test_duplicate_routes[6-Vlan*]
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0', 't2', 'lt2', 'ft2'), kwargs={})
+route/test_forced_mgmt_route.py::test_update_forced_mgmt
+
+# Skipped: Skip test_forced_mgmt_route_add_and_remove_by_mgmt_port_status, port does not exist
+# Test requires two mgmt ports (eth0 and eth1)
+route/test_forced_mgmt_route.py::test_forced_mgmt_route_add_and_remove_by_mgmt_port_status
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0',), kwargs={})
+route/test_route_bgp_ecmp.py::test_route_bgp_ecmp
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0', 'm0', 'mx'), kwargs={})
+route/test_static_route.py
+
+###################################################################
+### srv6 deselect tests
+
+# Skipped: It's a new test case, skip it for other topologies except cisco vs nodes and force nodes.
+srv6/test_srv6_basic_sanity.py
+
+# Skipped: 202505 has issue with SRv6 config. https:/ithub.com/sonic-net/sonic-buildimage/issues/23585
+srv6/test_srv6_dataplane.py
+srv6/test_srv6_static_config.py
+srv6/test_srv6_vlan_forwarding.py
+
+###################################################################
+### sub_port_interfaces deselect tests
+
+# Skipped: Unsupported platform or asic
+sub_port_interfaces/test_show_subinterface.py
+sub_port_interfaces/test_sub_port_interfaces.py
+sub_port_interfaces/test_sub_port_l2_forwarding.py
+
+###################################################################
+### voq deselect tests
+
+# Skipped: Only supported in t2 topology
+voq
+
+###################################################################
+### vrf deselect tests
+
+# Skipped: Vrf tests are skipped both in nightly and PR testing, not supported on mellanox and nvidia asic from 202411 and later
+vrf/test_vrf.py
+vrf/test_vrf_attr.py
+
+###################################################################
+### vxlan deselect tests
+
+# Skipped: Test skipped due to issue #8374
+vxlan/test_vnet_route_leak.py
+vxlan/test_vnet_vxlan.py
+
+# Skipped: VxLAN ECMP BFD TSA test is not yet supported on multi-ASIC platform. Also this test can only run on some platforms.
+# Looks like only multi-asic, or switch with DPU is supported
+vxlan/test_vxlan_bfd_tsa.py
+vxlan/test_vxlan_crm.py
+vxlan/test_vxlan_ecmp.py
+vxlan/test_vxlan_ecmp_switchover.py
+
+# Skipped: No portchannels found
+vxlan/test_vnet_bgp_route_precedence.py
+
+# Skipped: test requires topology in Mark(name='topology', args=('t0',), kwargs={})
+vxlan/test_vxlan_decap.py

@@ -1,0 +1,23 @@
+qos/test_tunnel_qos_remap.py     # Applicable to dualtor topology
+qos/test_qos_masic.py            # Applicable for T1 topology
+qos/test_voq_watchdog.py         # Apply to cisco 8000 platforms
+qos/test_oq_watchdog.py          # Apply to cisco 8000 platforms
+qos/test_ecn_config.py           # Apply to cisco 8000 platforms
+qos/test_buffer.py::test_buffer_model_test     # Skip test in traditional model
+qos/test_buffer.py::test_change_speed_cable    # Skip test in traditional model
+qos/test_buffer.py::test_exceeding_headroom    # Skip test in traditional model
+qos/test_buffer.py::test_headroom_override     # Skip test in traditional model
+qos/test_buffer.py::test_lossless_pg           # Skip test in traditional model
+qos/test_buffer.py::test_lossless_pg           # Skip test in traditional model
+qos/test_buffer.py::test_port_admin_down       # Skip test in traditional model
+qos/test_buffer.py::test_port_auto_neg         # Skip test in traditional model
+qos/test_buffer.py::test_shared_headroom_pool_configure    # Skip test in traditional model
+pfcwd/test_pfcwd_function.py::TestPfcwdFunc::test_pfcwd_no_traffic   # Applicable only for cisco-8000
+pfcwd/test_pfcwd_warm_reboot.py               # Skipped due to "https://github.com/sonic-net/sonic-mgmt/issues/15942 and asic_type in ['broadcom', 'mellanox']"
+
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[multi_dut_*]  #multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[single_dut_multi_asic]  #multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrrWeightChange  #Skip DWRR weight change test on Mellanox platform. / Unsupported testbed type.
+qos/test_qos_sai.py::TestQosSai::testQosSaiHeadroomPoolWatermark  #Headroom pool size not supported.
+qos/test_qos_sai.py::TestQosSai::testQosSaiQSharedWatermark[multi_dut_*]  #multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiQSharedWatermark[single_dut_multi_asic-*]  #single_dut_multi_asic is not supported on T0 topologies

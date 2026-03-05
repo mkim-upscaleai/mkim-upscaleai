@@ -1,0 +1,106 @@
+###############################################################################
+# CACL Tests
+###############################################################################
+
+# Supported on dualtor topology only
+cacl/test_cacl_application.py::test_cacl_application_dualtor
+
+# Supported on multi-ASIC platform only
+cacl/test_cacl_application.py::test_multiasic_cacl_application
+
+###############################################################################
+# DHCP Relay Tests
+###############################################################################
+
+# Test requires T0/m0 topology
+dhcp_relay/test_dhcp_counter_stress.py
+dhcp_relay/test_dhcp_pkt_recv.py::TestDhcpv6WithEmptyAclTable
+dhcp_relay/test_dhcp_pkt_recv.py::TestDhcpv6WithMulticastAccpectAcl
+dhcp_relay/test_dhcp_relay.py
+dhcp_relay.test_dhcp_relay_stress.py
+dhcp_relay/test_dhcpv6_relay.py
+
+###############################################################################
+# Drop Packets Tests
+###############################################################################
+
+# Not supported on mellanox platform
+drop_packets/test_configurable_drop_counters.py
+
+#Not applicable for T1 topology
+drop_packets/test_drop_counters.py::test_absent_ip_header[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_absent_ip_header[vlan_members-*]
+drop_packets/test_drop_counters.py::test_acl_drop[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_acl_drop[vlan_members-*]
+drop_packets/test_drop_counters.py::test_acl_egress_drop[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_acl_egress_drop[vlan_members-*]
+drop_packets/test_drop_counters.py::test_broken_ip_header[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_broken_ip_header[vlan_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_absent[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_absent[vlan_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[vlan_members-*]
+drop_packets.test_drop_counters.py::test_equal_smac_dmac_drop
+drop_packets/test_drop_counters.py::test_ip_is_zero_addr[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_ip_is_zero_addr[vlan_members-*]
+drop_packets/test_drop_counters.pytest_ip_pkt_with_exceeded_mtu[port_channel_members-*]
+drop_packets/test_drop_counters.pytest_ip_pkt_with_exceeded_mtu[vlan_members-*]
+drop_packets/test_drop_counters.py::test_multicast_smac_drop
+drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[vlan_members-*]
+drop_packets/test_drop_counters.py::test_non_routable_igmp_pkts
+drop_packets/test_drop_counters.py::test_src_ip_is_class_e[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_class_e[vlan_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_loopback_addr[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_loopback_addr[vlan_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_multicast_addr[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_multicast_addr[vlan_members-*]
+drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[vlan_members-*]
+drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[port_channel_members*]
+drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[vlan_members*]
+
+
+#MLX platforms do not drop DIP linklocal packets
+drop_packets/test_drop_counters.py::test_dst_ip_link_local
+
+#Not supported on Mellanox devices and M0/Mx topos
+drop_packets/test_drop_counters.py::test_ip_pkt_with_expired_ttl
+drop_packets/test_drop_counters.py::test_not_expected_vlan_tag_drop
+drop_packets/test_drop_counters.py::test_reserved_dmac_drop
+drop_packets/test_drop_counters.py::test_src_ip_link_local
+
+#SONiC can't enable loop-back filter feature
+drop_packets/test_drop_counters.py::test_loopback_filter
+
+###############################################################################
+# COPP Tests
+###############################################################################
+
+# Valid skip - test failures (using wildcard for testbed name to work across all testbeds)
+copp/test_copp.py::TestCOPP::test_trap_neighbor_miss[4-VlanSubnetIPinIP-*]
+copp/test_copp.py::TestCOPP::test_trap_neighbor_miss[4-VlanSubnet-*]
+copp/test_copp.py::TestCOPP::test_trap_neighbor_miss[6-VlanSubnetIPinIP-*]
+copp/test_copp.py::TestCOPP::test_trap_neighbor_miss[6-VlanSubnet-*]
+
+###############################################################################
+# Feature-Level Exclusions
+###############################################################################
+
+# Not enabled in SN5610 platform
+macsec
+
+# Applicable to t0-mclag topology only
+mclag
+
+# Needs WAN topology
+wan
+
+#Needs to T0 topology
+vlan
+fdb
+pc
+sflow
+span
+dhcp_server
+l2

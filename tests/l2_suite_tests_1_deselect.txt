@@ -1,0 +1,162 @@
+###############################################################################
+# L2 Suite Tests - Deselect List
+#
+# This file contains tests that should be deselected from the L2
+# test suite execution.
+###############################################################################
+
+###############################################################################
+# CACL Tests
+###############################################################################
+
+# Supported on dualtor topology only
+cacl/test_cacl_application.py::test_cacl_application_dualtor
+
+# Supported on multi-ASIC platform only
+cacl/test_cacl_application.py::test_multiasic_cacl_application
+
+###############################################################################
+# DHCP Relay Tests
+###############################################################################
+
+# Test requires T1 topology
+dhcp_relay/test_dhcp_pkt_fwd.py
+
+# DHCP_COUNTER_TABLE is not supported
+dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_counter
+
+# github issue: https://github.com/sonic-net/sonic-mgmt/issues/14851
+dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[discover]
+
+# github issue: https://github.com/sonic-net/sonic-mgmt/issues/14851
+dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[request]
+
+###############################################################################
+# Drop Packets Tests
+###############################################################################
+
+# Not supported on mellanox platform
+drop_packets/test_configurable_drop_counters.py
+
+# DIP link-local not dropped on mellanox
+drop_packets/test_drop_counters.py::test_dst_ip_link_local
+
+# SIP link-local not dropped on mellanox
+drop_packets/test_drop_counters.py::test_src_ip_link_local
+
+# TTL expiry not supported on mellanox
+drop_packets/test_drop_counters.py::test_ip_pkt_with_expired_ttl
+
+# ACL on loopback not supported
+drop_packets/test_drop_counters.py::test_acl_drop_on_loopback
+
+# ACL on loopback RIF not supported
+drop_packets/test_drop_counters.py::test_acl_drop_on_loopback_rif
+
+# Not supported on VLAN interface
+drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[vlan_members-*]
+
+# Not supported on Mellanox devices
+drop_packets/test_drop_counters.py::test_ip_pkt_with_expired_ttl
+
+# Not supported on Mellanox platform
+drop_packets/test_drop_counters.py::test_not_expected_vlan_tag_drop
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tests parametrized with rif_members - skipped for T0 topologies
+# ────────────────────────────────────────────────────────────────────────────
+drop_packets/test_drop_counters.py::test_absent_ip_header[rif_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[rif_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_loopback_addr[rif_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_absent[rif_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_multicast_addr[rif_members-*]
+drop_packets/test_drop_counters.py::test_ip_is_zero_addr[rif_members-*]
+drop_packets/test_drop_counters.py::test_loopback_filter[rif_members-*]
+drop_packets/test_drop_counters.py::test_ip_pkt_with_expired_ttl[rif_members-*]
+drop_packets/test_drop_counters.py::test_broken_ip_header[rif_members-*]
+drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[rif_members-*]
+drop_packets/test_drop_counters.py::test_non_routable_igmp_pkts[rif_members-*]
+drop_packets/test_drop_counters.py::test_acl_drop[rif_members-*]
+drop_packets/test_drop_counters.py::test_acl_egress_drop[rif_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_is_class_e[rif_members-*]
+drop_packets/test_drop_counters.py::test_dst_ip_link_local[rif_members-*]
+drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[rif_members-*]
+drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[vlan_members-*]
+drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[rif_members-*]
+drop_packets/test_drop_counters.py::test_src_ip_link_local[rif_members-*]
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tests requiring explicit fanout support
+# ────────────────────────────────────────────────────────────────────────────
+drop_packets/test_drop_counters.py::test_equal_smac_dmac_drop
+drop_packets/test_drop_counters.py::test_multicast_smac_drop
+drop_packets/test_drop_counters.py::test_non_routable_igmp_pkts
+drop_packets/test_drop_counters.py::test_reserved_dmac_drop
+
+# ────────────────────────────────────────────────────────────────────────────
+# Other drop counter tests
+# ────────────────────────────────────────────────────────────────────────────
+
+# SONiC can't enable loop-back filter feature
+drop_packets/test_drop_counters.py::test_loopback_filter
+
+# RIF interface is absent
+drop_packets/test_drop_counters.pytest_no_egress_drop_on_down_link
+
+# Not supported on VLAN interface
+drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[vlan_members-*]
+
+# Vlan interfaces (downlink) don't have DATAACL binding
+drop_packets/test_drop_counters.py::test_acl_drop[vlan_members-*]
+
+# Vlan interfaces (downlink) don't have DATAACL binding
+drop_packets/test_drop_counters.py::test_acl_egress_drop[vlan_members-*]
+
+###############################################################################
+# Port Channel (LAG) Tests
+###############################################################################
+
+# Applicable to T2 topology only
+pc/test_po_voq.py
+
+# Applicable to t1-lag, t1-56-lag, t1-28-lag, t1-64-lag and t2 topology
+pc/test_lag_2.py::test_lag_db_status_with_po_update
+
+# Test is applicable for T2 VOQ Chassis Setup
+pc/test_po_update.py::test_po_update_with_higher_lagids
+
+# Test needs PO with minimum 2 members
+pc/test_po_update.py::test_po_update_io_no_loss
+
+# Skip fallback tests for port channels that don't have fallback configured
+pc/test_lag_2.py::test_lag[*-fallback]
+
+# LACP retry count is a SONiC-specific protocol extension (custom TLVs)
+# Non-SONiC neighbors (EOS, Cisco, etc.) don't support these custom LACP fields
+# Tests require bidirectional retry count communication between devices
+pc/test_retry_count.py
+
+###############################################################################
+# Vlan
+###############################################################################
+#No secondary subnet found on DUT, skipping test
+vlan/test_secondary_subnet.py::test_existing_secondary_subnet
+
+#Need QinQ support on fanout
+vlan/test_vlan.py::test_vlan_tc5_untagged_unicast
+vlan/test_vlan.py::test_vlan_tc6_tagged_untagged_unicast
+
+
+###############################################################################
+# Feature-Level Exclusions
+###############################################################################
+
+# Not enabled in SN5610 platform
+macsec
+
+# Applicable to t0-mclag topology only
+mclag
+
+# Needs WAN topology
+wan

@@ -109,6 +109,7 @@ pytest_plugins = ('tests.common.plugins.ptfadapter',
                   'tests.decap',
                   'tests.platform_tests.api',
                   'tests.common.plugins.allure_server',
+                  'tests.common.plugins.allure_labels',
                   'tests.common.plugins.conditional_mark',
                   'tests.common.plugins.random_seed',
                   'tests.common.plugins.memory_utilization',
@@ -324,6 +325,67 @@ def pytest_addoption(parser):
     #################################
     parser.addoption("--skip_yang", action="store_true", default=False,
                      help="Skip YANG validation")
+
+    ############################
+    #   deselect-file option   #
+    ############################
+    parser.addoption(
+        "--deselect-file", action="store", default=None, help="File with tests to deselect, one per line."
+    )
+
+def _deselect_pattern_to_regex(pattern):
+    """Convert a deselection pattern (with optional * wildcards) to a compiled regex.
+
+    Uses re.escape for safe handling of special chars like '.', '(', ')', '[', ']',
+    then converts escaped wildcards back to '.*'.
+    Allows an optional directory prefix so patterns work regardless of pytest rootdir
+    (e.g. pattern 'clock/test.py' matches both 'clock/test.py::t' and 'tests/clock/test.py::t').
+    """
+    escaped = re.escape(pattern).replace(r'\*', '.*')
+    return re.compile(r'(?:^|/)' + escaped)
+
+
+def pytest_collection_modifyitems(config, items):
+    """Modifies test collection: deselects tests from file and skips stress tests."""
+    logger = logging.getLogger(__name__)
+
+    deselect_file_path = config.getoption("--deselect-file")
+    if deselect_file_path:
+        try:
+            with open(deselect_file_path, "r") as f:
+                deselected_tests = {line.strip() for line in f if line.strip() and not line.strip().startswith("#")}
+        except FileNotFoundError:
+            logger.warning("Deselect file not found at: %s", deselect_file_path)
+        else:
+            compiled_patterns = [(p, _deselect_pattern_to_regex(p)) for p in deselected_tests]
+
+            remaining_items = []
+            deselected_items = []
+
+            for item in items:
+                nodeid = item.nodeid
+                matched_pattern = None
+                for raw, regex in compiled_patterns:
+                    if regex.search(nodeid):
+                        matched_pattern = raw
+                        break
+
+                if matched_pattern:
+                    deselected_items.append(item)
+                    logger.info("DESELECTED: %s (matched pattern: %s)", nodeid, matched_pattern)
+                else:
+                    remaining_items.append(item)
+
+            logger.info("Deselected %d tests out of %d total tests", len(deselected_items), len(items))
+            config.hook.pytest_deselected(items=deselected_items)
+            items[:] = remaining_items
+    
+    # Second: Skip all stress_tests if --run-stress-test is not set
+    if not config.getoption("--run-stress-tests"):
+        skip_stress_tests = pytest.mark.skip(reason="Stress tests run only if --run-stress-tests is passed")
+        for item in items:
+            if "stress_test" in item.keywords:
+                item.add_marker(skip_stress_tests)
 
 
 def pytest_configure(config):
@@ -3305,13 +3367,13 @@ def cli_namespace_prefix(request, selected_asic_index):
         return f'-n {NAMESPACE_PREFIX}{selected_asic_index}'
 
 
-def pytest_collection_modifyitems(config, items):
-    # Skip all stress_tests if --run-stress-test is not set
-    if not config.getoption("--run-stress-tests"):
-        skip_stress_tests = pytest.mark.skip(reason="Stress tests run only if --run-stress-tests is passed")
-        for item in items:
-            if "stress_test" in item.keywords:
-                item.add_marker(skip_stress_tests)
+# def pytest_collection_modifyitems(config, items):
+#     # Skip all stress_tests if --run-stress-test is not set
+#     if not config.getoption("--run-stress-tests"):
+#         skip_stress_tests = pytest.mark.skip(reason="Stress tests run only if --run-stress-tests is passed")
+#         for item in items:
+#             if "stress_test" in item.keywords:
+#                 item.add_marker(skip_stress_tests)
 
 
 def update_t1_test_ports(duthost, mg_facts, test_ports, tbinfo):

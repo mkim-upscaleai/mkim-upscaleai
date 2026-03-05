@@ -14,6 +14,7 @@ function show_help_and_exit()
     echo "    -E             : exit for any error (default: False)"
     echo "    -f <tb file>   : specify testbed file (default testbed.yaml)"
     echo "    -H <dpu name>  : specify comma-separated DPU names (default: none)"
+    echo "    -F <file>      : specify test case list file (supports # comments)"
     echo "    -i <inventory> : specify inventory name"
     echo "    -I <folders>   : specify list of test folders, filter out test cases not in the folders (default: none)"
     echo "    -k <file log>  : specify file log level: error|warning|info|debug (default debug)"
@@ -186,7 +187,8 @@ function setup_test_options()
         done
     else
         if [[ ${TEST_CASES_FILE} ]]; then
-            TEST_CASES="${TEST_CASES} $(cat ${TEST_CASES_FILE} | tr '\n' ' ')"
+            # Ignore comments in test case list file
+            TEST_CASES="${TEST_CASES} $(cat ${TEST_CASES_FILE} | grep -v '^[[:space:]]*#' | tr '\n' ' ')"
         fi
         # When TEST_CASES is specified, ignore the scripts under $SKIP_FOLDERS
         all_scripts=""

@@ -1,0 +1,77 @@
+# Temporary: Deselecting auditd since we may or may not support
+auditd
+
+# Need reachable NTP Servers
+clock/test_clock.py::test_config_clock_date
+
+# Requires T1 topology 
+configlet/test_add_rack.py
+
+# Deselecting all containers that are NOT running bc they will be skipped.
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-dhcp_server]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-iccpd]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-macsec]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-mux]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-nat]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-sflow]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-telemetry]
+
+container_checker/test_container_checker.py::test_container_checker[*-None-dhcp_server]
+container_checker/test_container_checker.py::test_container_checker[*-None-iccpd]
+container_checker/test_container_checker.py::test_container_checker[*-None-macsec]
+container_checker/test_container_checker.py::test_container_checker[*-None-mux]
+container_checker/test_container_checker.py::test_container_checker[*-None-nat]
+container_checker/test_container_checker.py::test_container_checker[*-None-sflow]
+container_checker/test_container_checker.py::test_container_checker[*-None-telemetry]
+
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-dhcp_server]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-iccpd]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-macsec]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-mux]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-nat]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-pmon]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-sflow]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-swss]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-syncd]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-telemetry]
+
+# Will need to revisit to support
+container_upgrade
+
+# Requires DPU or smartswitch T1
+dash/test_dash_acl.py
+dash/test_dash_disable_enable_eni.py
+dash/test_dash_privatelink.py
+dash/test_dash_smartswitch_vnet.py
+dash/test_dash_vnet.py
+dash/test_relaxed_match_negative.py
+
+# Requires DPU
+dash/crm/test_dash_crm.py
+
+# Static ip configured, will not use dynamic ip
+dns/static_dns/test_static_dns.py::TestDynamicMgmtPortIP
+
+# Requires T2 topology
+dut_console/test_console_chassis_conn.py
+
+# Requires console switch to be running SONiC
+dut_console/test_console_baud_rate.py::test_baud_rate_sonic_connect
+
+# Unsupported platform (Arista, Nokia)
+dut_console/test_console_baud_rate.py::test_baud_rate_boot_connect 
+
+# Requires T1 or T2 topology
+generic_config_updater/test_bgp_prefix.py
+
+# Requires T1 topology
+generic_config_updater/test_bgp_sentinel.py::test_bgp_sentinel_tc1_test_config
+
+# These tests are labeled as not production scenarios and are not very necessary (waste time)
+generic_config_updater/test_eth_interface.py::test_replace_lanes
+generic_config_updater/test_eth_interface.py::test_update_invalid_index
+generic_config_updater/test_eth_interface.py::test_update_valid_index
+generic_config_updater/test_eth_interface.py::test_update_speed
+
+# TEMPORARY: Need Buffer Profile Config info from Nvidia before proceeding
+generic_config_updater/test_ecn_config_update.py
