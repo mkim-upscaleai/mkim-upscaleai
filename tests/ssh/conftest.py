@@ -44,13 +44,16 @@ def load_source(modname, filename):
 
 def generate_ssh_ciphers(request, typename):
     if typename == "enc":
-        remote_cmd = "ssh -Q cipher"
+        remote_cmd_C = "ssh -Q cipher"
+        remote_cmd_S = "sudo sshd -T | grep -i '^ciphers'"
         permitted_list = PERMITTED_ENC_CIPHERS
     elif typename == "mac":
-        remote_cmd = "ssh -Q mac"
+        remote_cmd_C = "ssh -Q mac"
+        remote_cmd_S = "sudo sshd -T | grep -i '^macs'"
         permitted_list = PERMITTED_MACS
     elif typename == "kex":
-        remote_cmd = "ssh -Q kex"
+        remote_cmd_C = "ssh -Q kex"
+        remote_cmd_S = "sudo sshd -T | grep -i '^kexalgorithms'"
         permitted_list = PERMITTED_KEXS
 
     # If --collect-only is specified, return the permitted list directly. Otherwise, pytest will try to
@@ -70,25 +73,31 @@ def generate_ssh_ciphers(request, typename):
     dut_name = tbinfo['duts'][0]
     inv_name = tbinfo['inv_name'] if 'inv_name' in list(
         tbinfo.keys()) else 'lab'
+    ptf_name = tbinfo['ptf']
 
-    ansible_cmd = "ansible -m shell -i ../ansible/{} {} -a".format(
-        inv_name, dut_name)
-    cmd = ansible_cmd.split()
-    cmd.append(remote_cmd)
-    logger.debug('cmd:\n{}'.format(cmd))
+    cmd_C = ["ansible", "-m", "shell", "-i", "../ansible/{}".format(inv_name), ptf_name, "-a", remote_cmd_C]
+    cmd_S = ["ansible", "-m", "shell", "-i", "../ansible/{}".format(inv_name), dut_name, "-a", remote_cmd_S]
+    logger.debug('ansible_cmd_C:\n{}'.format(" ".join(cmd_C)))
+    logger.debug('ansible_cmd_S:\n{}'.format(" ".join(cmd_S)))
 
     try:
         raw_output = subprocess.check_output(
-            cmd, shell=False, stderr=subprocess.STDOUT, universal_newlines=True)
-        cipher_list = raw_output.split("rc=0 >>", 1)[1].split()
-        logger.debug('cipher full list: {}'.format(cipher_list))
-        cipher_param_list = permitted_list
-        for cipher in cipher_list:
-            if cipher in permitted_list:
-                continue
-            else:
-                cipher_param_list.append(pytest.param(
-                    cipher, marks=pytest.mark.xfail))
+            cmd_C, shell=False, stderr=subprocess.STDOUT, universal_newlines=True)
+        cipher_list_C = raw_output.split("rc=0 >>", 1)[1].split()
+        logger.debug('client cipher full list: {}'.format(cipher_list_C))
+
+        raw_output = subprocess.check_output(
+            cmd_S, shell=False, stderr=subprocess.STDOUT, universal_newlines=True)
+        cipher_list_S = raw_output.split("rc=0 >>", 1)[1].split(" ")[1].strip("\n").split(",")
+        logger.debug('server cipher full list: {}'.format(cipher_list_S))
+
+        # Get the common cipher list between ssh clint(ptf) and server(DUT)
+        common_cipher_list = list(set(cipher_list_C) & set(cipher_list_S))
+        logger.debug('common cipher list: {}'.format(common_cipher_list))
+
+        cipher_param_list = []
+        for cipher in common_cipher_list:
+            cipher_param_list.append(cipher)
 
         return cipher_param_list
     except subprocess.CalledProcessError as e:

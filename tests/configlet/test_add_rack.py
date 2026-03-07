@@ -50,8 +50,8 @@ def ignore_expected_loganalyzer_exceptions(duthosts, rand_one_dut_hostname, loga
 def configure_dut(duthosts, rand_one_dut_hostname):
     try:
         log_info("configure_dut fixture on setup for {}".format(rand_one_dut_hostname))
-        if not restore_orig_minigraph(duthosts[rand_one_dut_hostname]):
-            backup_minigraph(duthosts[rand_one_dut_hostname])
+        # Always create a fresh backup from current config to ensure it's up-to-date
+        backup_minigraph(duthosts[rand_one_dut_hostname])
         log_info("configure_dut fixture DONE for {}".format(rand_one_dut_hostname))
         yield
     finally:

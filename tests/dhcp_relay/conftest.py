@@ -42,7 +42,12 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def check_dhcp_feature_status(duthost):
+def check_dhcp_feature_status(duthost, tbinfo):
+    # T1, M0, M1 topology tests (like test_dhcp_pkt_fwd.py) don't require dhcp_relay feature to be enabled
+    # They test DHCP packet forwarding through T1/M0/M1 devices, not DHCP relay functionality
+    topo_type = tbinfo['topo']['type']
+    if topo_type in ['t1', 't2', 'm0', 'm1']:
+        return
     feature_status_output = duthost.show_and_parse("show feature status")
     for feature in feature_status_output:
         if feature["feature"] == "dhcp_relay" and feature["state"] != "enabled":

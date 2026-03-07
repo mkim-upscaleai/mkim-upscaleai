@@ -3,6 +3,7 @@ import logging
 import pytest
 import re
 import time
+import os
 
 from tests.common.helpers.constants import DEFAULT_ASIC_ID
 from tests.common.helpers.multi_thread_utils import SafeThreadPoolExecutor
@@ -128,32 +129,53 @@ def test_show_features_ipv6_only(duthosts_ipv6_mgmt_only):  # noqa: F411, F811
             executor.submit(run_show_features, duthosts_ipv6_mgmt_only, duthost.hostname)
 
 
-def test_image_download_ipv6_only(creds, duthosts_ipv6_mgmt_only):  # noqa: F411, F811
+def test_image_download_ipv6_only(creds, duthosts_ipv6_mgmt_only, ptfhost): # noqa F411
     """
     Test image download in mgmt ipv6 only scenario
     """
     # Add a temporary debug log to see if DUTs are reachable via IPv6 mgmt-ip. Will remove later
     log_eth0_interface_info(duthosts_ipv6_mgmt_only)
 
-    def verify_image_download_ipv6_only(dut, img_url):
+    def verify_image_download_ipv6_only(dut):
         cfg_facts = dut.config_facts(host=dut.hostname, source="running")['ansible_facts']
         mgmt_interfaces = cfg_facts.get("MGMT_INTERFACE", {}).keys()
+
+        ptf_ip = ptfhost.mgmt_ipv6
+        test_file_name = "test_file.bin"
+
+        # Copies http server files to ptf
+        ptfhost.copy(src="ip/start_http_server_v6.py", dest="/tmp/start_http_server_v6.py")
+        ptfhost.copy(src="ip/stop_http_server_v6.py", dest="/tmp/stop_http_server_v6.py")
+
+        # Starts the http server on the ptf
+        ptfhost.command("python /tmp/start_http_server_v6.py", module_async=True)
+
+        # Generate the file from /dev/urandom
+        ptfhost.command(("dd if=/dev/urandom of=./{} count=1 bs=5000000 iflag=fullblock".format(test_file_name)))
+
         for mgmt_interface in mgmt_interfaces:
-            output = dut.shell("curl --fail --interface {} {}".format(mgmt_interface, img_url),
+            output = dut.shell("curl --interface {} [{}]:8080/{} --output {}".format(mgmt_interface, ptf_ip, test_file_name, test_file_name),
                                module_ignore_errors=True)
             if output["rc"] == 0:
                 break
         else:
-            pytest.fail("Failed to download image from image_url {} via any of {}"
-                        .format(img_url, list(mgmt_interfaces)))
+            pytest.fail("Failed to download image from {} via any of {}"
+                        .format(ptf_ip, list(mgmt_interfaces)))
 
-    image_url = creds.get("test_image_url", {}).get("ipv6", "")
-    if len(image_url) == 0:
-        pytest.skip("No IPv6 image url found for DUTs")
+        # Stops http server
+        ptfhost.command("python /tmp/stop_http_server_v6.py")
+
+        # Perform cleanup on DUT
+        dut.command("sudo rm ./{}".format(test_file_name))
+
+        # Delete file off ptf
+        ptfhost.command(("rm ./{}".format(test_file_name)))
+        ptfhost.command(("rm /tmp/start_http_server_v6.py"))
+        ptfhost.command(("rm /tmp/stop_http_server_v6.py"))
 
     with SafeThreadPoolExecutor(max_workers=8) as executor:
         for duthost in duthosts_ipv6_mgmt_only:
-            executor.submit(verify_image_download_ipv6_only, duthost, image_url)
+            executor.submit(verify_image_download_ipv6_only, duthost)
 
 
 @pytest.mark.parametrize("dummy_syslog_server_ip_a, dummy_syslog_server_ip_b",

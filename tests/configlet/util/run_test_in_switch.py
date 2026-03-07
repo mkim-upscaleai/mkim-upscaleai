@@ -42,14 +42,8 @@ def run_test(skip_load=False, skip_clet_test=False,
         log_error("Wrapper for execution in SONiC switch only")
         return -1
 
-    if not os.path.exists("/etc/sonic/orig/minigraph.xml.addRack.orig"):
-        backup_minigraph(duthost)
-    elif ((not os.path.exists("/etc/sonic/minigraph.xml")) or
-            (not filecmp.cmp("/etc/sonic/orig/minigraph.xml.addRack.orig",
-             "/etc/sonic/minigraph.xml"))):
-        restore_orig_minigraph(duthost)
-    else:
-        skip_load = True
+    # Always create a fresh backup from current config to ensure it's up-to-date
+    backup_minigraph(duthost)
 
     do_test_add_rack(duthost, skip_load=skip_load,
                      skip_clet_test=skip_clet_test,

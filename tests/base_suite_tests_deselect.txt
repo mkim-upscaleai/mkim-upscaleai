@@ -148,6 +148,9 @@ smartswitch
 # Not supporting first time boot password change
 platform_tests/test_first_time_boot_password_change/test_first_time_boot_password_change.py
 
+# Not supporting first time boot password change
+platform_tests/test_first_time_boot_password_change/test_first_time_boot_password_change.py
+
 # Deprecated as Mellanox do not use ethtool in release 202305 or higher / Mellanox platform tests only supported on Mellanox devices
 platform_tests/mellanox/test_check_sfp_using_ethtool.py
 

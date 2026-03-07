@@ -17,6 +17,12 @@ pytestmark = [
 
 INTERFACE_WAIT_TIME = 300
 
+# Minimum PSUs required for device to operate
+# Add your platform here if it requires more than 1 PSU to boot
+MIN_REQUIRED_PSUS = {
+    'x86_64-nvidia_sn5610-r0': 2,
+}
+
 
 @pytest.fixture(scope="module", autouse=True)
 def set_max_time_for_interfaces(duthost):
@@ -125,9 +131,15 @@ def test_power_off_reboot(duthosts, localhost, enum_supervisor_dut_hostname, con
     # 2. Turn off all PSUs, turn on PSU2, then check.
     # 3. Turn off all PSUs, turn on one of the PSU, then turn on the other PSU, then check.
     power_on_seq_list = []
+    platform = duthost.facts.get("platform")
+    
     if all_outlets:
-        power_on_seq_list = [pdus for pdus in psu_to_pdus.values()]
-        power_on_seq_list.append(all_outlets)
+        # Check if platform requires minimum number of PSUs to boot
+        if platform in MIN_REQUIRED_PSUS and len(psu_to_pdus) >= MIN_REQUIRED_PSUS[platform]:
+            power_on_seq_list.append(all_outlets)
+        else: 
+            power_on_seq_list = [pdus for pdus in psu_to_pdus.values()]
+            power_on_seq_list.append(all_outlets)
 
     logging.info("Got all power on sequences {}".format(power_on_seq_list))
 

@@ -49,6 +49,15 @@ FMT_YEAR = "%Y %b %d %H:%M:%S.%f"
 FMT_SHORT = "%b %d %H:%M:%S"
 FMT_ALT = "%Y-%m-%dT%H:%M:%S.%f%z"
 
+# Regex patterns for extracting timestamps from the beginning of a string when
+# the log line wasn't cleanly split (e.g., bgpd logs where the container hostname
+# differs from the DUT hostname, causing the delimiter split to fail).
+_TIMESTAMP_EXTRACT_PATTERNS = [
+    (re.compile(r'^(\d{4}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\.\d+)'), FMT_YEAR),
+    (re.compile(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\.\d+)'), FMT),
+    (re.compile(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})'), FMT_SHORT),
+]
+
 SERVER_FILE = 'platform_api_server.py'
 SERVER_PORT = 8000
 IPTABLES_PREPEND_RULE_CMD = 'iptables -I INPUT 1 -p tcp -m tcp --dport {} -j ACCEPT'.format(SERVER_PORT)
@@ -505,6 +514,19 @@ def _parse_timestamp(timestamp):
             return time
         except ValueError:
             continue
+
+    # Exact match failed -- the timestamp string likely has trailing text because
+    # the log line wasn't cleanly split (e.g., bgpd container hostname differs
+    # from DUT hostname, so the delimiter regex didn't match). Try extracting
+    # just the timestamp from the beginning of the string.
+    for regex, fmt in _TIMESTAMP_EXTRACT_PATTERNS:
+        match = regex.match(timestamp)
+        if match:
+            try:
+                return datetime.strptime(match.group(1), fmt)
+            except ValueError:
+                continue
+
     # Handling leap year FEB29 case, where year not provided causing exception
     # if strptime fails for all format, check if its leap year
     # ValueError exception will be raised for invalid cases for strptime

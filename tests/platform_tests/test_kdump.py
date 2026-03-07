@@ -24,6 +24,29 @@ class TestKernelPanic:
     """
     This test case is used to verify that DUT will load kdump crashkernel on kernel panic.
     """
+
+    @pytest.fixture(scope="module", autouse=True)
+    def setup(self, duthost, localhost):
+        """
+        If kdump is not enabled, enable it and start it
+        """
+        is_kdump_enabled = True
+
+        out = duthost.command("show kdump config")
+        if "Enabled" not in out["stdout"]:
+            is_kdump_enabled = False
+            duthost.command("config kdump enable")
+            duthost.command("config save -y")
+            # update config_db and bootloader config
+            reboot(duthost, localhost, reboot_type=REBOOT_TYPE_COLD, safe_reboot=True)
+        yield
+
+        if not is_kdump_enabled:
+            duthost.command("config kdump disable")
+            duthost.command("config save -y")
+            # update config_db and bootloader config
+            reboot(duthost, localhost, reboot_type=REBOOT_TYPE_COLD, safe_reboot=True)
+
     def wait_lc_healthy_if_sup(self, duthost, duthosts, localhost, conn_graph_facts, xcvr_skip_list):
         # For sup, we also need to ensure linecards are back and healthy for following tests
         is_sup = duthost.get_facts().get("modular_chassis") and duthost.is_supervisor_node()

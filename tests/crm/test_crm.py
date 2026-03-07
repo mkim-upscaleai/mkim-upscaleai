@@ -798,11 +798,17 @@ def _get_interface_neighbor_and_port(duthost, tbinfo, dut_interface, nbrhosts):
     vm_neighbors = mg_facts['minigraph_neighbors']
     if port_channel := mg_facts['minigraph_portchannels'].get(dut_interface):
         dut_interface = port_channel['members'][0]
-    neighbor_name = vm_neighbors[dut_interface]
-    neighbor_name, neighbor_interface = neighbor_name['name'], neighbor_name['port']
+    neighbor_entry = vm_neighbors[dut_interface]
+    neighbor_name, neighbor_interface = neighbor_entry['name'], neighbor_entry['port']
+
     neighbor = nbrhosts[neighbor_name]
     lacp_num = neighbor['conf']['interfaces'][neighbor_interface].get('lacp')
     neighbor_interface = f'po{lacp_num}' if lacp_num else neighbor_interface
+
+    # Normalize interface name: EthernetX -> ethX
+    if neighbor_interface.startswith("Ethernet"):
+        neighbor_interface = "eth" + neighbor_interface[len("Ethernet"):]
+
     return neighbor['host'], neighbor_interface
 
 

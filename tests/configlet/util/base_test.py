@@ -100,15 +100,17 @@ def init(duthost):
 
 def backup_minigraph(duthost):
     ret = duthost.stat(path="/etc/sonic/orig/minigraph.xml.addRack.orig")
-    if not ret["stat"]["exists"]:
-        log_info("Backing up minigraph.xml")
-        duthost.shell("mkdir -p /etc/sonic/orig")
-        duthost.shell("cp /etc/sonic/minigraph.xml /etc/sonic/orig/minigraph.xml.addRack.orig")
-        duthost.shell("chmod a-w /etc/sonic/orig/minigraph.xml.addRack.orig")
-        return True
+    if ret["stat"]["exists"]:
+        log_info("Backup exists, overwriting with current minigraph.xml")
+        # Make the old backup writable so we can overwrite it
+        duthost.shell("chmod u+w /etc/sonic/orig/minigraph.xml.addRack.orig")
     else:
-        log_info("Already backed up")
-        return False
+        log_info("Backing up minigraph.xml")
+    
+    duthost.shell("mkdir -p /etc/sonic/orig")
+    duthost.shell("cp /etc/sonic/minigraph.xml /etc/sonic/orig/minigraph.xml.addRack.orig")
+    duthost.shell("chmod a-w /etc/sonic/orig/minigraph.xml.addRack.orig")
+    return True
 
 
 def restore_orig_minigraph(duthost, skip_load=False):

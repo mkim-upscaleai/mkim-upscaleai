@@ -13,7 +13,7 @@ from dhcp_server_test_common import DHCP_SERVER_CONFIG_TOOL_GCU, DHCP_SERVER_CON
 
 
 pytestmark = [
-    pytest.mark.topology('mx'),
+    pytest.mark.topology('t0', 'mx'),
 ]
 
 
@@ -649,7 +649,8 @@ def test_dhcp_server_config_vlan_member_change(
     """
         Test if config change on dhcp interface status can take effect
     """
-    loganalyzer[duthost.hostname].ignore_regex.append(".*Failed to get port by bridge port.*")
+    if loganalyzer:
+        loganalyzer[duthost.hostname].ignore_regex.append(".*Failed to get port by bridge port.*")
     test_xid = 11
     vlan_name, gateway, net_mask, vlan_hosts, vlan_members_with_ptf_idx = parse_vlan_setting_from_running_config
     expected_assigned_ip = random.choice(vlan_hosts)

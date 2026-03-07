@@ -23,12 +23,12 @@ def get_common_supported_speeds(duthost, dut_port_name, fanout, fanout_port_name
 
     fanout_supported_speeds = fanout.get_supported_speeds(fanout_port_name)
     if not fanout_supported_speeds:
-        dut_supported_speeds = [dut_current_port_speed]
+        fanout_supported_speeds = [dut_current_port_speed]
 
     # get supported speeds for the cable
     cable_supported_speeds = get_cable_supported_speeds(duthost, dut_port_name)
     if not cable_supported_speeds:
-        dut_supported_speeds = [dut_current_port_speed]
+        cable_supported_speeds = [dut_current_port_speed]
 
     supported_speeds = set(dut_supported_speeds) & set(fanout_supported_speeds) & set(cable_supported_speeds)
     if not supported_speeds:
@@ -109,7 +109,14 @@ class MlnxCableSupportedSpeedsHelper(object):
             cls.device_path = duthost.shell('ls /dev/mst/*_pci_cr0')['stdout'].strip()
         port_index = cls.sorted_ports[duthost].index(dut_port_name) + 1
         cmd = 'mlxlink -d {} -p {} | grep "Supported Cable Speed"'.format(cls.device_path, port_index)
-        output = duthost.shell(cmd)['stdout'].strip()
+        
+        # In 8x100G breakout mode, some physical ports may not be connected
+        # If mlxlink fails, just skip this port
+        result = duthost.shell(cmd, module_ignore_errors=True)
+        if result['rc'] != 0:
+            return None
+        output = result['stdout'].strip()
+        
         # Valid output should be something like "Supported Cable Speed:0x68b1f141 (100G,56G,50G,40G,25G,10G,1G)"
         if not output:
             return None

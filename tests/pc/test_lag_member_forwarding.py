@@ -179,6 +179,10 @@ def test_lag_member_forwarding_packets(duthosts, enum_rand_one_per_hwsku_fronten
                 "Failed to apply lag member configuration file: {}".format(result["stderr"])
             )
 
+        # Wait for ASIC to process the LAG member disable state change
+        # This allows the forwarding state to update before we verify packets are dropped
+        time.sleep(3)
+
         # Make sure data forwarding starts to fail
         if peer_device_dest_ip:
             ptfadapter.dataplane.flush()

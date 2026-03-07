@@ -7,7 +7,7 @@ from dhcp_server_test_common import apply_dhcp_server_config_gcu, empty_config_p
 
 
 pytestmark = [
-    pytest.mark.topology('mx'),
+    pytest.mark.topology('t0', 'mx'),
 ]
 
 

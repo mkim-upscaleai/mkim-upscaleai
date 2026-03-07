@@ -95,6 +95,55 @@ def get_port_interface_counter(duthost, interface_name):
             return port_counter
 
 
+def check_snmp_interfaces(duthost, localhost, hostip, creds_all_duts, validate_all_fields=False):
+    """
+    Get SNMP facts and validate that all interfaces have the required 'name' field and other MIBs are fully populated
+    :param validate_all_fields: If True, also validate MIB-specific fields
+    """
+    snmp_facts = get_snmp_facts(
+        duthost, localhost, host=hostip, version="v2c",
+        community=creds_all_duts[duthost.hostname]["snmp_rocommunity"], 
+        wait=True)['ansible_facts']
+    
+    if 'snmp_interfaces' not in snmp_facts:
+        logger.info("'snmp_interfaces' not in snmp_facts")
+        return False
+    
+    for idx, interface in snmp_facts['snmp_interfaces'].items():
+        if 'name' not in interface:
+            logger.info("'name' not in snmp_facts['snmp_interfaces'][{}]. Available fields: {}".format(
+                idx, list(interface.keys())))
+            return False
+    
+    if validate_all_fields:
+        required_fields = ['operstatus', 'adminstatus', 'mtu', 'description', 'type', 'ifindex']
+        for idx, interface in snmp_facts['snmp_interfaces'].items():
+            for field in required_fields:
+                if field not in interface:
+                    logger.info("'{}' not in snmp_facts['snmp_interfaces'][{}]. Available fields: {}".format(
+                        field, idx, list(interface.keys())))
+                    return False
+    
+    logger.info("SNMP interfaces validated successfully")
+    return True
+
+
+def get_snmp_facts_with_validation(duthost, localhost, hostip, creds_all_duts, validate_all_fields=False):
+    """
+    Get SNMP facts with check to ensure MIBs are fully populated.
+    Uses wait_until to retry if check fails.
+    :return: checked SNMP facts
+    """
+    assert wait_until(60, 5, 0, check_snmp_interfaces, duthost, localhost, hostip, 
+                     creds_all_duts, validate_all_fields), \
+        "SNMP get facts check failed - MIBs may not be fully populated"
+    
+    return get_snmp_facts(
+        duthost, localhost, host=hostip, version="v2c",
+        community=creds_all_duts[duthost.hostname]["snmp_rocommunity"], 
+        wait=True)['ansible_facts']
+
+
 def collect_all_facts(duthost, ports_list, namespace=None):
     """
     Collect all data needed for test per each port from DUT
@@ -282,9 +331,7 @@ def test_snmp_interfaces(localhost, creds_all_duts, duthosts, enum_rand_one_per_
     hostip = duthost.host.options['inventory_manager'].get_host(
         duthost.hostname).vars['ansible_host']
 
-    snmp_facts = get_snmp_facts(
-        duthost, localhost, host=hostip, version="v2c",
-        community=creds_all_duts[duthost.hostname]["snmp_rocommunity"], wait=True)['ansible_facts']
+    snmp_facts = get_snmp_facts_with_validation(duthost, localhost, hostip, creds_all_duts)
 
     snmp_ifnames = [v['name']
                     for k, v in list(snmp_facts['snmp_interfaces'].items())]
@@ -311,9 +358,7 @@ def test_snmp_mgmt_interface(localhost, creds_all_duts, duthosts, enum_rand_one_
     hostip = duthost.host.options['inventory_manager'].get_host(
         duthost.hostname).vars['ansible_host']
 
-    snmp_facts = get_snmp_facts(
-        duthost, localhost, host=hostip, version="v2c",
-        community=creds_all_duts[duthost.hostname]["snmp_rocommunity"], wait=True)['ansible_facts']
+    snmp_facts = get_snmp_facts_with_validation(duthost, localhost, hostip, creds_all_duts)
     config_facts = duthost.config_facts(
         host=duthost.hostname, source="persistent")['ansible_facts']
 
@@ -344,9 +389,8 @@ def test_snmp_interfaces_mibs(duthosts, enum_rand_one_per_hwsku_hostname, localh
     duthost = duthosts[enum_rand_one_per_hwsku_hostname]
     hostip = duthost.host.options['inventory_manager'].get_host(
         duthost.hostname).vars['ansible_host']
-    snmp_facts = get_snmp_facts(
-        duthost, localhost, host=hostip, version="v2c",
-        community=creds_all_duts[duthost.hostname]["snmp_rocommunity"], wait=True)['ansible_facts']
+    snmp_facts = get_snmp_facts_with_validation(duthost, localhost, hostip, creds_all_duts, 
+                                                validate_all_fields=True)
 
     for asic in duthost.asics:
         config_facts = duthost.config_facts(

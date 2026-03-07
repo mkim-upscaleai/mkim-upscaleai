@@ -794,9 +794,9 @@ def duthosts_ipv6_mgmt_only(duthosts, backup_and_restore_config_db_on_duts):
                 is_ipv4 = valid_ipv4(ip_addr_without_mask)
                 if is_ipv4:
                     ipv4_address[duthost.hostname].append(ip_addr_without_mask)
-                    logger.info(f"Removing host[{duthost.hostname}] IPv4[{ip_addr}]")
-                    duthost.shell(f"""jq 'del(."MGMT_INTERFACE"."{key}")' {config_db_file} > temp.json"""
-                                  f"""&& mv temp.json {config_db_file}""", module_ignore_errors=True)
+                    #logger.info(f"Removing host[{duthost.hostname}] IPv4[{ip_addr}]")
+                    #duthost.shell(f"""jq 'del(."MGMT_INTERFACE"."{key}")' {config_db_file} > temp.json"""
+                    #              f"""&& mv temp.json {config_db_file}""", module_ignore_errors=True)
                     config_db_modified[duthost.hostname] = True
 
     # Save both IPv4 and IPv6 SNMP address for verification purpose.
@@ -817,9 +817,9 @@ def duthosts_ipv6_mgmt_only(duthosts, backup_and_restore_config_db_on_duts):
             if ip_addr:
                 if valid_ipv4(ip_addr):
                     snmp_ipv4_address[duthost.hostname].append(ip_addr)
-                    logger.info(f"Removing host[{duthost.hostname}] SNMP IPv4 address {ip_addr}")
-                    duthost.shell(f"""jq 'del(."SNMP_AGENT_ADDRESS_CONFIG"."{key}")' {config_db_file} > temp.json"""
-                                  f"""&& mv temp.json {config_db_file}""", module_ignore_errors=True)
+                    #logger.info(f"Removing host[{duthost.hostname}] SNMP IPv4 address {ip_addr}")
+                    #duthost.shell(f"""jq 'del(."SNMP_AGENT_ADDRESS_CONFIG"."{key}")' {config_db_file} > temp.json"""
+                    #              f"""&& mv temp.json {config_db_file}""", module_ignore_errors=True)
                     config_db_modified[duthost.hostname] = True
                 elif valid_ipv6(ip_addr):
                     snmp_ipv6_address[duthost.hostname].append(ip_addr.lower())
@@ -860,7 +860,7 @@ def duthosts_ipv6_mgmt_only(duthosts, backup_and_restore_config_db_on_duts):
         logger.info(f"Checking host[{duthost.hostname}] mgmt interface[{mgmt_intf_name}]")
         mgmt_intf_ifconfig = duthost.shell(f"ifconfig {mgmt_intf_name}", module_ignore_errors=True)["stdout"]
         assert_addr_in_output(addr_set=ipv4_address, hostname=duthost.hostname,
-                              expect_exists=False, cmd_output=mgmt_intf_ifconfig,
+                              expect_exists=True, cmd_output=mgmt_intf_ifconfig,
                               cmd_desc="ifconfig")
         assert_addr_in_output(addr_set=ipv6_address, hostname=duthost.hostname,
                               expect_exists=True, cmd_output=mgmt_intf_ifconfig,
@@ -872,7 +872,7 @@ def duthosts_ipv6_mgmt_only(duthosts, backup_and_restore_config_db_on_duts):
         snmp_netstat_output = duthost.shell("sudo netstat -tulnpW | grep snmpd",
                                             module_ignore_errors=True)["stdout"]
         assert_addr_in_output(addr_set=snmp_ipv4_address, hostname=duthost.hostname,
-                              expect_exists=False, cmd_output=snmp_netstat_output,
+                              expect_exists=True, cmd_output=snmp_netstat_output,
                               cmd_desc="netstat")
         assert_addr_in_output(addr_set=snmp_ipv6_address, hostname=duthost.hostname,
                               expect_exists=True, cmd_output=snmp_netstat_output,

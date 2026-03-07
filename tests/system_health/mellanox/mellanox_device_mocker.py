@@ -2,7 +2,7 @@ from ..device_mocker import DeviceMocker
 from pkg_resources import parse_version
 from tests.common.mellanox_data import get_platform_data, get_hw_management_version
 from tests.common.helpers.mellanox_thermal_control_test_helper import MockerHelper, FanDrawerData, FanData, \
-    FAN_NAMING_RULE
+    FAN_NAMING_RULE, SysfsNotExistError
 
 HW_MANAGE_VER = '7.0030.2003'
 
@@ -82,10 +82,18 @@ class MellanoxDeviceMocker(DeviceMocker):
         self.fan_drawer_data = FanDrawerData(self.mock_helper, naming_rule, 1)
         self.fan_data = FanData(self.mock_helper, naming_rule, 1)
 
-        for i in range(MellanoxDeviceMocker.PSU_NUM):
+        # Check all PSU slots to find one with temperature monitoring capability
+        platform_data = get_platform_data(self.mock_helper.dut)
+        psu_count = platform_data.get('psus', {}).get('number', MellanoxDeviceMocker.PSU_NUM)
+        for i in range(psu_count):
             self.psu_data = PsuData(self.mock_helper, i + 1)
             if self.psu_data.power_on:
-                break
+                # Verify this PSU has temperature monitoring before using it
+                try:
+                    self.psu_data.get_psu_temperature_threshold()
+                    break  # Found a PSU with temperature capability
+                except SysfsNotExistError:
+                    continue  # This PSU lacks temperature monitoring, try next one
 
     def deinit(self):
         self.mock_helper.deinit()

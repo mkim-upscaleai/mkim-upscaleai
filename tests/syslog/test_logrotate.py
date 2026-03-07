@@ -1,6 +1,7 @@
 import logging
 import pytest
 import allure
+import time
 
 from tests.common.plugins.loganalyzer.loganalyzer import DisableLogrotateCronContext
 from tests.common import config_reload
@@ -18,7 +19,9 @@ LOG_FOLDER = '/var/log'
 SMALL_VAR_LOG_PARTITION_SIZE = '300M'
 FAKE_IP = '10.20.30.40'
 FAKE_MAC = 'aa:bb:cc:dd:11:22'
-
+ROTATE_LIMIT = 500
+DELETE_BATCH_SIZE = 100
+SAVE_RETRY = 3
 
 @pytest.fixture(scope='module', autouse=True)
 def disable_logrotate_cron_job(rand_selected_dut):
@@ -33,13 +36,35 @@ def backup_syslog(rand_selected_dut):
     :param rand_selected_dut: The fixture returns a randomly selected DUT
     """
     duthost = rand_selected_dut
-    logger.info('Backup syslog file to syslog_bk')
-    duthost.shell('sudo cp -f /var/log/syslog /var/log/syslog_bk')
+    # hard code the rotate limit to 500 for now, in future we can get rotate limit 
+    # from file /etc/logrotate.conf or/and files under /etc/logrotate.d/
+    # for example /etc/logrotate.d/rsyslog
+    current_file_count = get_syslog_file_count(duthost)
+    remove_count = current_file_count - ROTATE_LIMIT
+
+    if remove_count > 0:
+        delete_old_syslog_files(duthost, remove_count)
+        new_file_count = get_syslog_file_count(duthost)
+        logger.info("Reduced syslog file count from {} to {}".format(current_file_count,new_file_count))
+
+    logger.debug('Backup syslog file to syslog_bk')
+    cp_cmd = "sudo cp -f /var/log/syslog /var/log/syslog_bk"
+    index = 0
+
+    while index < SAVE_RETRY:
+        out = duthost.shell(cp_cmd, module_ignore_errors=True)
+        if out["rc"] == 0 :
+            index = SAVE_RETRY
+        else:
+            logger.debug("Wait and redo save /var/log/syslog to /var/log/syslog_bk")
+            time.sleep(3)
+            index = index + 1
 
     yield
 
     logger.info('Recover syslog file to syslog')
-    duthost.shell('sudo mv /var/log/syslog_bk /var/log/syslog')
+    duthost.shell('sudo mv /var/log/syslog_bk /var/log/syslog',
+                   module_ignore_errors=True)
 
     logger.info('Restart rsyslog service')
     duthost.shell('sudo service rsyslog restart')
@@ -79,6 +104,25 @@ def simulate_small_var_log_partition(rand_selected_dut, localhost):
         logger.info('Restart logrotate-config service')
         duthost.shell('sudo service logrotate-config restart')
 
+def delete_old_syslog_files(duthost, count):
+    """
+    Delete count syslog files according to file time stamp from oldest to newest
+    :param duthost: DUT host object
+    :param count: file count to delete
+    """
+    # get the count number of syslog files from oldest to newest
+    res = duthost.shell("ls -rt /var/log/syslog.* | head -n {}".format(count))
+    files = res["stdout_lines"]
+    
+    batch_size = DELETE_BATCH_SIZE
+    start = 0
+    end = batch_size
+    while start < count:
+        cmd = "sudo rm -f {}".format(' '.join(files[start:end]))
+        logger.info('run command: {}'.format(cmd))
+        duthost.shell(cmd, module_ignore_errors=True)
+        start = end
+        end = end + batch_size
 
 def get_var_log_size(duthost):
     """
@@ -170,7 +214,8 @@ def validate_logrotate_function(duthost, logrotate_threshold, small_size):
         logger.info('There are {} syslog gz files after running logrotate'.format(syslog_number_with_rotate))
         assert syslog_number_origin + 1 == syslog_number_with_rotate, \
             'No logrotate happens, there should be one time logrotate executed'
-
+        assert syslog_number_origin < ROTATE_LIMIT + 10, \
+            'Unexpected logrotate happens, the syslog file number should be less than {}'.format(ROTATE_LIMIT + 10)
 
 def get_threshold_based_on_memory(duthost):
     """

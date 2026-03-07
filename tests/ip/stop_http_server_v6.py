@@ -7,6 +7,6 @@ output = output.decode('utf-8').split("\n")
 
 # Find process that is running the http server and kill it
 for line in output:
-    if "tmp/start_http_server.py" in line:
+    if "tmp/start_http_server_v6.py" in line:
         pid = line.split()[1]
         os.system("kill {}".format(pid))

@@ -196,6 +196,7 @@ class LagMemberTrafficTest(BaseTest, RouterUtility):
         masked_exp_pkt = Mask(pkt)
         masked_exp_pkt.set_do_not_care_scapy(scapy.IP, 'id')
         masked_exp_pkt.set_do_not_care_scapy(scapy.IP, 'chksum')
+        masked_exp_pkt.set_do_not_care_scapy(scapy.IP, 'ttl')
         masked_exp_pkt.set_do_not_care_scapy(scapy.ICMP, 'chksum')
         return masked_exp_pkt
 
@@ -235,14 +236,18 @@ class LagMemberTrafficTest(BaseTest, RouterUtility):
             dst_ip = self.ptf_lag['ip'].split('/')[0]
             src_ip = self.port_not_behind_lag['ip'].split('/')[0]
 
-            send_pkt = self.build_icmp_packet(vlan_id=0, src_mac=src_mac, dst_mac=dst_mac,
+            send_pkt = self.build_icmp_packet(vlan_id=0, src_mac=src_mac, dst_mac=self.dut_mac,
                                               src_ip=src_ip, dst_ip=dst_ip, icmp_type=8)
-            masked_exp_pkt = self.get_mask_pkt(send_pkt)
+            exp_pkt = self.build_icmp_packet(vlan_id=0, src_mac=self.dut_mac, dst_mac=dst_mac,
+                                              src_ip=src_ip, dst_ip=dst_ip, icmp_type=8)
+            masked_exp_pkt = self.get_mask_pkt(exp_pkt)
             self.send_and_verify_packets(send_pkt, masked_exp_pkt, src_port[0], self.lag_ports)
 
-            send_pkt = self.build_icmp_packet(vlan_id=0, src_mac=dst_mac, dst_mac=src_mac,
+            send_pkt = self.build_icmp_packet(vlan_id=0, src_mac=dst_mac, dst_mac=self.dut_mac,
                                               src_ip=dst_ip, dst_ip=src_ip, icmp_type=8)
-            masked_exp_pkt = self.get_mask_pkt(send_pkt)
+            exp_pkt = self.build_icmp_packet(vlan_id=0, src_mac=self.dut_mac, dst_mac=src_mac,
+                                             src_ip=dst_ip, dst_ip=src_ip, icmp_type=8)
+            masked_exp_pkt = self.get_mask_pkt(exp_pkt)
             self.send_and_verify_packets(send_pkt, masked_exp_pkt, self.lag_ports[0], src_port)
 
     def runTest(self):

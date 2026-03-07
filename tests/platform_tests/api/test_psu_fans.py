@@ -370,6 +370,14 @@ class TestPsuFans(PlatformApiTestBase):
             "amber",
             "green",
         ]
+
+        # Mellanox/Nvidia hardware only supports red and green LEDs
+        if duthosts[enum_rand_one_per_hwsku_hostname].facts.get("asic_type") == "mellanox":
+            LED_COLOR_LIST = [
+                "red",
+                "green",
+            ]
+
         duthost = duthosts[enum_rand_one_per_hwsku_hostname]
         psus_skipped = 0
 

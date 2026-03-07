@@ -125,8 +125,7 @@ class TestIPPacket(object):
             pktlen=1246,
             ip_src="10.250.136.195",
             ip_dst="10.156.94.34",
-            ip_proto=47,
-            ip_tos=0x84,
+            ip_tos=0xb3,  # ToS=0xb3 gives checksum 0x0000 with total_len=1232
             ip_id=0,
             ip_ihl=5,
             ip_ttl=121,
@@ -134,7 +133,7 @@ class TestIPPacket(object):
         pkt.payload.flags = 2
         exp_pkt = pkt.copy()
         exp_pkt.payload.ttl = 120
-        exp_pkt.payload.chksum = 0x0100
+        exp_pkt.payload.chksum = 0x0100  # Expected checksum after TTL 121->120
         exp_pkt = mask.Mask(exp_pkt)
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'src')
@@ -198,17 +197,16 @@ class TestIPPacket(object):
             pktlen=1246,
             ip_src="10.250.136.195",
             ip_dst="10.156.94.34",
-            ip_proto=47,
-            ip_tos=0x84,
+            ip_tos=0xb3,  # ToS=0xb3 gives natural checksum 0x0000
             ip_id=0,
             ip_ihl=5,
             ip_ttl=121,
         )
         pkt.payload.flags = 2
-        pkt.payload.chksum = 0xffff
+        pkt.payload.chksum = 0xffff  # Manually override to 0xffff to test tolerance
         exp_pkt = pkt.copy()
         exp_pkt.payload.ttl = 120
-        exp_pkt.payload.chksum = 0x0100
+        exp_pkt.payload.chksum = 0x0100  # Expected checksum after TTL 121->120
         exp_pkt = mask.Mask(exp_pkt)
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'src')
@@ -255,7 +253,7 @@ class TestIPPacket(object):
                       "DUT forwarded {} packets, but {} packets matched expected format, not in expected range"
                       .format(tx_ok, match_cnt))
 
-    def test_forward_ip_packet_with_0xffff_chksum_drop(self, duthosts, localhost,
+    def test_forward_ip_packet_with_0xffff_chksum_drop(self, duthosts,
                                                        enum_rand_one_per_hwsku_frontend_hostname, ptfadapter,
                                                        common_param, tbinfo):
 
@@ -265,8 +263,6 @@ class TestIPPacket(object):
 
         duthost = duthosts[enum_rand_one_per_hwsku_frontend_hostname]
         asic_type = duthost.facts["asic_type"]
-        if is_mellanox_fanout(duthost, localhost):
-            pytest.skip("Not supported at Mellanox fanout")
         (peer_ip_ifaces_pair, rif_rx_ifaces, rif_support, ptf_port_idx,
          pc_ports_map, ptf_indices, ingress_router_mac) = common_param
         pkt = testutils.simple_ip_packet(
@@ -275,17 +271,16 @@ class TestIPPacket(object):
             pktlen=1246,
             ip_src="10.250.136.195",
             ip_dst="10.156.94.34",
-            ip_proto=47,
-            ip_tos=0x84,
+            ip_tos=0xb3,  # ToS=0xb3 gives natural checksum 0x0000
             ip_id=0,
             ip_ihl=5,
             ip_ttl=121,
         )
         pkt.payload.flags = 2
-        pkt.payload.chksum = 0xffff
+        pkt.payload.chksum = 0xffff  # Manually override to 0xffff (should be dropped)
         exp_pkt = pkt.copy()
         exp_pkt.payload.ttl = 120
-        exp_pkt.payload.chksum = 0x0100
+        exp_pkt.payload.chksum = 0x0100  # Expected checksum if it were forwarded
         exp_pkt = mask.Mask(exp_pkt)
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'src')
@@ -358,7 +353,6 @@ class TestIPPacket(object):
             pktlen=1246,
             ip_src="10.250.40.40",
             ip_dst="10.156.190.188",
-            ip_proto=47,
             ip_tos=0x84,
             ip_id=0,
             ip_ihl=5,
@@ -367,7 +361,9 @@ class TestIPPacket(object):
         pkt.payload.flags = 2
         exp_pkt = pkt.copy()
         exp_pkt.payload.ttl = 121
-        exp_pkt.payload.chksum = 0x0001
+        # Delete checksum so Scapy recalculates it after TTL change
+        del exp_pkt.payload.chksum
+        exp_pkt = packet.Ether(bytes(exp_pkt))
         exp_pkt = mask.Mask(exp_pkt)
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'src')
@@ -430,7 +426,6 @@ class TestIPPacket(object):
             pktlen=1246,
             ip_src="10.250.136.195",
             ip_dst="10.156.94.34",
-            ip_proto=47,
             ip_tos=0x84,
             ip_id=0,
             ip_ihl=5,
@@ -439,7 +434,9 @@ class TestIPPacket(object):
         pkt.payload.flags = 2
         exp_pkt = pkt.copy()
         exp_pkt.payload.ttl = 121
-        exp_pkt.payload.chksum = 0x0000
+        # Delete checksum so Scapy recalculates it after TTL change
+        del exp_pkt.payload.chksum
+        exp_pkt = packet.Ether(bytes(exp_pkt))
         exp_pkt = mask.Mask(exp_pkt)
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
         exp_pkt.set_do_not_care_scapy(packet.Ether, 'src')

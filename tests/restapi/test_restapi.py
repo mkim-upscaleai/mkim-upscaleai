@@ -1,3 +1,4 @@
+import os
 import pytest
 import time
 import logging
@@ -17,8 +18,11 @@ pytestmark = [
     pytest.mark.disable_loganalyzer
 ]
 
-CLIENT_CERT = 'restapiclient.crt'
-CLIENT_KEY = 'restapiclient.key'
+# Use absolute paths for client certificates to ensure they are found
+# This must match the CERT_DIR used in conftest.py
+CERT_DIR = os.path.dirname(os.path.abspath(__file__))
+CLIENT_CERT = os.path.join(CERT_DIR, 'restapiclient.crt')
+CLIENT_KEY = os.path.join(CERT_DIR, 'restapiclient.key')
 
 restapi = Restapi(CLIENT_CERT, CLIENT_KEY)
 
@@ -91,7 +95,13 @@ def check_reset_status_after_reboot(reboot_type, pre_reboot_status, post_reboot_
         wait_warmboot_finalizer = True
     reboot(duthost, localhost, reboot_type,
            wait_warmboot_finalizer=wait_warmboot_finalizer, safe_reboot=True)
+
+    # Wait for system to stabilize after reboot before reapplying cert config
+    time.sleep(60)
+
+    # Re-apply certificate configuration after reboot
     apply_cert_config(duthost)
+
     r = restapi.get_reset_status(construct_url)
     pytest_assert(r.status_code == 200)
     logger.info(r.json())

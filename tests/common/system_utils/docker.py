@@ -98,7 +98,7 @@ def tag_image(duthost, tag, image_name, image_version="latest"):
         image_version (str): The version of the image to tag.
     """
     vendor_id = _get_vendor_id(duthost)
-    if vendor_id in ['mrvl-teralynx']:
+    if vendor_id in ['invm']:
         image_name = "docker-syncd-{}-rpc".format(vendor_id)
 
     duthost.command("docker tag {}:{} {}".format(image_name, image_version, tag))
@@ -157,13 +157,13 @@ def swap_syncd(duthost, creds, namespace=DEFAULT_NAMESPACE):
         )
     else:
         registry = load_docker_registry_info(duthost, creds)
-        download_image(duthost, registry, docker_rpc_image, duthost.os_version)
+        download_image(duthost, registry, docker_rpc_image, "latest")
 
         tag_image(
             duthost,
             "{}:latest".format(docker_syncd_name),
             "{}/{}".format(registry.host, docker_rpc_image),
-            duthost.os_version
+            "latest"
         )
 
     logger.info("Reloading config and restarting swss...")
@@ -210,7 +210,7 @@ def restore_default_syncd(duthost, creds, namespace=DEFAULT_NAMESPACE):
     docker_rpc_image = docker_syncd_name + "-rpc"
     registry = load_docker_registry_info(duthost, creds)
     duthost.command(
-        "docker rmi {}/{}:{}".format(registry.host, docker_rpc_image, duthost.os_version),
+        "docker rmi {}/{}:{}".format(registry.host, docker_rpc_image, "latest"),
         module_ignore_errors=True
     )
 
@@ -245,7 +245,7 @@ def _get_vendor_id(duthost):
     elif is_cisco_device(duthost):
         vendor_id = "cisco"
     elif is_marvell_teralynx_device(duthost):
-        vendor_id = "mrvl-teralynx"
+        vendor_id = "invm"
     else:
         error_message = '"{}" does not currently support swap_syncd'.format(duthost.facts["asic_type"])
         logger.error(error_message)

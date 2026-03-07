@@ -12,6 +12,7 @@ pytestmark = [
 ]
 
 SUPPORTED_PLATFORMS = [
+    "nvidia_sn",
     "mlnx_msn",
     "8101_32fh",
     "8111_32eh",
@@ -231,14 +232,17 @@ def validate_fec_histogram(duthost, intf_name):
     critical_bins = range(7, 16)
     error_bins = []
     for bin_index in critical_bins:
-        bin_value = int(fec_hist[bin_index].get('codewords', 0))
+        # Handle different key casings and remove commas from large numbers
+        bin_data = fec_hist[bin_index]
+        codewords_str = str(bin_data.get('codewords', bin_data.get('Codewords', 0)))
+        bin_value = int(codewords_str.replace(',', ''))
         if bin_value > 0:
             error_bins.append((bin_index, bin_value))
 
     if error_bins:
-        error_messages = ["FEC histogram bin {} has errors for interface {}: {}".format(bin_index, intf_name, bin_value)
-                          for bin_index, bin_value in error_bins]
-        logging.error("\n".join(error_messages))
+        error_msg = "FEC histogram bin {} has errors for interface {}: {}".format(
+            error_bins[0][0], intf_name, error_bins[0][1])
+        logging.error(error_msg)
         return False
 
     return True
@@ -257,11 +261,8 @@ def test_verify_fec_histogram(duthosts, enum_rand_one_per_hwsku_frontend_hostnam
     # Get operationally up and interfaces with supported speeds
     interfaces = get_fec_eligible_interfaces(duthost, SUPPORTED_SPEEDS)
 
-    if not interfaces:
-        pytest.skip("Skipping this test as there is no fec eligible interface")
-
-    for intf_name in interfaces:
-        for _ in range(3):
+    for _ in range(3):
+        for intf_name in interfaces:
             if not validate_fec_histogram(duthost, intf_name):
                 pytest.fail("FEC histogram validation failed for interface {}".format(intf_name))
-            time.sleep(10)
+        time.sleep(10)

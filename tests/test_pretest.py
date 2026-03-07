@@ -544,12 +544,22 @@ def prepare_autonegtest_params(duthosts, fanouthosts):
         def select_test_ports(dut):
             all_ports = list_dut_fanout_connections(dut, fanouthosts)
             selected_ports = {}
+            # For SN5610 in 8x100G breakout mode, only odd ports are usable
+            # To Do: When hwsku is finalized and box is available, will change this to hwsku.
+            skip_even_ports = (dut.facts.get('hwsku') == 'Mellanox-SN5610-C256S2')
             for dut_port, fanout, fanout_port in all_ports:
                 if len(selected_ports) == max_interfaces_per_dut:
                     break
                 auto_neg_mode = fanout.get_auto_negotiation_mode(fanout_port)
                 fec_mode = dut.get_port_fec(dut_port)
                 if auto_neg_mode is not None and fec_mode is not None:
+                    if skip_even_ports:
+                        # Handle both 'EthernetN' and 'EthernetN/M' (subport) formats
+                        port_number_str = dut_port.replace('Ethernet', '').split('/')[0]
+                        physical_port = int(port_number_str) + 1
+                        if physical_port % 2 == 0:
+                            logger.info(f"Skipping even number physical ports for {dut.hostname} port {dut_port} because sn5610 supports 8x100G breakout mode.")
+                            continue
                     speeds = get_common_supported_speeds(dut, dut_port, fanout, fanout_port)
                     selected_ports[dut_port] = {
                         'fanout': fanout.hostname,

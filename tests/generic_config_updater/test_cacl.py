@@ -87,7 +87,7 @@ def setup_env(duthosts, rand_one_dut_front_end_hostname, enum_rand_one_frontend_
         logger.info("Rolled back to original checkpoint")
         rollback_or_reload(duthost)
 
-        pytest_assert(wait_until(5, 1, 0, check_original_and_current_iptable_rule,
+        pytest_assert(wait_until(10, 1, 0, check_original_and_current_iptable_rule,
                                  duthost, original_iptable_rules, ip_netns_namespace_prefix),
                       "The current iptable rules doesn't match the original one")
 

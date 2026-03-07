@@ -159,7 +159,9 @@ def setup_session(duthosts, rand_one_dut_hostname, session_info):
     yield {
         'source1_index': session_info['source1_index'],
         'source2_index': session_info['source2_index'],
-        'destination_index': session_info['destination_index']
+        'destination_index': session_info['destination_index'],
+        'destination_port_name': session_info['session_destination_port'],
+        'duthost': duthost
     }
     # Remove mirroring session
     duthost.command('config mirror_session remove {}'.format(session_info["session_name"]))

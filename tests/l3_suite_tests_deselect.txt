@@ -140,6 +140,11 @@ srv6/test_srv6_dataplane.py
 srv6/test_srv6_static_config.py
 srv6/test_srv6_vlan_forwarding.py
 
+# Skipped: 202505 has issue with SRv6 config. https:/ithub.com/sonic-net/sonic-buildimage/issues/23585
+srv6/test_srv6_dataplane.py
+srv6/test_srv6_static_config.py
+srv6/test_srv6_vlan_forwarding.py
+
 ###################################################################
 ### sub_port_interfaces deselect tests
 

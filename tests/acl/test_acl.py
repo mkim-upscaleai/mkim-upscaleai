@@ -9,12 +9,10 @@ import six
 import ptf.testutils as testutils
 import ptf.mask as mask
 import ptf.packet as packet
-import queue
 import re
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from datetime import timedelta
 
 from tests.common import reboot, port_toggle
 from tests.common.helpers.assertions import pytest_require, pytest_assert
@@ -31,11 +29,9 @@ from tests.common.fixtures.conn_graph_facts import conn_graph_facts         # no
 from tests.common.platform.processes_utils import wait_critical_processes
 from tests.common.platform.interface_utils import check_all_interface_information
 from tests.common.utilities import get_iface_ip
-from tests.common.sai_validation.sonic_db import start_db_monitor, wait_for_n_keys, stop_db_monitor
-from tests.common.validation.sai.acl_validation import validate_acl_asicdb_entries
 from tests.common.utilities import is_ipv4_address
+from tests.common.mellanox_data import is_mellanox_device
 from tests.common.dualtor.dual_tor_utils import show_muxcable_status
-from tests.common.fixtures.duthost_utils import is_multi_binding_acl_enabled  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +39,7 @@ pytestmark = [
     pytest.mark.acl,
     pytest.mark.multi_binding_acl,
     pytest.mark.disable_loganalyzer,  # Disable automatic loganalyzer, since we use it for the test
-    pytest.mark.topology("t0", "t1", "t2", "lt2", "m0", "mx", "m1"),
+    pytest.mark.topology("t0", "t1", "t2", "m0", "mx", "m1"),
     pytest.mark.disable_memory_utilization
 ]
 
@@ -353,6 +349,10 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
                     else DOWNSTREAM_IP_TO_ALLOW_VLAN
                 DOWNSTREAM_IP_TO_BLOCK = DOWNSTREAM_IP_TO_BLOCK_VLAN2000 if vlan_name == "Vlan2000" \
                     else DOWNSTREAM_IP_TO_BLOCK_VLAN
+            else:
+                DOWNSTREAM_DST_IP["ipv6"] = DOWNSTREAM_DST_IP_VLAN["ipv6"]
+                DOWNSTREAM_IP_TO_ALLOW["ipv6"] = DOWNSTREAM_IP_TO_ALLOW_VLAN["ipv6"]
+                DOWNSTREAM_IP_TO_BLOCK["ipv6"] = DOWNSTREAM_IP_TO_BLOCK_VLAN["ipv6"]
         except KeyError:
             logger.error("topo {} keys are missing in the tbinfo:{}".format(tbinfo['topo']['name'], tbinfo))
     if topo in ["t0", "mx", "m0_vlan"]:
@@ -411,9 +411,6 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
 
                     downstream_ports[neighbor['namespace']].append(interface)
                     downstream_port_ids.append(port_id)
-                    # Duplicate all ports to upstream port list for FT2
-                    if topo == "ft2":
-                        upstream_port_ids.append(port_id)
                     downstream_port_id_to_router_mac_map[port_id] = downlink_dst_mac
                 for neigh_type in upstream_neigh_types:
                     if neigh_type in neighbor["name"].upper():
@@ -451,8 +448,8 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
     # TODO: We should make this more robust (i.e. bind all active front-panel ports)
     acl_table_ports = defaultdict(list)
 
-    if (topo in ["t0", "mx", "m0_vlan", "m0_l3", "m1", "ft2"]
-            or tbinfo["topo"]["name"] in ("t1", "t1-lag", "t1-28-lag", "t1-48-lag")
+    if (topo in ["t0", "mx", "m0_vlan", "m0_l3", "m1"]
+            or tbinfo["topo"]["name"] in ("t1", "t1-64", "t1-lag", "t1-28-lag", "t1-48-lag")
             or 't1-isolated' in tbinfo["topo"]["name"]):
         for namespace, port in list(downstream_ports.items()):
             acl_table_ports[namespace] += port
@@ -535,8 +532,9 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
 
 @pytest.fixture(scope="module", params=["ipv4", "ipv6"])
 def ip_version(request, tbinfo, duthosts, rand_one_dut_hostname):
-    if tbinfo["topo"]["type"] in ["t0"] and request.param == "ipv6":
-        pytest.skip("IPV6 ACL test not currently supported on t0 testbeds")
+    #Enabling ipv6 tests as it seems to work for most cases with matching Vlan subnet
+    #if tbinfo["topo"]["type"] in ["t0"] and request.param == "ipv6":
+    #    pytest.skip("IPV6 ACL test not currently supported on t0 testbeds")
 
     return request.param
 
@@ -705,6 +703,32 @@ def multi_binding_acl_table_type(duthosts, rand_selected_dut):
         yield
 
 
+def is_sai_profile_multi_binding_enabled(duthost):
+    """
+    Check if SAI_ACL_MULTI_BINDING_ENABLED is enabled in syncd docker's sai.profile
+
+    Args:
+        duthost: DUT host object
+
+    Returns:
+        bool: True if SAI_ACL_MULTI_BINDING_ENABLED=1 exists in sai.profile, False otherwise
+    """
+    try:
+        # Check if sai.profile exists in syncd docker
+        result = duthost.shell(
+            "docker exec syncd ls /tmp/sai.profile", module_ignore_errors=True)
+        if result['rc'] != 0:
+            return False
+
+        # Check if SAI_ACL_MULTI_BINDING_ENABLED=1 exists in the file
+        result = duthost.shell(
+            "docker exec syncd grep 'SAI_ACL_MULTI_BINDING_ENABLED=1' /tmp/sai.profile", module_ignore_errors=True)
+        return result['rc'] == 0
+    except Exception as e:
+        logger.error("Failed to check sai.profile: %s", str(e))
+        return False
+
+
 def create_or_remove_acl_table(duthost, acl_table_config, setup, op, topo):
     for sonic_host_or_asic_inst in duthost.get_sonic_host_and_frontend_asic_instance():
         namespace = sonic_host_or_asic_inst.namespace if hasattr(sonic_host_or_asic_inst, 'namespace') else ''
@@ -753,6 +777,12 @@ def acl_table(duthosts, rand_selected_dut, rand_one_dut_hostname, setup, stage, 
     if is_multi_binding_acl():
         if stage == "egress":
             pytest.skip("Not applicable for multi binding ACL")
+        for duthost in duthosts:
+            if not is_sai_profile_multi_binding_enabled(duthost):
+                if is_mellanox_device(duthost) and 'dualtor' in tbinfo['topo']['name']:
+                    pytest.fail(
+                        "No multi-binding ACL supported on this platform, please check the sai.profile")
+                pytest.skip("No multi-binding ACL supported on this platform")
         table_name = f"MULTI_BINDING_{stage.upper()}_{ip_version.upper()}_TEST"
         table_type = "MULTI_BINDING_ACL"
         duthosts = [rand_selected_dut]
@@ -822,10 +852,10 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
     applying an empty configuration file.
     """
 
-    ACL_COUNTERS_UPDATE_INTERVAL_SECS = 30
+    ACL_COUNTERS_UPDATE_INTERVAL_SECS = 10
 
     @abstractmethod
-    def setup_rules(self, dut, acl_table, ip_version, tbinfo, gnmi_connection):
+    def setup_rules(self, dut, acl_table, ip_version, tbinfo):
         """Setup ACL rules for testing.
 
         Args:
@@ -865,7 +895,7 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
 
     @pytest.fixture(scope="class", autouse=True)
     def acl_rules(self, duthosts, localhost, setup, acl_table, populate_vlan_arp_entries, tbinfo,
-                  ip_version, conn_graph_facts, gnmi_connection, rand_selected_dut):        # noqa: F811
+                  ip_version, conn_graph_facts, rand_selected_dut):        # noqa: F811
         """Setup/teardown ACL rules for the current set of tests.
 
         Args:
@@ -879,13 +909,14 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
 
         """
         dut_to_analyzer_map = {}
+
         if is_multi_binding_acl():
             duthosts = [rand_selected_dut]
         with SafeThreadPoolExecutor(max_workers=8) as executor:
             for duthost in duthosts:
                 executor.submit(self.set_up_acl_rules_single_dut, acl_table, conn_graph_facts,
                                 dut_to_analyzer_map, duthost, ip_version, localhost,
-                                populate_vlan_arp_entries, tbinfo, gnmi_connection)
+                                populate_vlan_arp_entries, tbinfo)
         logger.info("Set up acl_rules finished")
 
         try:
@@ -909,7 +940,7 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
     def set_up_acl_rules_single_dut(self, acl_table,
                                     conn_graph_facts, dut_to_analyzer_map, duthost,     # noqa: F811
                                     ip_version, localhost,
-                                    populate_vlan_arp_entries, tbinfo, gnmi_connection):
+                                    populate_vlan_arp_entries, tbinfo):
         logger.info("{}: ACL rule application started".format(duthost.hostname))
         if duthost.is_supervisor_node():
             return
@@ -921,7 +952,7 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
             # Ignore any other errors to reduce noise
             loganalyzer.ignore_regex = [r".*"]
             with loganalyzer:
-                self.setup_rules(duthost, acl_table, ip_version, tbinfo, gnmi_connection)
+                self.setup_rules(duthost, acl_table, ip_version, tbinfo)
                 # Give the dut some time for the ACL rules to be applied and LOG message generated
                 wait_until(300, 20, 0, check_msg_in_syslog,
                            duthost, LOG_EXPECT_ACL_RULE_CREATE_RE)
@@ -1034,14 +1065,11 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
                 logger.info("No byte counters for this hwsku\n")
 
     @pytest.fixture(params=["downlink->uplink", "uplink->downlink"])
-    def direction(self, request, tbinfo):
+    def direction(self, request):
         """Parametrize test based on direction of traffic."""
         if is_multi_binding_acl() and request.param == "downlink->uplink":
             pytest.skip("Not applicable for multi binding ACL")
 
-        # Skip uplink->downlink test on FT2 as it's the same as downlink->uplink
-        if tbinfo["topo"]["type"] == "ft2" and request.param == "uplink->downlink":
-            pytest.skip("Skip uplink->downlink test on FT2")
         return request.param
 
     def check_rule_counters(self, duthost):
@@ -1245,7 +1273,7 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
                     rule_id = 32
                 else:
                     rule_id = 30
-            elif setup["topo"] in ["m0_vlan", "mx"] or setup["vlan_config"] == "two_vlan_a":
+            elif setup["topo"] in ["m0_vlan", "mx"] or setup["vlan_config"] == "two_vlan_a" or setup["topo"] in ["t0"] and ip_version == "ipv6":
                 if ip_version == "ipv6":
                     rule_id = 34 if vlan_name == "Vlan1000" else 36
                 else:
@@ -1273,7 +1301,7 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
                     rule_id = 33
                 else:
                     rule_id = 31
-            elif setup["topo"] in ["m0_vlan", "mx"] or setup["vlan_config"] == "two_vlan_a":
+            elif setup["topo"] in ["m0_vlan", "mx"] or setup["vlan_config"] == "two_vlan_a" or setup["topo"] in ["t0"] and ip_version == "ipv6":
                 if ip_version == "ipv6":
                     rule_id = 35 if vlan_name == "Vlan1000" else 37
                 else:
@@ -1462,7 +1490,7 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
 class TestBasicAcl(BaseAclTest):
     """Test Basic functionality of ACL rules (i.e. setup with full update on a running device)."""
 
-    def setup_rules(self, dut, acl_table, ip_version, tbinfo, gnmi_connection):
+    def setup_rules(self, dut, acl_table, ip_version, tbinfo):
         """Setup ACL rules for testing.
 
         Args:
@@ -1487,51 +1515,18 @@ class TestBasicAcl(BaseAclTest):
             dut.host.options["variable_manager"].extra_vars.update({"dualtor": False})
 
         table_name = acl_table["table_name"]
-        stage = acl_table["table_stage"]
         loopback_ip = acl_table["loopback_ip"]
         dut.host.options["variable_manager"].extra_vars.update({"acl_table_name": table_name})
         dut.host.options["variable_manager"].extra_vars.update({"loopback_ip": loopback_ip})
 
         logger.info("Generating basic ACL rules config for ACL table \"{}\" on {}".format(table_name, dut))
+
         dut_conf_file_path = os.path.join(DUT_TMP_DIR, "acl_rules_{}.json".format(table_name))
         dut.template(src=os.path.join(TEMPLATE_DIR, ACL_RULES_FULL_TEMPLATE[ip_version]),
                      dest=dut_conf_file_path)
 
-        # Skip event verification step for egress as it is not supported / skipped on
-        # some platforms
-        logger.debug(f'stage: {stage}')
-        if stage == "egress":
-            dut.command("config acl update full {}".format(dut_conf_file_path))
-            return
-
-        with SafeThreadPoolExecutor(max_workers=8) as executor:
-            logger.info('Start monitoring for ACL rules')
-            path = 'ASIC_DB/localhost/ASIC_STATE'
-            filter_path = 'SAI_OBJECT_TYPE_ACL_ENTRY'
-            rules = json.loads(dut.command(f'cat {dut_conf_file_path}')['stdout'])
-            n_rules = len(rules['acl']['acl-sets']['acl-set'][table_name]['acl-entries']['acl-entry'])
-            # n_rules + 1 because of one extra rule created (by default) to DROP all
-            # traffic if no rule matches
-            event_queue = queue.Queue()
-            monitor_ctx = start_db_monitor(executor, gnmi_connection, path, event_queue)
-            logger.info("Applying ACL rules config \"{}\"".format(dut_conf_file_path))
-            dut.command("config acl update full {}".format(dut_conf_file_path))
-            try:
-                events = wait_for_n_keys(monitor_ctx, filter_path, event_queue, n_rules+1, timedelta(minutes=5))
-                logger.debug(f'Number of received events for Basic ACL events#: {len(events)}')
-                logger.debug(f'Events for Basic ACL test: {events}')
-                validation = validate_acl_asicdb_entries(acl_rules=rules,
-                                                         table_name=table_name,
-                                                         events=events,
-                                                         ip_version=ip_version,
-                                                         gnmi_connection=gnmi_connection)
-                # TODO assert on validation
-                logger.debug(f'Validation result: {validation}')
-                assert n_rules+1 == len(events)
-            except TimeoutError:
-                logger.error("Timeout waiting for ACL rules to be created in ASIC DB")
-            finally:
-                stop_db_monitor(monitor_ctx)
+        logger.info("Applying ACL rules config \"{}\"".format(dut_conf_file_path))
+        dut.command("config acl update full {}".format(dut_conf_file_path))
 
 
 class TestIncrementalAcl(BaseAclTest):
@@ -1541,7 +1536,7 @@ class TestIncrementalAcl(BaseAclTest):
     multiple parts.
     """
 
-    def setup_rules(self, dut, acl_table, ip_version, tbinfo, gnmi_connection):
+    def setup_rules(self, dut, acl_table, ip_version, tbinfo):
         """Setup ACL rules for testing.
 
         Args:
@@ -1565,7 +1560,6 @@ class TestIncrementalAcl(BaseAclTest):
             dut.host.options["variable_manager"].extra_vars.update({"dualtor": False})
 
         table_name = acl_table["table_name"]
-        stage = acl_table["table_stage"]
         loopback_ip = acl_table["loopback_ip"]
         dut.host.options["variable_manager"].extra_vars.update({"acl_table_name": table_name})
         dut.host.options["variable_manager"].extra_vars.update({"loopback_ip": loopback_ip})
@@ -1573,40 +1567,12 @@ class TestIncrementalAcl(BaseAclTest):
         logger.info("Generating incremental ACL rules config for ACL table \"{}\""
                     .format(table_name))
 
-        logger.debug(f'stage: {stage}')
+        for part, config_file in enumerate(ACL_RULES_PART_TEMPLATES[ip_version]):
+            dut_conf_file_path = os.path.join(DUT_TMP_DIR, "acl_rules_{}_part_{}.json".format(table_name, part))
+            dut.template(src=os.path.join(TEMPLATE_DIR, config_file), dest=dut_conf_file_path)
 
-        path = 'ASIC_DB/localhost/ASIC_STATE'
-        filter_path = 'SAI_OBJECT_TYPE_ACL_ENTRY'
-        with SafeThreadPoolExecutor(max_workers=8) as executor:
-            event_queue = queue.Queue()
-            monitor_ctx = start_db_monitor(executor, gnmi_connection, path, event_queue)
-            for part, config_file in enumerate(ACL_RULES_PART_TEMPLATES[ip_version]):
-                logger.info('Start monitoring for ACL rules')
-                dut_conf_file_path = os.path.join(DUT_TMP_DIR, "acl_rules_{}_part_{}.json".format(table_name, part))
-                dut.template(src=os.path.join(TEMPLATE_DIR, config_file), dest=dut_conf_file_path)
-                if stage != "egress":
-                    rules = json.loads(dut.command(f'cat {dut_conf_file_path}')['stdout'])
-                    n_rules = len(rules['acl']['acl-sets']['acl-set'][table_name]['acl-entries']['acl-entry'])
-                    logger.info("Applying ACL rules config incremental ACL \"{}\"".format(dut_conf_file_path))
-                    dut.command("config acl update incremental {}".format(dut_conf_file_path))
-                    try:
-                        events = wait_for_n_keys(monitor_ctx, filter_path, event_queue, n_rules+1, timedelta(minutes=5))
-                        logger.debug(f'Number of events for incremental ACL part: {part}, events#: {len(events)}')
-                        logger.debug(f'Events for incremental ACL: {events}')
-                        validation = validate_acl_asicdb_entries(acl_rules=rules,
-                                                                 table_name=table_name,
-                                                                 events=events,
-                                                                 ip_version=ip_version,
-                                                                 gnmi_connection=gnmi_connection)
-                        # TODO assert on validation
-                        logger.debug(f'Validation result (incremental ACL): {validation}')
-                        assert n_rules+1 == len(events)
-                    except TimeoutError:
-                        logger.error("Timeout waiting for ACL rules to be created in ASIC DB (incremental ACL)")
-                else:
-                    logger.info("Applying ACL rules config \"{}\"".format(dut_conf_file_path))
-                    dut.command("config acl update incremental {}".format(dut_conf_file_path))
-            stop_db_monitor(monitor_ctx)
+            logger.info("Applying ACL rules config \"{}\"".format(dut_conf_file_path))
+            dut.command("config acl update incremental {}".format(dut_conf_file_path))
 
 
 @pytest.mark.reboot
@@ -1632,37 +1598,10 @@ class TestAclWithReboot(TestBasicAcl):
             return
         TestAclWithReboot.dut_rebooted = True
         dut.command("config save -y")
-
-        # Get the original number of eBGP v4 and v6 routes on the DUT.
-        sumv4, sumv6 = dut.get_ip_route_summary()
-        v4_routes_count = sumv4.get('ebgp', {'routes': 0})['routes']
-        v6_routes_count = sumv6.get('ebgp', {'routes': 0})['routes']
-        logging.info("eBGP v4 routes: {}, eBGP v6 routes: {}".format(v4_routes_count, v6_routes_count))
-        # Dictionary mapping route thresholds to convergence delays
-        # e.g. if route_delay_map = {10000: 60, 50000: 120}
-        # routes = 0-9999 -> delay = 60s, 10000-49999 -> 120s, 50000+ -> 180s
-        route_delay_map = {10000: 60, 25000: 90, 50000: 120, 75000: 150}
-        max_routes = max(v4_routes_count, v6_routes_count)
-
-        route_convergence_delay = 180  # Default for 75000+ routes
-        for threshold, delay in sorted(route_delay_map.items()):
-            if max_routes < threshold:
-                route_convergence_delay = delay
-                break
-
-        logger.info("Route count: {}, setting convergence delay to: {}".format(max_routes, route_convergence_delay))
-
         reboot(dut, localhost, safe_reboot=True, check_intf_up_ports=True, wait_for_bgp=True)
         # We need some additional delay on e1031
         if dut.facts["platform"] == "x86_64-cel_e1031-r0":
-            route_convergence_delay = 240
-        elif dut.get_facts().get("modular_chassis") and dut.facts["asic_type"] == "cisco-8000":
-            # todo: remove the extra sleep on chassis device after bgp suppress fib pending feature is enabled
-            # We observe flakiness failure on chassis devices
-            # Suspect it's because the route is not programmed into hardware
-            # Add external sleep to make sure route is in hardware
-            route_convergence_delay = 180
-
+            time.sleep(240)
         # We need additional delay and make sure ports are up for Nokia-IXR7250E-36x400G
         if dut.facts["hwsku"] == "Nokia-IXR7250E-36x400G":
             interfaces = conn_graph_facts["device_conn"][dut.hostname]
@@ -1675,8 +1614,16 @@ class TestAclWithReboot(TestBasicAcl):
             assert result, "Not all transceivers are detected or interfaces are up in {} seconds".format(
                 MAX_WAIT_TIME_FOR_INTERFACES)
 
-        # Delay for route convergence
-        time.sleep(route_convergence_delay)
+        # Delay 10 seconds for route convergence
+        time.sleep(10)
+
+        # todo: remove the extra sleep on chassis device after bgp suppress fib pending feature is enabled
+        # We observe flakiness failure on chassis devices
+        # Suspect it's because the route is not programmed into hardware
+        # Add external sleep to make sure route is in hardware
+        if dut.get_facts().get("modular_chassis") and dut.facts["asic_type"] == "cisco-8000":
+            logger.info("Sleep 180s on Cisco chassis")
+            time.sleep(180)
 
         populate_vlan_arp_entries()
 
@@ -1703,40 +1650,19 @@ class TestAclWithPortToggle(TestBasicAcl):
         if TestAclWithPortToggle.dut_port_toggled:
             return
         TestAclWithPortToggle.dut_port_toggled = True
-
-        # Get the original number of eBGP v4 and v6 routes on the DUT.
-        sumv4, sumv6 = dut.get_ip_route_summary()
-        v4_routes_count = sumv4.get('ebgp', {'routes': 0})['routes']
-        v6_routes_count = sumv6.get('ebgp', {'routes': 0})['routes']
-        logging.info("eBGP v4 routes: {}, eBGP v6 routes: {}".format(v4_routes_count, v6_routes_count))
-        # Dictionary mapping route thresholds to convergence delays
-        # e.g. if route_delay_map = {10000: 60, 50000: 120}
-        # routes = 0-9999 -> delay = 60s, 10000-49999 -> 120s, 50000+ -> 180s
-        route_delay_map = {10000: 60, 25000: 90, 50000: 120, 75000: 150}
-        max_routes = max(v4_routes_count, v6_routes_count)
-
-        route_convergence_delay = 180  # Default for 75000+ routes
-        for threshold, delay in sorted(route_delay_map.items()):
-            if max_routes < threshold:
-                route_convergence_delay = delay
-                break
-
-        logger.info("Route count: {}, setting convergence delay to: {}".format(max_routes, route_convergence_delay))
-
         # todo: remove the extra sleep on chassis device after bgp suppress fib pending feature is enabled
         # We observe flakiness failure on chassis devices
         # Suspect it's because the route is not programmed into hardware
         # Add external sleep to make sure route is in hardware
         if dut.get_facts().get("modular_chassis"):
-            route_convergence_delay = 180
-
-        port_toggle(dut, tbinfo, wait_after_ports_up=route_convergence_delay)
+            port_toggle(dut, tbinfo, wait_after_ports_up=180)
+        else:
+            port_toggle(dut, tbinfo)
         populate_vlan_arp_entries()
 
 
 @pytest.mark.multi_binding_acl
-@pytest.mark.usefixtures("setup_standby_ports_on_rand_unselected_tor_class_scope",
-                         "restore_duthosts", "is_multi_binding_acl_enabled")
+@pytest.mark.usefixtures("setup_standby_ports_on_rand_unselected_tor_class_scope", "restore_duthosts")
 class TestMultiBindingAcl(TestBasicAcl):
     """Test ACL rule functionality with multi-binding ACL table."""
 

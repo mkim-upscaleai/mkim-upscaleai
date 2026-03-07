@@ -25,8 +25,10 @@ def test_mirroring_rx(ptfadapter, setup_session):
     Pass Criteria: PTF gets ICMP packet on monitor port.
     '''
     send_and_verify_mirrored_packet(ptfadapter,
+                                    setup_session['duthost'],
                                     setup_session['source1_index'],
-                                    setup_session['destination_index'])
+                                    setup_session['destination_index'],
+                                    setup_session['destination_port_name'])
 
 
 def test_mirroring_tx(ptfadapter, setup_session):
@@ -42,8 +44,10 @@ def test_mirroring_tx(ptfadapter, setup_session):
     Pass Criteria: PTF gets ICMP packet on monitor port.
     '''
     send_and_verify_mirrored_packet(ptfadapter,
+                                    setup_session['duthost'],
                                     setup_session['source2_index'],
-                                    setup_session['destination_index'])
+                                    setup_session['destination_index'],
+                                    setup_session['destination_port_name'])
 
 
 def test_mirroring_both(ptfadapter, setup_session):
@@ -62,12 +66,16 @@ def test_mirroring_both(ptfadapter, setup_session):
     Pass Criteria: PTF gets both ICMP packets on monitor port.
     '''
     send_and_verify_mirrored_packet(ptfadapter,
+                                    setup_session['duthost'],
                                     setup_session['source1_index'],
-                                    setup_session['destination_index'])
+                                    setup_session['destination_index'],
+                                    setup_session['destination_port_name'])
 
     send_and_verify_mirrored_packet(ptfadapter,
+                                    setup_session['duthost'],
                                     setup_session['source2_index'],
-                                    setup_session['destination_index'])
+                                    setup_session['destination_index'],
+                                    setup_session['destination_port_name'])
 
 
 def test_mirroring_multiple_source(ptfadapter, setup_session):
@@ -86,9 +94,13 @@ def test_mirroring_multiple_source(ptfadapter, setup_session):
     Pass Criteria: PTF gets both ICMP packets on monitor port.
     '''
     send_and_verify_mirrored_packet(ptfadapter,
+                                    setup_session['duthost'],
                                     setup_session['source1_index'],
-                                    setup_session['destination_index'])
+                                    setup_session['destination_index'],
+                                    setup_session['destination_port_name'])
 
     send_and_verify_mirrored_packet(ptfadapter,
+                                    setup_session['duthost'],
                                     setup_session['source2_index'],
-                                    setup_session['destination_index'])
+                                    setup_session['destination_index'],
+                                    setup_session['destination_port_name'])

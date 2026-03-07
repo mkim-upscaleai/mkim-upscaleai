@@ -64,7 +64,7 @@ rules_per_platform = {
 def setup_table_and_rules(rand_selected_dut, prepare_test_port):
 
     logger.debug('Setting up rules')
-    _, _, dut_port = prepare_test_port
+    _, _, dut_port, _ = prepare_test_port
     logger.debug(f'dut_port: {dut_port}')
     table_name = 'STRESS_ACL_MANY'
 
@@ -190,29 +190,39 @@ def prepare_test_port(rand_selected_dut, tbinfo):
 
     topo = tbinfo["topo"]["type"]
     topo_name = tbinfo["topo"]["name"]
-    # Get the list of upstream ports
+    # Get the list of upstream and downstream ports
+    # ACL test traffic may egress on any neighbor port depending on routing
     upstream_ports = defaultdict(list)
     upstream_port_ids = []
+    downstream_port_ids = []
     upstream_port_neighbor_ips = {}
     for interface, neighbor in list(mg_facts["minigraph_neighbors"].items()):
         port_id = mg_facts["minigraph_ptf_indices"][interface]
+        is_upstream = False
         if (topo == "t1" and "T2" in neighbor["name"]) or \
                 (topo == "t0" and ("T1" in neighbor["name"] or "PT0" in neighbor["name"])) or \
                 (topo == "m0" and "M1" in neighbor["name"]) or (topo == "mx" and "M0" in neighbor["name"]) or \
                 (topo == "m1" and ("MA" in neighbor["name"] or "MB" in neighbor["name"])) or \
                 (topo_name in ("t1-isolated-d32", "t1-isolated-d128") and "T0" in neighbor["name"]):
+            is_upstream = True
             upstream_ports[neighbor['namespace']].append(interface)
             upstream_port_ids.append(port_id)
             ipv4_addr = [bgp_neighbor['addr'] for bgp_neighbor in mg_facts['minigraph_bgp']
                          if bgp_neighbor['name'] == neighbor["name"] and
                          isinstance(ip_address(bgp_neighbor['addr']), IPv4Address)][0]
             upstream_port_neighbor_ips[interface] = ipv4_addr
+        if not is_upstream:
+            downstream_port_ids.append(port_id)
+
+    # Include both upstream and downstream ports as valid destinations
+    # since ACL test destination IPs may be routed to either direction
+    all_neighbor_port_ids = upstream_port_ids + downstream_port_ids
 
     dst_ip_addr = None
     if tbinfo["topo"]['name'] in ["t1-isolated-d28u1", "t1-isolated-d56u2", "t1-isolated-d448u15-lag",
                                   "t1-isolated-d56u1-lag"] or topo == "m1":
         dst_ip_addr = random.choices(list(upstream_port_neighbor_ips.values()))
-    return ptf_src_port, upstream_port_ids, dut_port, dst_ip_addr
+    return ptf_src_port, all_neighbor_port_ids, dut_port, dst_ip_addr
 
 
 def verify_acl_rules(rand_selected_dut, ptfadapter, ptf_src_port, ptf_dst_ports,
@@ -225,16 +235,23 @@ def verify_acl_rules(rand_selected_dut, ptfadapter, ptf_src_port, ptf_dst_ports,
         src_ip_addr = "20.0.{}.{}".format(ip_addr2, ip_addr1)
         if not dst_ip_addr:
             dst_ip_addr = "10.0.0.1"
-        pkt = testutils.simple_ip_packet(
+        # Create proper GRE packet with GRE header to ensure fanout switch forwards it
+        # (Mellanox switches validate protocol headers and drop malformed proto=47 packets)
+        # Create inner packet as the GRE payload
+        inner_pkt = testutils.simple_ip_packet(
+            ip_src="192.168.1.1",
+            ip_dst="192.168.1.2"
+        )
+        # Create GRE encapsulated packet
+        pkt = testutils.simple_gre_packet(
             eth_dst=rand_selected_dut.facts['router_mac'],
             eth_src=ptfadapter.dataplane.get_mac(0, ptf_src_port),
             ip_src=src_ip_addr,
             ip_dst=dst_ip_addr,
-            ip_proto=47,
             ip_tos=0x84,
             ip_id=0,
-            ip_ihl=5,
-            ip_ttl=121
+            ip_ttl=121,
+            inner_frame=inner_pkt
         )
 
         pkt_copy = pkt.copy()
@@ -484,7 +501,7 @@ def test_scale_acl_rules(request, rand_selected_dut, prepare_test_port, tbinfo, 
     loop_times = LOOP_TIMES_LEVEL_MAP[normalized_level]
 
     logger.debug('Starting ACL scale test')
-    ptf_src_port, ptf_dst_ports, dut_port = prepare_test_port
+    ptf_src_port, ptf_dst_ports, dut_port, _ = prepare_test_port
     logger.debug(f'DUT port used in test {dut_port}')
     acl_rules = setup_table_and_rules
     logger.debug(f'Number of rules: {len(acl_rules)}')

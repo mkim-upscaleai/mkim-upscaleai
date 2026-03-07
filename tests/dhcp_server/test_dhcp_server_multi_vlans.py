@@ -9,7 +9,7 @@ from dhcp_server_test_common import create_common_config_patch, append_common_co
 
 
 pytestmark = [
-    pytest.mark.topology('mx'),
+    pytest.mark.topology('t0', 'mx'),
 ]
 
 

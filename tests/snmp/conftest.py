@@ -4,6 +4,8 @@ import shutil
 import yaml
 
 from tests.common.gu_utils import create_checkpoint, rollback
+# Import to register mocker classes (SingleFanMocker, etc.) for thermal control tests
+from tests.common.helpers import mellanox_thermal_control_test_helper  # noqa F401
 
 SETUP_ENV_CP = "test_setup_checkpoint"
 

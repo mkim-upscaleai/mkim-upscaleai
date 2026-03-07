@@ -212,11 +212,15 @@ def setup_bgp_peers(
 '''
 
 
-def test_bgp_update_replication(
+def _run_bgp_update_replication_for_intervals(
     duthost,
     setup_bgp_peers,
     setup_duthost_intervals,
+    interval_indices,
 ):
+    """
+    Helper function to run BGP update replication test for specified interval indices.
+    """
     NUM_ROUTES = 10_000
     bgp_peers: list[BGPNeighbor] = setup_bgp_peers
     duthost_intervals: list[float] = setup_duthost_intervals
@@ -235,6 +239,7 @@ def test_bgp_update_replication(
     route_receivers = bgp_peers[1:PEER_COUNT]
 
     logger.info(f"Route injector: '{route_injector}', route receivers: '{route_receivers}'")
+    logger.info(f"Testing interval indices: {interval_indices}")
 
     results = [measure_stats(duthost)]
     base_rib = int(results[0]["num_rib"])
@@ -242,9 +247,17 @@ def test_bgp_update_replication(
     max_expected_rib = base_rib + (2 * NUM_ROUTES)
 
     # Inject and withdraw routes with a specified interval in between iterations
-    for interval in duthost_intervals:
+    # Only test the specified interval indices
+    for idx in interval_indices:
+        if idx >= len(duthost_intervals):
+            logger.warning(f"Interval index {idx} is out of range. Available intervals: {len(duthost_intervals)}")
+            continue
+
+        interval = duthost_intervals[idx]
+        logger.info(f"Testing interval {idx} with value {interval}")
+
         # Repeat 20 times
-        for _ in range(20):
+        for iteration in range(20):
             # Inject 10000 routes
             route_injector.announce_routes_batch(generate_routes(num_routes=NUM_ROUTES, nexthop=route_injector.ip))
 
@@ -293,3 +306,54 @@ def test_bgp_update_replication(
 
     logger.info('TSV: \n' + results_tsv)
     logger.info('Results: \n' + results_table)
+
+
+def test_bgp_update_replication_interval_0(
+    duthost,
+    setup_bgp_peers,
+    setup_duthost_intervals,
+):
+    """
+    Test BGP update replication with interval index 0.
+    This is part 1 of 3, split to keep allure-results under 100MB per run.
+    """
+    _run_bgp_update_replication_for_intervals(
+        duthost,
+        setup_bgp_peers,
+        setup_duthost_intervals,
+        [0],
+    )
+
+
+def test_bgp_update_replication_interval_1(
+    duthost,
+    setup_bgp_peers,
+    setup_duthost_intervals,
+):
+    """
+    Test BGP update replication with interval index 1.
+    This is part 2 of 3, split to keep allure-results under 100MB per run.
+    """
+    _run_bgp_update_replication_for_intervals(
+        duthost,
+        setup_bgp_peers,
+        setup_duthost_intervals,
+        [1],
+    )
+
+
+def test_bgp_update_replication_interval_2(
+    duthost,
+    setup_bgp_peers,
+    setup_duthost_intervals,
+):
+    """
+    Test BGP update replication with interval index 2.
+    This is part 3 of 3, split to keep allure-results under 100MB per run.
+    """
+    _run_bgp_update_replication_for_intervals(
+        duthost,
+        setup_bgp_peers,
+        setup_duthost_intervals,
+        [2],
+    )
