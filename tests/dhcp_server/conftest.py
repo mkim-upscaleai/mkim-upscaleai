@@ -17,6 +17,7 @@ def dhcp_server_setup_teardown(duthost):
     if "enabled" not in features_state.get(DHCP_SERVER_FEATRUE_NAME, ""):
         restore_state_flag = True
         duthost.shell("config feature state dhcp_server enabled")
+        duthost.shell("sudo systemctl reset-failed dhcp_relay.service", module_ignore_errors=True)
         duthost.shell("sudo systemctl restart dhcp_relay.service")
 
     def is_supervisor_subprocess_running(duthost, container_name, app_name):
@@ -42,6 +43,7 @@ def dhcp_server_setup_teardown(duthost):
 
     if restore_state_flag:
         duthost.shell("config feature state dhcp_server disabled", module_ignore_errors=True)
+        duthost.shell("sudo systemctl reset-failed dhcp_relay.service", module_ignore_errors=True)
         duthost.shell("sudo systemctl restart dhcp_relay.service")
         duthost.shell("docker rm dhcp_server", module_ignore_errors=True)
 

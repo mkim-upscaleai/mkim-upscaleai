@@ -11,16 +11,43 @@ pytestmark = [
 ]
 
 
+DHCP_PACKAGES_PATH = "/tmp/dhcp_packages"
+DHCP_PACKAGES = [
+    "isc-dhcp-common_4.4.3-P1-2_amd64.deb",
+    "isc-dhcp-client_4.4.3-P1-2_amd64.deb",
+]
+DHCP_PACKAGES_SRC_DIR = "../ansible/roles/test/files/dhcp_packages"
+
+
 @pytest.fixture(scope="module", autouse=True)
 def dhcp_client_setup_teardown_on_ptf(ptfhost, creds):
-    http_proxy = creds.get("proxy_env", {}).get("http_proxy", "")
-    http_param = "-o Acquire::http::proxy='{}'".format(http_proxy) if http_proxy != "" else ""
-    ptfhost.shell("apt-get {} update".format(http_param), module_ignore_errors=True)
-    ptfhost.shell("apt-get {} install isc-dhcp-client -y".format(http_param))
+    # Try installing from local .deb packages first to avoid relying on apt mirrors
+    ptfhost.shell("mkdir -p {}".format(DHCP_PACKAGES_PATH))
+    local_install_ok = True
+    for pkg in DHCP_PACKAGES:
+        src = "{}/{}".format(DHCP_PACKAGES_SRC_DIR, pkg)
+        dst = "{}/{}".format(DHCP_PACKAGES_PATH, pkg)
+        try:
+            ptfhost.copy(src=src, dest=dst)
+        except Exception:
+            local_install_ok = False
+            break
+
+    if local_install_ok:
+        ptfhost.shell("dpkg -i {}/*.deb".format(DHCP_PACKAGES_PATH), module_ignore_errors=True)
+        result = ptfhost.shell("which dhclient", module_ignore_errors=True)
+        local_install_ok = result["rc"] == 0
+
+    if not local_install_ok:
+        http_proxy = creds.get("proxy_env", {}).get("http_proxy", "")
+        http_param = "-o Acquire::http::proxy='{}'".format(http_proxy) if http_proxy != "" else ""
+        ptfhost.shell("apt-get {} update".format(http_param), module_ignore_errors=True)
+        ptfhost.shell("apt-get {} install isc-dhcp-client -y".format(http_param))
 
     yield
 
     ptfhost.shell("apt-get remove isc-dhcp-client -y", module_ignore_errors=True)
+    ptfhost.shell("rm -rf {}".format(DHCP_PACKAGES_PATH), module_ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
