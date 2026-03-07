@@ -106,7 +106,10 @@ class MlnxCableSupportedSpeedsHelper(object):
             cls.sorted_ports[duthost] = ports
 
         if not cls.device_path:
-            cls.device_path = duthost.shell('ls /dev/mst/*_pci_cr0')['stdout'].strip()
+            result = duthost.shell('/usr/bin/asic_detect/asic_detect.sh -p', module_ignore_errors=True)
+            if result['rc'] != 0 or not result['stdout'].strip():
+                return None
+            cls.device_path = result['stdout'].strip()
         port_index = cls.sorted_ports[duthost].index(dut_port_name) + 1
         cmd = 'mlxlink -d {} -p {} | grep "Supported Cable Speed"'.format(cls.device_path, port_index)
         
