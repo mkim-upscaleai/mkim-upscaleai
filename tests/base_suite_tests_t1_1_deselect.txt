@@ -41,6 +41,9 @@ container_hardening/test_container_hardening.py::test_container_privileged[*-Non
 # Will need to revisit to support
 container_upgrade
 
+# Broadcom
+cpu_shaper
+
 # Requires DPU or smartswitch T1
 dash/test_dash_acl.py
 dash/test_dash_disable_enable_eni.py
@@ -205,6 +208,7 @@ testbed_setup/test_populate_fdb.py::test_populate_fdb
 
 # Requires ptp-256 topology
 transceiver/cli/show/test_transceiver_info_cli.py
+transceiver/cmis_cdb_firmware_upgrade
 
 # Disabling until we have images to test upgrading
 upgrade_path

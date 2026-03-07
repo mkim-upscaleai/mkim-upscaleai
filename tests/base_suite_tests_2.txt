@@ -19,6 +19,7 @@ generic_config_updater/test_srv6.py
 generic_config_updater/test_syslog.py
 generic_config_updater/test_vlan_interface.py
 gnmi
+gnmi_e2e
 golden_config_infra
 hash
 http

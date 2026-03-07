@@ -5,6 +5,8 @@ configlet
 container_checker
 container_hardening
 container_upgrade
+counter
+cpu_shaper
 dash
 database
 db_migrator
@@ -14,6 +16,7 @@ dut_console
 fips
 generic_config_updater
 gnmi
+gnmi_e2e
 golden_config_infra
 hash
 http

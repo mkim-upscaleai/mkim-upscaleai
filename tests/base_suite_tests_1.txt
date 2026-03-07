@@ -5,6 +5,8 @@ configlet
 container_checker
 container_hardening
 container_upgrade
+counter
+cpu_shaper
 dash
 database
 db_migrator
