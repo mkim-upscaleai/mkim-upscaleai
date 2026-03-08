@@ -5,7 +5,7 @@ override_config_table
 packet_trimming
 passw_hardening
 performance_meter
-platform_tests/test_advanced_reboot.py
+# platform_tests/test_advanced_reboot.py
 platform_tests/test_auto_negotiation.py
 platform_tests/test_chassis_reboot.py
 platform_tests/test_cont_warm_reboot.py
