@@ -36,11 +36,15 @@
   tasks:
 
   - block:
-    - name: remove asic_table.json so deploy-mg regenerates it with correct ASIC
+    - name: remove asic_table.json so it can be regenerated with correct ASIC
       become: true
       file:
         path: /etc/sonic/asic_table.json
         state: absent
+
+    - name: regenerate asic_table.json from hardware metadata before config load
+      become: true
+      shell: sonic-cfggen -H -t /usr/share/sonic/templates/asic_table.j2 > /etc/sonic/asic_table.json
 
     - name: set default testbed file
       set_fact:
