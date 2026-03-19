@@ -178,7 +178,8 @@ def config_reload(sonic_host, config_source='config_db', wait=120, start_bgp=Tru
         if start_bgp:
             sonic_host.shell('config bgp startup all')
         if is_buffer_model_dynamic:
-            sonic_host.shell('enable-dynamic-buffer.py')
+            logger.info('reloading dynamic buffer')
+            sonic_host.shell('config qos reload')
         sonic_host.shell('config save -y')
 
     elif config_source == 'config_db':
