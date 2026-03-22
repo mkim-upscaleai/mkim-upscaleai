@@ -15,9 +15,15 @@ qos/test_buffer.py::test_shared_headroom_pool_configure    # Skip test in tradit
 pfcwd/test_pfcwd_function.py::TestPfcwdFunc::test_pfcwd_no_traffic   # Applicable only for cisco-8000
 pfcwd/test_pfcwd_warm_reboot.py               # Skipped due to "https://github.com/sonic-net/sonic-mgmt/issues/15942 and asic_type in ['broadcom', 'mellanox']"
 
-qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[multi_dut_*]  #multi-dut is not supported on T0 topologies
-qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[single_dut_multi_asic]  #multi-dut is not supported on T0 topologies
-qos/test_qos_sai.py::TestQosSai::testQosSaiDwrrWeightChange  #Skip DWRR weight change test on Mellanox platform. / Unsupported testbed type.
-qos/test_qos_sai.py::TestQosSai::testQosSaiHeadroomPoolWatermark  #Headroom pool size not supported.
-qos/test_qos_sai.py::TestQosSai::testQosSaiQSharedWatermark[multi_dut_*]  #multi-dut is not supported on T0 topologies
-qos/test_qos_sai.py::TestQosSai::testQosSaiQSharedWatermark[single_dut_multi_asic-*]  #single_dut_multi_asic is not supported on T0 topologies
+# multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[multi_dut_*]              
+# multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[single_dut_multi_asic]   
+# multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrrWeightChange[multi_dut_*]  
+# Headroom pool size not supported.
+qos/test_qos_sai.py::TestQosSai::testQosSaiHeadroomPoolWatermark          
+# multi-dut is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiQSharedWatermark[multi_dut_*]  
+# single_dut_multi_asic is not supported on T0 topologies
+qos/test_qos_sai.py::TestQosSai::testQosSaiQSharedWatermark[single_dut_multi_asic-*]  
