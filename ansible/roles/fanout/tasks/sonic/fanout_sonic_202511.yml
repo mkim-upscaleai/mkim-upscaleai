@@ -90,14 +90,14 @@
 
 - name: Set system hostname to match inventory
   hostname:
-    name: "{{ inventory_hostname }}"
+    name: "{{ inventory_hostname | replace('_', '-') }}"
   become: yes
 
 - name: Ensure hostname is in /etc/hosts
   lineinfile:
     path: /etc/hosts
-    regexp: '127\.0\.0\.1\s+{{ inventory_hostname }}'
-    line: "127.0.0.1 {{ inventory_hostname }}"
+    regexp: '127\.0\.0\.1\s+{{ inventory_hostname | replace(''_'', ''-'') }}'
+    line: "127.0.0.1 {{ inventory_hostname | replace('_', '-') }}"
     state: present
   become: yes
 

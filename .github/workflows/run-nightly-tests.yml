@@ -43,6 +43,14 @@ on:
         type: string
         description: "Base64-encoded Allure environment variables from shared job run. Leave blank if not using shared job run."
         required: false
+      sonic_version:
+        type: string
+        description: "Image tag to use for sonic-mgmt and syncd-rpc containers (e.g. 202505)"
+        required: true
+      port_count:
+        type: string
+        description: "Port count descriptor for Allure launch title (e.g. 32-Port, 64-Port)"
+        required: false
     secrets:
       ALLURE_TOKEN:
         required: true
@@ -115,6 +123,13 @@ on:
       ALLURE_ENV:
         description: "Base64-encoded Allure environment variables from shared job run. Leave blank if not using shared job run."
         required: false
+      sonic_version:
+        description: "Image tag to use for sonic-mgmt and syncd-rpc containers (e.g. 202505)"
+        required: true
+      port_count:
+        description: "Port count descriptor for Allure launch title (e.g. 32-Port, 64-Port)"
+        default: "32-Port"
+        required: false
 env:
   SSH_OPTS: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   ALLURE_PROJECT_ID: 78
@@ -132,6 +147,7 @@ jobs:
       ansible_inventory: ${{ inputs.ansible_inventory || github.event.inputs.ansible_inventory || github.event.client_payload.ansible_inv || 'veos' }}
       test_files: ${{ inputs.test_files || github.event.inputs.test_files || github.event.client_payload.test_files || 'base_suite_tests.txt,mgmt_suite_tests.txt,l2_suite_tests.txt,l3_suite_tests.txt' }}
       runner_label: ${{ inputs.runner_label || github.event.inputs.runner_label }}
+      port_count: ${{ inputs.port_count || github.event.inputs.port_count || '32-Port' }}
     steps:
       - name: Set outputs
         run: echo "Normalizing inputs"
@@ -164,6 +180,37 @@ jobs:
             cat /tmp/allure-env-decoded
           else
             echo "Creating new Allure job run for this workflow execution"
+
+            # --- Launch title: "Base, Mgmt, L2, L3 : MM/DD/YY" ---
+
+            # Date (MM/DD/YY)
+            LAUNCH_DATE=$(date '+%m/%d/%y')
+
+            # Suite labels: deduplicated in canonical order from test_files
+            IFS=',' read -ra TEST_FILE_ARRAY <<< "${{ needs.normalize-inputs.outputs.test_files }}"
+            declare -A suite_seen
+            for f in "${TEST_FILE_ARRAY[@]}"; do
+              f=$(echo "$f" | xargs)
+              [[ -z "$f" ]] && continue
+              prefix=$(echo "$f" | sed 's/_suite_tests.*//')
+              [[ -n "$prefix" ]] && suite_seen[$prefix]=1
+            done
+            suite_labels=()
+            for suite in base mgmt l2 l3 qos platform snappi; do
+              if [[ -n "${suite_seen[$suite]+x}" ]]; then
+                case $suite in
+                  l2)  suite_labels+=("L2") ;;
+                  l3)  suite_labels+=("L3") ;;
+                  qos) suite_labels+=("QoS") ;;
+                  *)   suite_labels+=("$(echo "${suite:0:1}" | tr '[:lower:]' '[:upper:]')${suite:1}") ;;
+                esac
+              fi
+            done
+            suites_label=$(IFS=', '; echo "${suite_labels[*]}")
+            [ -z "$suites_label" ] && suites_label="Tests"
+
+            export ALLURE_LAUNCH_NAME="${suites_label} : ${LAUNCH_DATE}"
+            echo "Allure launch name: $ALLURE_LAUNCH_NAME"
             allurectl job-run start
             export $(allurectl job-run env)
             printenv | grep ALLURE_
@@ -240,7 +287,7 @@ jobs:
             --env-file /tmp/allure-env \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v $PWD:/var/AzDevOps \
-            docker-sonic-mgmt-allure:latest bash
+            docker-sonic-mgmt-allure:${{ inputs.sonic_version }} bash
 
           echo "Delete previously added ssh keys from nightly workflow"
           cp ~/.ssh/authorized_keys ~/.ssh/authorized_keys_copy
@@ -301,7 +348,7 @@ jobs:
           attempt=0
           rpc_pull_success=false
           while [ $attempt -lt $max_attempts ]; do
-            if /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "docker pull 192.168.218.28:5000/docker-syncd-mlnx-rpc && docker tag 192.168.218.28:5000/docker-syncd-mlnx-rpc:latest docker-syncd-mlnx-rpc:latest"; then
+            if /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "docker pull 192.168.218.28:5000/docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} && docker tag 192.168.218.28:5000/docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} && docker tag 192.168.218.28:5000/docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} docker-syncd-mlnx-rpc:latest"; then
               echo "RPC image pulled successfully on attempt $((attempt + 1))"
               rpc_pull_success=true
               break
@@ -450,7 +497,7 @@ jobs:
           done
 
   upload-logs:
-    needs: [normalize-inputs, setup, run-test-and-generate-report]
+    needs: [normalize-inputs, setup-allure, setup, run-test-and-generate-report]
     runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
     if: always()
     env:
