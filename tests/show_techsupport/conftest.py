@@ -22,6 +22,7 @@ def ignore_expected_loganalyzer_exceptions(duthosts, loganalyzer):
         ".*ERR kernel:.*Fails to get module type.*",
         ".*ERR pmon#xcvrd:.*Failed to read sfp.*",
         ".*DEBUG systemd.*",
+        ".*ERR kernel:.*sxd_kernel: \[error\] dev_id=1.*",
         ".*ERR syncd#SDK:.*mlnx_sai_object.* mlnx_(?:allocate|deallocate)_sx_bulk_buffer: Failed to (?:create|destroy) "
         "buffer: Driver.* Return Status is Non-Zero.*",
         ".*ERR syncd#SDK: .*mlnx_sai_queue.c.*- mlnx_sai_bulk_queue_stats_get: "
