@@ -41,16 +41,19 @@ container_upgrade
 # Broadcom
 cpu_shaper
 
-# Requires DPU or smartswitch T1
+# Requires DPU or smartswitch — not applicable to T0/T1 spine topology
+dash/crm/test_dash_crm.py
 dash/test_dash_acl.py
 dash/test_dash_disable_enable_eni.py
+dash/test_dash_eni_counter
+dash/test_dash_metering.py
 dash/test_dash_privatelink.py
 dash/test_dash_smartswitch_vnet.py
 dash/test_dash_vnet.py
 dash/test_relaxed_match_negative.py
-
-# Requires DPU
-dash/crm/test_dash_crm.py
+dash/test_config_churn.py
+dash/test_fnic.py
+dash/test_plnsg.py
 
 # Static ip configured, will not use dynamic ip
 dns/static_dns/test_static_dns.py::TestDynamicMgmtPortIP
