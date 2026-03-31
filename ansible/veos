@@ -340,63 +340,48 @@ all:
         ptf_sp6-t0:
           ansible_host: 192.168.221.23
           ansible_hostv6: 2001:db8:121::23
-          ansible_connection: ssh
         ptf_sp6-t1:
           ansible_host: 192.168.221.24
           ansible_hostv6: 2001:db8:121::24
-          ansible_connection: ssh
         ptf_sp6t1lag:
           ansible_host: 192.168.221.25
           ansible_hostv6: 2001:db8:121::25
-          ansible_connection: ssh
         ptf_sp7-t0:
           ansible_host: 192.168.222.23
           ansible_hostv6: 2001:db8:122::23
-          ansible_connection: ssh
         ptf_sp7-t1:
           ansible_host: 192.168.222.24
           ansible_hostv6: 2001:db8:122::24
-          ansible_connection: ssh
         ptf_sp7t1lag:
           ansible_host: 192.168.222.25
           ansible_hostv6: 2001:db8:122::25
-          ansible_connection: ssh
         ptf_sp8-t0:
           ansible_host: 192.168.223.23
           ansible_hostv6: 2001:db8:123::23
-          ansible_connection: ssh
         ptf_sp8-t1:
           ansible_host: 192.168.223.24
           ansible_hostv6: 2001:db8:123::24
-          ansible_connection: ssh
         ptf_sp8t1lag:
           ansible_host: 192.168.223.25
           ansible_hostv6: 2001:db8:123::25
-          ansible_connection: ssh
         ptf_sp8-t064:
           ansible_host: 192.168.223.26
           ansible_hostv6: 2001:db8:123::26
-          ansible_connection: ssh
         ptf_sp8-t164:
           ansible_host: 192.168.223.27
           ansible_hostv6: 2001:db8:123::27
-          ansible_connection: ssh
         ptf_sp8t164l:
           ansible_host: 192.168.223.28
           ansible_hostv6: 2001:db8:123::28
-          ansible_connection: ssh
         ptf_sp9-t0:
           ansible_host: 192.168.211.23
           ansible_hostv6: 2001:db8:124::23
-          ansible_connection: ssh
         ptf_sp9-t1:
           ansible_host: 192.168.211.24
           ansible_hostv6: 2001:db8:124::24
-          ansible_connection: ssh
         ptf_sp9t1lag:
           ansible_host: 192.168.211.25
           ansible_hostv6: 2001:db8:124::25
-          ansible_connection: ssh
 
     fanout:
       hosts:
