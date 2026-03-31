@@ -113,6 +113,9 @@ generic_config_updater/test_portchannel_interface.py
 # For ('t0', 'm0', 'mx')
 generic_config_updater/test_vlan_interface.py
 
+# For only traditional buffer configs
+generic_config_updater/test_pg_headroom_update.py
+
 # From test_mark_conditions.yaml: The test refers to a stale implementation of GNOI.System.Reboot.
 gnmi/test_gnmi_configdb.py::test_gnmi_configdb_full_01
 

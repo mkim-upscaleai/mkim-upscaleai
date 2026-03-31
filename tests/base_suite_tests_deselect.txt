@@ -95,6 +95,9 @@ generic_config_updater/test_mmu_dynamic_threshold_config_update.py
 generic_config_updater/test_pfcwd_interval.py
 generic_config_updater/test_pfcwd_status.py
 
+# For only traditional buffer configs
+generic_config_updater/test_pg_headroom_update.py
+
 # From test_mark_conditions.yaml: The test refers to a stale implementation of GNOI.System.Reboot.
 gnmi/test_gnmi_configdb.py::test_gnmi_configdb_full_01
 
