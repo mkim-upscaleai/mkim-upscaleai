@@ -34,6 +34,14 @@ on:
         type: string
         description: aws bucket with builds
         required: true
+      buildimage_branch_name:
+        type: string
+        description: S3 path branch under caspian/ (default upscaleai-<sonic_version> when unset)
+        required: false
+      sonic_version:
+        type: string
+        description: "SONiC release tag (e.g. 202505); used with default buildimage branch upscaleai-<sonic_version>"
+        required: true
     secrets:
       PAT_TOKEN:
         required: true
@@ -44,14 +52,15 @@ on:
       SWITCH_PASSWORD:
         required: true
 
+
 env:
+  SSH_OPTS: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   HOST: ${{ inputs.host }}
   TESTBED: ${{ inputs.testbed }}
   FANOUT_IP: ${{ inputs.fanoutip }}
   SWITCH_USER: ${{ inputs.switch_user }}
   ANSIBLE_INVENTORY: ${{ inputs.ansible_inventory }}
   SONIC_MGMT_CONTAINER: sonic-mgmt-install-image
-  IMAGE_URL: ${{  inputs.image_url  || 'latest' }}
   AWS_BUCKET: ${{ inputs.aws_bucket || 'upscale-ai-sonic-builds' }}
 
 jobs:
@@ -76,12 +85,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2  # Change this to your region of your bucket
 
-      - name: Get branch name and switch IP
+      - name: Resolve buildimage S3 branch and switch IP
         run: |
-          # Get current branch name
-          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD || echo "default")
+          if [ -n "${{ inputs.buildimage_branch_name }}" ]; then
+            BRANCH_NAME="${{ inputs.buildimage_branch_name }}"
+            echo "Using buildimage branch from workflow input: $BRANCH_NAME"
+          else
+            BRANCH_NAME="upscaleai-${{ inputs.sonic_version }}"
+            echo "Using default buildimage branch from sonic_version: $BRANCH_NAME"
+          fi
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          echo "Current branch: $BRANCH_NAME"
+          echo "Using buildimage branch: $BRANCH_NAME"
 
           # Get switch IP from ansible inventory (matrix ensures single host per call)
           switch_ip=$(ansible -i ansible/${{ env.ANSIBLE_INVENTORY }} -m debug -a "var=ansible_host" "${{ env.HOST }}" 2>/dev/null | grep 'ansible_host' | sed -E 's/.*"ansible_host": "([^"]*)".*/\1/' | head -n1)
@@ -95,22 +109,23 @@ jobs:
           echo "Switch IP: $switch_ip"
 
       - name: Copy the latest installer from s3 onto device
+        env:
+          SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
         run: |
-          if ${{ env.IMAGE_URL == 'latest' }}; then
-              echo "Install latest image for caspian from branch ${{ env.BRANCH_NAME }}"
-              # List timestamp directories under caspian/${BRANCH_NAME}/
-              # Path structure: caspian/${BRANCH_NAME}/YYYY-MM-DD-HH_MM_SS/build_artifacts/
-              DIRECTORIES=$(aws s3api list-objects-v2 \
-                --bucket "${{ env.AWS_BUCKET }}" \
-                --prefix "caspian/${{ env.BRANCH_NAME }}/" \
-                --delimiter "/" \
-                --query "reverse(sort_by(CommonPrefixes, &Prefix))[*].Prefix" \
-                --output text | tr '\t' '\n')
+            echo "Install latest image for caspian from branch ${{ env.BRANCH_NAME }}"
+            # List timestamp directories under caspian/${BRANCH_NAME}/
+            # Path structure: caspian/${BRANCH_NAME}/YYYY-MM-DD-HH_MM_SS/build_artifacts/
+            DIRECTORIES=$(aws s3api list-objects-v2 \
+              --bucket "${{ env.AWS_BUCKET }}" \
+              --prefix "caspian/${{ env.BRANCH_NAME }}/" \
+              --delimiter "/" \
+              --query "reverse(sort_by(CommonPrefixes, &Prefix))[*].Prefix" \
+              --output text | tr '\t' '\n')
 
-              for dir in $DIRECTORIES; do
-                  # Look for the specific bin file in build_artifacts subdirectory
-                  # Pattern: sonic-mellanox-YYYY-MM-DD-HH_MM_SS.bin
-                  S3_FILE=$(aws s3api list-objects-v2 \
+            for dir in $DIRECTORIES; do
+                # Look for the specific bin file in build_artifacts subdirectory
+                # Pattern: sonic-mellanox-YYYY-MM-DD-HH_MM_SS.bin
+                S3_FILE=$(aws s3api list-objects-v2 \
                   --bucket "${{ env.AWS_BUCKET }}" \
                   --prefix "${dir}build_artifacts/" \
                   --query "Contents[?contains(Key, 'sonic-mellanox-')].Key" \
@@ -120,51 +135,39 @@ jobs:
                       S3_PATH="s3://${{ env.AWS_BUCKET }}/$S3_FILE"
                       break
                   fi
-              done
-          else
-              echo "Install image from ${{ env.IMAGE_URL }}"
-              aws s3 ls ${{ env.IMAGE_URL }}
-              if [ $? -eq 0 ]; then
-                  S3_PATH=${{ env.IMAGE_URL }}
-              fi
-          fi
-          if [ -n "$S3_PATH" ]; then
+            done
+
+            if [ -n "$S3_PATH" ]; then
               echo "Downloading file: $S3_PATH"
               aws s3 cp "$S3_PATH" .
               BIN_FILE=$(basename "$S3_PATH")
               echo "BIN_FILE=$BIN_FILE" >> $GITHUB_ENV
               echo "BIN_FILE: ${BIN_FILE}"
-              /usr/bin/sshpass -v -p ${{ secrets.SWITCH_PASSWORD }} scp  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BIN_FILE ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE
+              /usr/bin/sshpass -v -p ${{ env.SWITCH_PASS }} scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE
             else
-              if ${{ env.IMAGE_URL == 'latest' }}; then
-                echo "Unable to find sonic-mellanox-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
-              else
-                echo "Invalid image URL: ${{ env.IMAGE_URL }}"
-              fi
+              echo "Unable to find sonic-mellanox-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
               exit 1
             fi
 
-      - name: Run SSH Commands on Switch
-        uses: appleboy/ssh-action@v0.1.10 # Use the latest version
+      - name: Install image and reboot switch
         env:
           BIN_FILE: ${{ env.BIN_FILE }}
-        with:
-          host: ${{ env.SWITCH_IP }}
-          username: ${{ env.SWITCH_USER }}
-          password: ${{ secrets.SWITCH_PASSWORD }}
-          port: 22 # Default SSH port, adjust if needed
-          envs: BIN_FILE
-          script: |
-            export BINFILE=$BIN_FILE
-            show interface status
-            sudo sonic-installer install -y /tmp/$BINFILE
-            sudo reboot || true
-
-      - name: Wait for switch to come back online
+          SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
+          SWITCH_IP: ${{ env.SWITCH_IP }}
         run: |
+          /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} \
+            "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
+            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &"
           sleep 60
           echo 'Waiting for ${{ env.SWITCH_IP }} to come back online...'
-          until /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} 'echo "Server is back online"'; do
+          max_attempts=20
+          attempt=0
+          until /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} 'echo "Server is back online"'; do
+            attempt=$((attempt + 1))
+            if [ $attempt -ge $max_attempts ]; then
+              echo "Switch did not come back after $max_attempts attempts"
+              exit 1
+            fi
             echo "Server not yet available, retrying in 30 seconds..."
             sleep 30
           done
@@ -203,11 +206,7 @@ jobs:
           fi
 
       - name: Cleanup older images
-        uses: appleboy/ssh-action@v0.1.10 # Use the latest version
-        with:
-          host: ${{ env.SWITCH_IP }}
-          username: ${{ env.SWITCH_USER }}
-          password: ${{ secrets.SWITCH_PASSWORD }}
-          port: 22 # Default SSH port, adjust if needed
-          script: |
-            sudo sonic-installer cleanup -y
+        run: |
+          /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
+            "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
+            "sudo sonic-installer cleanup -y"

@@ -60,6 +60,10 @@ on:
         required: true
       SWITCH_PASSWORD:
         required: true
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
 
   workflow_dispatch:
     inputs:
@@ -181,35 +185,47 @@ jobs:
           else
             echo "Creating new Allure job run for this workflow execution"
 
-            # --- Launch title: "Base, Mgmt, L2, L3 : MM/DD/YY" ---
+            # --- Launch title: "Nightly : T0/T1 : Suites : MM/DD/YY" ---
 
             # Date (MM/DD/YY)
             LAUNCH_DATE=$(date '+%m/%d/%y')
 
-            # Suite labels: deduplicated in canonical order from test_files
+            # Topology label (e.g. t0 -> T0, t1-lag -> T1-lag)
+            TOPO=$(cut -d "_" -f 3 <<< "${{ needs.normalize-inputs.outputs.testbed }}")
+            TOPO_LABEL=$(echo "$TOPO" | sed 's/^t/T/')
+
+            # Suite labels: derived dynamically from test_files input order
+            # Strips "_suite_tests*" suffix, deduplicates, then title-cases each prefix.
+            # Special cases: l2->L2, l3->L3, qos->QoS; everything else gets first-letter cap.
             IFS=',' read -ra TEST_FILE_ARRAY <<< "${{ needs.normalize-inputs.outputs.test_files }}"
             declare -A suite_seen
+            suite_order=()
             for f in "${TEST_FILE_ARRAY[@]}"; do
               f=$(echo "$f" | xargs)
               [[ -z "$f" ]] && continue
               prefix=$(echo "$f" | sed 's/_suite_tests.*//')
-              [[ -n "$prefix" ]] && suite_seen[$prefix]=1
+              [[ -z "$prefix" ]] && continue
+              if [[ -z "${suite_seen[$prefix]+x}" ]]; then
+                suite_seen[$prefix]=1
+                suite_order+=("$prefix")
+              fi
             done
             suite_labels=()
-            for suite in base mgmt l2 l3 qos platform snappi; do
-              if [[ -n "${suite_seen[$suite]+x}" ]]; then
-                case $suite in
-                  l2)  suite_labels+=("L2") ;;
-                  l3)  suite_labels+=("L3") ;;
-                  qos) suite_labels+=("QoS") ;;
-                  *)   suite_labels+=("$(echo "${suite:0:1}" | tr '[:lower:]' '[:upper:]')${suite:1}") ;;
-                esac
-              fi
+            for suite in "${suite_order[@]}"; do
+              case $suite in
+                l2)  suite_labels+=("L2") ;;
+                l3)  suite_labels+=("L3") ;;
+                qos) suite_labels+=("QoS") ;;
+                *)   suite_labels+=("$(echo "${suite:0:1}" | tr '[:lower:]' '[:upper:]')${suite:1}") ;;
+              esac
             done
             suites_label=$(IFS=', '; echo "${suite_labels[*]}")
             [ -z "$suites_label" ] && suites_label="Tests"
 
-            export ALLURE_LAUNCH_NAME="${suites_label} : ${LAUNCH_DATE}"
+            # Allure launch tags (applied when the launch/job-run is created)
+            export ALLURE_LAUNCH_TAGS="topo:${TOPO_LABEL},sonic_version:${{ inputs.sonic_version }},port_count:${{ needs.normalize-inputs.outputs.port_count }}"
+
+            export ALLURE_LAUNCH_NAME="Nightly : ${TOPO_LABEL} : ${suites_label} : ${LAUNCH_DATE}"
             echo "Allure launch name: $ALLURE_LAUNCH_NAME"
             allurectl job-run start
             export $(allurectl job-run env)
@@ -324,7 +340,7 @@ jobs:
 
           # Bring up PTF container
           echo "Add topo"
-          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv"
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
 
           echo "Deploy minigraph"
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
@@ -488,13 +504,72 @@ jobs:
 
                     # Bring up PTF container
                     echo "Add topo"
-                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv"
+                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
 
                     echo "Deploy minigraph"
                     docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
                 fi
             fi
           done
+
+  upload-allure-results:
+    name: Upload Allure results to S3
+    needs: [normalize-inputs, setup-allure, setup, run-test-and-generate-report]
+    if: always()
+    runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
+    env:
+      ALLURE_S3_BUCKET: allure-results-tests
+      AWS_REGION: us-west-2
+      HOST: ${{ needs.normalize-inputs.outputs.host }}
+      TESTBED: ${{ needs.normalize-inputs.outputs.testbed }}
+
+    steps:
+      - name: Detect AWS credentials for Allure S3
+        id: aws_for_allure
+        run: |
+          if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Configure AWS credentials
+        if: steps.aws_for_allure.outputs.available == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Copy Allure results from sonic-mgmt container to S3
+        if: steps.aws_for_allure.outputs.available == 'true'
+        run: |
+          TOPO=$(cut -d "_" -f 3 <<< "${TESTBED}")
+          SONIC_MGMT_CONTAINER="sonic-mgmt-ngty-${TOPO}"
+          TOPO_LABEL=$(echo "$TOPO" | sed 's/^t/T/')
+          DATE_MM_DD_YY=$(date '+%m-%d-%y')
+          STAGING=$(mktemp -d)
+          trap 'rm -rf "$STAGING"' EXIT
+          if ! docker cp "${SONIC_MGMT_CONTAINER}:/var/AzDevOps/tests/allure-results/." "$STAGING/"; then
+            echo "Could not copy allure-results from ${SONIC_MGMT_CONTAINER} (container missing or job ran on a different runner)"
+            exit 0
+          fi
+          if [ -z "$(ls -A "$STAGING" 2>/dev/null)" ]; then
+            echo "No Allure files under tests/allure-results"
+            exit 0
+          fi
+          S3_URI="s3://${ALLURE_S3_BUCKET}/${DATE_MM_DD_YY}/${TOPO_LABEL}/${HOST}/allure-results/"
+          echo "Copying tests/allure-results to ${S3_URI}"
+          if ! aws s3 cp "$STAGING/" "$S3_URI" --recursive --region "${AWS_REGION}"; then
+            FALLBACK_DIR="/tmp/allure-results/${DATE_MM_DD_YY}/${TOPO_LABEL}/${HOST}"
+            echo "S3 upload failed; copying artifacts to ${FALLBACK_DIR}"
+            mkdir -p "$FALLBACK_DIR"
+            cp -r "$STAGING/." "$FALLBACK_DIR/"
+            echo "Artifacts saved to ${FALLBACK_DIR}"
+          fi
 
   upload-logs:
     needs: [normalize-inputs, setup-allure, setup, run-test-and-generate-report]

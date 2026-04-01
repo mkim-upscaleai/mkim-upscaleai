@@ -870,5 +870,5 @@ topology:                               # source: sonic-mgmt/ansible/files/sonic
 # docker_registry dictionary contains information about the host, username, and password
 # docker_registry is used to generate docker_registry.yaml
 # docker_registry dictionary does not cross reference with other files
-docker_registry:
-    docker_registry_host: sonicdev-microsoft.azurecr.io:443
+#docker_registry:
+    #docker_registry_host: sonicdev-microsoft.azurecr.io:443
