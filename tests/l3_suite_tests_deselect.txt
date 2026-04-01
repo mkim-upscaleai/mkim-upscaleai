@@ -67,6 +67,10 @@ bgp/test_bgp_operation_in_ro.py
 # Skipped: Not supperted on master or 202505
 bgp/test_bgp_port_disable.py
 
+# Skipped: Test only runs on IPv6-only topologies — spine7-800 is not IPv6-only
+# "Skip for topologies that are not IPv6-only"
+bgp/test_bgp_router_id.py::test_bgp_router_id_set_ipv6
+
 ###################################################################
 ### bmp deselect tests
 
@@ -188,3 +192,11 @@ vxlan/test_vxlan_bfd_tsa.py
 vxlan/test_vxlan_crm.py
 vxlan/test_vxlan_ecmp.py
 vxlan/test_vxlan_ecmp_switchover.py
+
+# Skipped: VxLAN underlay ECMP and multi-tunnel tests not supported on single-ASIC platform (Mellanox SN5610 / spc asic)
+# "VxLAN underlay ECMP test is not yet supported on multi-ASIC platform. Also this test can only run on some platforms."
+vxlan/test_vxlan_underlay_ecmp.py
+vxlan/test_vxlan_multi_tunnel.py
+
+# Skipped: Unsupported platform — Mellanox SN5610
+vxlan/test_vxlan_vnet_bgp_subintf.py::test_vnet_with_bgp_intf_smacrewrite
