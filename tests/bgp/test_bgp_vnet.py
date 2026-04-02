@@ -351,14 +351,18 @@ def get_ptf_port_index(interface_name):
     return int(interface_name.replace("Ethernet", "")) // 4
 
 
-def get_expected_unexpected_ptf_ports(cfg_facts, vnet_expected, vnet_unexpected):
+def get_expected_unexpected_ptf_ports(cfg_facts, mg_facts, vnet_expected, vnet_unexpected):
     """
     Return two lists of unique PTF port indices:
     - expected_ptf_ports: ports belonging to vnet_expected
     - unexpected_ptf_ports: ports belonging to vnet_unexpected
+
+    Uses mg_facts['minigraph_ptf_indices'] for the interface->PTF port mapping so that
+    only ports actually wired in the PTF topology are referenced.
     """
     portchannel_interfaces = cfg_facts.get("PORTCHANNEL_INTERFACE", {})
     portchannel_members = cfg_facts.get("PORTCHANNEL_MEMBER", {})
+    ptf_indices = mg_facts.get("minigraph_ptf_indices", {})
 
     expected_portchannels = set()
     unexpected_portchannels = set()
@@ -381,8 +385,8 @@ def get_expected_unexpected_ptf_ports(cfg_facts, vnet_expected, vnet_unexpected)
             except ValueError:
                 # Malformed key (should be pc|member)
                 continue
-            if pc in portchannels:
-                ptf_ports.add(get_ptf_port_index(iface))
+            if pc in portchannels and iface in ptf_indices:
+                ptf_ports.add(ptf_indices[iface])
         return sorted(ptf_ports)
 
     expected_ptf_ports = collect_ptf_ports(expected_portchannels)
@@ -415,7 +419,7 @@ def test_dynamic_peer_vnet(duthosts, rand_one_dut_hostname, cfg_facts):
                             (info == "ipv6Unicast" and attr['idType'] == 'ipv4')):
                         continue
                     else:
-                        assert int(prefix_count) >= 6000, "%s should received %s route prefixes!" % (
+                        assert int(prefix_count) >= route_count, "%s should received %s route prefixes!" % (
                             peer, route_count)
                         if 'dynamicPeer' in attr:
                             validate_state_db_entry(duthost, peer, vnet, True)
@@ -438,7 +442,7 @@ def test_dynamic_peer_vnet(duthosts, rand_one_dut_hostname, cfg_facts):
         modify_dynamic_peer_cfg(duthost, 'vnet_dynamic_peer_add')
 
 
-def test_bgp_vnet_route_forwarding(ptfadapter, duthosts, rand_one_dut_hostname, cfg_facts):
+def test_bgp_vnet_route_forwarding(ptfadapter, duthosts, rand_one_dut_hostname, cfg_facts, mg_facts):
     '''
     Verify that the traffic to the peer in Vnet1 is forwarded correctly.
     Send a UDP packet to with the destination as one of the routes learned via bgp in Vnet1
@@ -450,7 +454,7 @@ def test_bgp_vnet_route_forwarding(ptfadapter, duthosts, rand_one_dut_hostname, 
         router_mac = duthost.facts["router_mac"]
         # Destination IP is one of the routes learned via bgp in Vnet1
         dst_ip = "193.11.248.129"
-        expected_ports, unexpected_ports = get_expected_unexpected_ptf_ports(cfg_facts, "Vnet1", "Vnet2")
+        expected_ports, unexpected_ports = get_expected_unexpected_ptf_ports(cfg_facts, mg_facts, "Vnet1", "Vnet2")
         send_port = expected_ports[0]
         src_mac = ptfadapter.dataplane.get_mac(0, send_port)
 
