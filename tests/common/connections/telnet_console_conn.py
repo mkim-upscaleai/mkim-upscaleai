@@ -96,8 +96,10 @@ class TelnetConsoleConn(BaseConsoleConn):
                 ):
                     return return_msg
 
-                #  Check if login failed
-                if re.search(login_failure_prompt, output, flags=re.M):
+                #  Check if login failed - only after password has been sent to
+                #  avoid false positives from stale "Login incorrect" output
+                #  left on the console from a previous failed session
+                if password_sent and re.search(login_failure_prompt, output, flags=re.M):
                     self.remote_conn.close()
                     # Wait a short time or the next login will be refused
                     time.sleep(1 * delay_factor)

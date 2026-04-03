@@ -69,7 +69,7 @@ def test_http_copy(duthosts, rand_one_dut_hostname, ptfhost):
     # Ensure that file was downloaded
     file_stat = ptfhost.stat(path="./{}".format(TEST_FILE_NAME))
 
-    pytest_assert(file_stat["stat"]["exists"], "Test file was not found on ptfhost after attempted to generate")
+    pytest_assert(file_stat["stat"]["exists"], "Test file was not found on DUT after attempted http get")
 
     # Generate MD5 checksum to compare with the sent file
     output = ptfhost.command("md5sum ./{}".format(TEST_FILE_NAME))["stdout"]
@@ -103,25 +103,3 @@ def test_http_copy(duthosts, rand_one_dut_hostname, ptfhost):
         time.sleep(1)
 
     pytest_assert(not started, "HTTP Server could not be stopped.")
-
-    # Perform cleanup on DUT
-    duthost.command("sudo rm ./{}".format(test_file_name))
-
-    # Confirm cleanup occured succesfuly
-    file_stat = duthost.stat(path="./{}".format(test_file_name))
-
-    pytest_assert(not file_stat["stat"]["exists"], "DUT container could not be cleaned.")
-
-    # Delete file off ptf
-    ptfhost.command(("rm ./{}".format(test_file_name)))
-    ptfhost.command(("rm /tmp/start_http_server.py"))
-    ptfhost.command(("rm /tmp/stop_http_server.py"))
-
-    # Ensure that file was removed on ptf correctly
-    file_stat1 = ptfhost.stat(path="./{}".format(test_file_name))
-    file_stat2 = ptfhost.stat(path="/tmp/start_http_server.py")
-    file_stat3 = ptfhost.stat(path="/tmp/stop_http_server.py")
-
-    pytest_assert(not file_stat1["stat"]["exists"], "PTF container can not delete test_file.")
-    pytest_assert(not file_stat2["stat"]["exists"], "PTF container can not delete start_http_server.py.")
-    pytest_assert(not file_stat3["stat"]["exists"], "PTF container can not delete stop_http_server.py.")

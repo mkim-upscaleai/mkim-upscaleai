@@ -577,6 +577,10 @@ def duthost_clear_console_port(
         logger.info("Skip clearing conserver console port")
         return
 
+    if menu_type.startswith("console_telnet"):
+        logger.info("Skip clearing telnet console port - not supported")
+        return
+
     # Override console user if the configuration menu is Digi, as this requires admin login
     console_user = 'admin' if menu_type == CONSOLE_SSH_DIGI_CONFIG else console_username
 
