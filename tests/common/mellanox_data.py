@@ -8,7 +8,8 @@ SPC3_HWSKUS = ["ACS-MSN4700", "Mellanox-SN4700-O28", "ACS-MSN4600C", "ACS-MSN441
                "Mellanox-SN4600C-D112C8", "Mellanox-SN4600C-C64", "ACS-SN4280", "Mellanox-SN4280-O28",
                "Mellanox-SN4280-O8C40", "Mellanox-SN4280-C48", "Mellanox-SN4280-O8V40", "Mellanox-SN4280-O8C80"]
 SPC4_HWSKUS = ["ACS-SN5600", "Mellanox-SN5600-V256", "Mellanox-SN5600-C256S1", "Mellanox-SN5600-C224O8",
-               'Mellanox-SN5610N-C256S2', 'Mellanox-SN5610N-C224O8']
+               'Mellanox-SN5610N-C256S2', 'Mellanox-SN5610N-C224O8', 'Mellanox-SN5610-C256S2', 'Mellanox-SN5610-C224O8', 
+               'Mellanox-SN5610-O64S2', "Mellanox-SN5600-O64S1"]
 SPC5_HWSKUS = ["Mellanox-SN5640-C512S2", "Mellanox-SN5640-C448O16"]
 SWITCH_HWSKUS = SPC1_HWSKUS + SPC2_HWSKUS + SPC3_HWSKUS + SPC4_HWSKUS + SPC5_HWSKUS
 
@@ -26,6 +27,71 @@ MULTI_HARDWARE_TYPE_PLATFORMS = ['x86_64-mlnx_msn4700-r0',
                                  'x86_64-mlnx_msn3700-r0',
                                  'x86_64-mlnx_msn3700c-r0']
 SWITCH_MODELS = {
+    "x86_64-nvidia_sn5610-r0": {
+        "chip_type": "spectrum4",
+        "reboot": {
+            "cold_reboot": True,
+            "fast_reboot": True,
+            "warm_reboot": True
+        },
+        "fans": {
+            "number": 5, # There are only 5 fan trays, 10 total fans
+            "hot_swappable": True
+        },
+        "psus": {
+            "number": 4,
+            "hot_swappable": True,
+            "capabilities": PSU_CAPABILITIES[1]
+        },
+        "cpu_pack": {
+            "number": 1
+        },
+        "cpu_cores": {
+            "number": 0 # Number of per-core thermal sensors (not physical cores)
+        },
+        "ports": {
+            "number": 64
+        },
+        "thermals": {
+            "cpu_core": {
+                "start": 0,
+                "number": 0
+            },
+            "module": {
+                "start": 1,
+                "number": 66
+            },
+            "psu": {
+                "start": 1,
+                "number": 4
+            },
+            "cpu_pack": {
+                "number": 1
+            },
+            # "cpu_ambient": {
+            #     "number": 0
+            # },
+            "asic_ambient": {
+                "number": 1
+            },
+            "port_ambient": {
+                "number": 1
+            },
+            "fan_ambient": {
+                "number": 1
+            },
+            # "pch": {
+            #     "number": 0
+            # },
+            "sodimm": {
+                "start": 2,
+                "number": 1
+            },
+            "drivetemp": {
+                "number": 1
+            }
+        }
+    },
     "x86_64-nvidia_sn5600-r0": {
         "chip_type": "spectrum4",
         "reboot": {
