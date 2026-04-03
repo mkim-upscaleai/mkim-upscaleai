@@ -11,6 +11,7 @@ autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-ic
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-macsec]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-mux]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-nat]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-otel]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-radv]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-sflow]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-telemetry]
@@ -21,16 +22,19 @@ container_checker/test_container_checker.py::test_container_checker[*-None-iccpd
 container_checker/test_container_checker.py::test_container_checker[*-None-macsec]
 container_checker/test_container_checker.py::test_container_checker[*-None-mux]
 container_checker/test_container_checker.py::test_container_checker[*-None-nat]
+container_checker/test_container_checker.py::test_container_checker[*-None-otel]
 container_checker/test_container_checker.py::test_container_checker[*-None-radv]
 container_checker/test_container_checker.py::test_container_checker[*-None-sflow]
 container_checker/test_container_checker.py::test_container_checker[*-None-telemetry]
 
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-dhcp_relay]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-dhcp_server]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-gnmi]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-iccpd]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-macsec]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-mux]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-nat]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-otel]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-pmon]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-radv]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-sflow]
@@ -125,6 +129,10 @@ gnmi/test_gnmi_smartswitch.py::test_gnmi_appldb_01
 # Warm reboot should only run on T0 topology (per test skip message)
 gnmi/test_gnoi_system_reboot.py::test_gnoi_system_reboot_warm
 
+# Requires DPUs — SN5610 has no DPU sub-cards
+# "No DPUs specified, skipping HALT reboot test."
+gnmi/test_gnoi_system_reboot.py::test_gnoi_system_reboot_halt_dpus
+
 # From test skip case: This case is not supported on many platforms and often encounters issues. We can still run it, but we won’t rely on or validate the results
 hash
 
@@ -187,6 +195,9 @@ reset_factory
 # Not DPU
 show_techsupport/test_techsupport.py::test_techsupport_on_dpu
 
+# /var/core is on tmpfs — known sonic-buildimage issues #20950 and #15101
+show_techsupport/test_auto_techsupport.py::test_max_limit[core]
+
 # not smartswitch topology
 smartswitch
 
@@ -201,7 +212,16 @@ snmp/test_snmp_phy_entity.py::test_turn_off_psu_and_check_psu_info
 
 # only for supervisor node
 snmp/test_snmp_phy_entity.py::test_psu_info
+snmp/test_snmp_phy_entity.py::test_fabric_card_info
 telemetry/test_telemetry_poll.py::test_poll_mode_default_route_supervisor
+
+# Requires --container_test CLI flag which is not set in nightly runs
+# "Testcase skipped for non container test"
+telemetry/test_telemetry_show_cli.py::test_telemetry_show_get
+telemetry/test_telemetry_show_cli.py::test_telemetry_show_non_get
+
+# Skipped due to open GitHub issue https://github.com/sonic-net/sonic-mgmt/issues/20787
+tacacs/test_ro_disk.py
 
 # Will revisit, skipped because of https://github.com/sonic-net/sonic-mgmt/issues/16997
 syslog/test_syslog_source_ip.py
