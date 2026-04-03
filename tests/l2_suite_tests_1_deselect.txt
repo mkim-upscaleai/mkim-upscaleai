@@ -25,6 +25,17 @@ dhcp_relay/test_dhcp_pkt_fwd.py
 # DHCP_COUNTER_TABLE is not supported
 dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_counter
 
+# Requires dual-TOR topology (standby DUT) — spine7-800 is a single T0
+dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_on_dualtor_standby
+
+###############################################################################
+# DHCP Server Tests
+###############################################################################
+
+# dhcp_server feature not present on Mellanox SN5610 — entire module skips
+# "Skip on vs testbed without dhcp server feature"
+dhcp_server
+
 # github issue: https://github.com/sonic-net/sonic-mgmt/issues/14851
 dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[discover]
 

@@ -8,5 +8,6 @@ sflow
 vlan
 span
 dhcp_relay
+dhcp_server
 drop_packets
 copp
