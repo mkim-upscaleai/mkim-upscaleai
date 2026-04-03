@@ -21,6 +21,8 @@ bgp/test_bgp_4-byte_as_trans.py
 bgp/test_bgp_authentication.py
 bgp/test_bgp_azng_migration.py
 bgp/test_bgpmon_v6.py::test_bgpmon_v6
+# Skip for topologies that are not IPv6-only
+bgp/test_bgp_router_id.py::test_bgp_router_id_set_ipv6
 bgp/test_ipv6_nlri_over_ipv4.py
 bgp/test_passive_peering.py
 bgp/test_prefix_list.py
@@ -56,18 +58,18 @@ bgp/test_bgp_operation_in_ro.py
 bgp/test_bgp_port_disable.py
 
 # Skipped: BGPMonV6 is not supported on this image
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-no-export-BGPMonV6-none]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-no-export-BGPMonV6-soft]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-no-export-BGPMonV6-hard]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-None-BGPMonV6-none]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-None-BGPMonV6-soft]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-None-BGPMonV6-hard]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-None-BGPMonV6-none]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-None-BGPMonV6-soft]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-None-BGPMonV6-hard]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-no-export-BGPMonV6-none]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-no-export-BGPMonV6-soft]
-bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-no-export-BGPMonV6-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-BGPMonV6-no-export-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-BGPMonV6-no-export-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-BGPMonV6-no-export-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-BGPMonV6-None-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-BGPMonV6-None-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv6-BGPMonV6-None-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-None-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-None-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-None-hard]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-none]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-soft]
+bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-hard]
 
 ###################################################################
 ### bmp deselect tests
