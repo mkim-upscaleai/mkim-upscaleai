@@ -198,3 +198,10 @@ vxlan/test_vnet_bgp_route_precedence.py
 
 # Skipped: test requires topology in Mark(name='topology', args=('t0',), kwargs={})
 vxlan/test_vxlan_decap.py
+
+# Skipped: VxLAN underlay ECMP test not supported on Mellanox SN5610 platform
+vxlan/test_vxlan_underlay_ecmp.py
+# Skipped: VxLAN multi-tunnel test not supported on Mellanox SN5610 platform
+vxlan/test_vxlan_multi_tunnel.py::test_vxlan_error_null_tunnel_id
+# Skipped: test requires topology t0 and cisco-8000 asic
+vxlan/test_vxlan_vnet_bgp_subintf.py::test_vnet_with_bgp_intf_smacrewrite
