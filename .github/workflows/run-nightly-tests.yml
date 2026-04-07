@@ -187,8 +187,8 @@ jobs:
 
             # --- Launch title: "Nightly : T0/T1 : Suites : MM/DD/YY" ---
 
-            # Date (MM/DD/YY)
-            LAUNCH_DATE=$(date '+%m/%d/%y')
+            # Date (MM/DD/YY) in Pacific time (PST/PDT)
+            LAUNCH_DATE=$(TZ=America/Los_Angeles date '+%m/%d/%y')
 
             # Topology label (e.g. t0 -> T0, t1-lag -> T1-lag)
             TOPO=$(cut -d "_" -f 3 <<< "${{ needs.normalize-inputs.outputs.testbed }}")

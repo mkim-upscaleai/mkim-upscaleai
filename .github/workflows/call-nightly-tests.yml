@@ -83,7 +83,7 @@ jobs:
           # --- Launch title: "Nightly : T0/T1 : Suites : MM/DD/YY" ---
 
           # Date (MM/DD/YY)
-          LAUNCH_DATE=$(date '+%m/%d/%y')
+          LAUNCH_DATE=$(TZ=America/Los_Angeles date '+%m/%d/%y')
 
           # Topology label: take first testbed from comma-separated list (e.g. caspian_testbed_t1_spine8-800 -> T1)
           FIRST_TESTBED=$(echo "${{ inputs.testbed }}" | cut -d ',' -f1 | xargs)
