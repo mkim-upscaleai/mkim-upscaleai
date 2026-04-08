@@ -388,3 +388,93 @@
   inv_name: veos
   auto_recover: 'False'
   comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t0_spine10
+  group-name: sp10-t0
+  topo: t0
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp10-t0
+  ptf_ip: 10.9.107.165/16
+  ptf_ipv6: 2001:db8:107::165/64
+  server: server_5
+  vm_base: VM0501
+  dut:
+    - spine10
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t1_spine10
+  group-name: sp10-t1
+  topo: t1
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp10-t1
+  ptf_ip: 10.9.107.166/16
+  ptf_ipv6: 2001:db8:107::166/64
+  server: server_5
+  vm_base: VM0501
+  dut:
+    - spine10
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t1-lag_spine10
+  group-name: 10t1lag
+  topo: t1-lag
+  ptf_image_name: docker-ptf
+  ptf: ptf_s10t1lag
+  ptf_ip: 10.9.107.167/16
+  ptf_ipv6: 2001:db8:107::167/64
+  server: server_5
+  vm_base: VM0501
+  dut:
+    - spine10
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t0_spine10-800
+  group-name: sp10-t0
+  topo: t0
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp10-t0
+  ptf_ip: 10.9.107.165/16
+  ptf_ipv6: 2001:db8:107::165/64
+  server: server_5
+  vm_base: VM0501
+  dut:
+    - spine10-800
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t1_spine10-800
+  group-name: sp10-t1
+  topo: t1
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp10-t1
+  ptf_ip: 10.9.107.166/16
+  ptf_ipv6: 2001:db8:107::166/64
+  server: server_5
+  vm_base: VM0501
+  dut:
+    - spine10-800
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t1-lag_spine10-800
+  group-name: 10t1lag
+  topo: t1-lag
+  ptf_image_name: docker-ptf
+  ptf: ptf_s10t1lag
+  ptf_ip: 10.9.107.167/16
+  ptf_ipv6: 2001:db8:107::167/64
+  server: server_5
+  vm_base: VM0501
+  dut:
+    - spine10-800
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox

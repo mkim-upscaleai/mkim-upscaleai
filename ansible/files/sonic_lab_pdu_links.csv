@@ -15,4 +15,5 @@ pdu-1-upscalelab2,4,upscalelab2-spine8-800,PSU2,
 pdu-1-upscalelab2,1,upscalelab2-spine8-800,PSU4,
 pdu-3-upscalelab2,3,upscalelab2-spine9-800,PSU2,
 pdu-3-upscalelab2,2,upscalelab2-spine9-800,PSU4,
-
+pdu-cab7-l,8,spine10-800,PSU1,
+pdu-cab7-l,8,spine10,PSU1,

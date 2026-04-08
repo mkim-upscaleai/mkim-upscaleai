@@ -172,6 +172,9 @@ platform_tests/mellanox/test_psu_power_threshold.py
 # Mellanox does not support this API: "WARNING pmon#platform_api_server.py: API 'get_status' not implemented"
 platform_tests/api/test_psu.py::TestPsuApi::test_get_status
 
+# Spine10 does not have get_voltage_high_threshold or get_voltage_low_threshold for psu
+platform_tests/api/test_psu.py::TestPsuApi::test_power[spine10-800]
+
 # ledd and fancontrol is skipped in file "usr/share/sonic/device/x86_64-nvidia_sn5610-r0/pmon_daemon_control.json"
 platform_tests/daemon/test_ledd.py
 platform_tests/daemon/test_fancontrol.py

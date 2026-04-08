@@ -289,8 +289,6 @@ platform_tests/api/test_thermal.py::TestThermalApi::test_get_high_threshold
 platform_tests/api/test_thermal.py::TestThermalApi::test_get_high_critical_threshold
 
 # Mellanox does not support this API:
-# platform_tests/api/test_psu.py::TestPsuApi::test_power
-# platform_tests/api/test_psu.py::TestPsuApi::test_led
 platform_tests/api/test_psu.py::TestPsuApi::test_get_status
 # platform_tests/api/test_psu.py::TestPsuApi::test_get_serial
 # platform_tests/api/test_psu.py::TestPsuApi::test_get_model
@@ -330,3 +328,6 @@ upgrade_path
 
 # Requires mx or m0 topology
 wol
+
+# Spine10 does not have get_voltage_high_threshold or get_voltage_low_threshold for psu
+platform_tests/api/test_psu.py::TestPsuApi::test_power[spine10-800]
