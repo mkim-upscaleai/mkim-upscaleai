@@ -148,6 +148,10 @@ platform_tests/broadcom
 # not smartswitch topology
 smartswitch
 
+### TEMPORARY: kdump is crashing dut in future tests because of limited file system size
+
+platform_tests/test_kdump.py
+
 # Not supporting first time boot password change
 platform_tests/test_first_time_boot_password_change/test_first_time_boot_password_change.py
 
