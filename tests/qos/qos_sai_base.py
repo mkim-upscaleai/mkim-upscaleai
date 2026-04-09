@@ -281,7 +281,16 @@ class QosSaiBase(QosBase):
             if pg_q_buffer_profile['dynamic_th'] == "7" and port_dynamic_th != "7":
                 buffer_scale = port_alpha / (1 + port_alpha)
             else:
-                buffer_scale = port_alpha * pg_q_alpha / (port_alpha * pg_q_alpha + pg_q_alpha + 1)
+                # The binding constraint is whichever alpha is smaller:
+                # queue limit: pg_q_alpha/(pg_q_alpha+1), port limit: port_alpha/(port_alpha+1)
+                # The original combined formula (port*q / (port*q + q + 1)) is only accurate
+                # when pg_q_alpha >= port_alpha. When pg_q_alpha < port_alpha (e.g. egress
+                # lossy queues with dynamic_th=0), it overestimates capacity.
+                # buffer_scale = port_alpha * pg_q_alpha / (port_alpha * pg_q_alpha + pg_q_alpha + 1)
+                buffer_scale = min(
+                    pg_q_alpha / (pg_q_alpha + 1),
+                    port_alpha / (port_alpha + 1)
+                )
 
             pg_q_max_occupancy = int(buffer_size * buffer_scale)
 
@@ -1655,6 +1664,9 @@ class QosSaiBase(QosBase):
                 ".*WARNING syncd#SDK:.*check_attribs_metadata: Not implemented attribute.*",
                 ".*WARNING syncd#SDK:.*sai_set_attribute: Failed attribs check, key:Switch ID.*",
                 ".*WARNING syncd#SDK:.*check_rate: Set max rate to 0.*"
+                # pmon DOM/transceiver errors when port has no optic or optic has no DOM support (common in lab)
+                ".*ERR pmon#DomInfoUpdateTask.*Post port dom flags to db failed.*no dom flags found.*",
+                ".*ERR pmon#DomInfoUpdateTask.*Post port transceiver hw status flags to db failed.*"
             ]
             for a_dut in get_src_dst_asic_and_duts['all_duts']:
                 loganalyzer[a_dut.hostname].ignore_regex.extend(ignoreRegex)
@@ -2292,6 +2304,17 @@ class QosSaiBase(QosBase):
                 if cable_len == '0m':
                     is_lossy_queue_only = True
                     logger.info(f"{srcport} has only lossy queue")
+                else:
+                    # Some platforms store per-queue entries (e.g. :0, :1, :2) instead of a
+                    # single range entry (:0-2). Detect this and fall back to per-queue lookup.
+                    buf_queue_table = "BUFFER_QUEUE_TABLE" if self.isBufferInApplDb(dut_asic) else "BUFFER_QUEUE"
+                    buf_db = "0" if self.isBufferInApplDb(dut_asic) else "4"
+                    range_key = "{}:{}:0-2".format(buf_queue_table, srcport)
+                    range_profile = dut_asic.run_redis_cmd(
+                        argv=["redis-cli", "-n", buf_db, "HGET", range_key, "profile"])
+                    if not range_profile:
+                        is_lossy_queue_only = True
+                        logger.info(f"{srcport} uses per-queue buffer entries, treating as lossy queue only")
             if is_lossy_queue_only:
                 is_lossy_queue_only = True
                 queue_table_postfix_list = ['0', '1', '2', '3', '4', '5']
