@@ -161,6 +161,7 @@ jobs:
     runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
     outputs:
       allure-env: ${{ steps.allure-context.outputs.allure-env }}
+      launch-date: ${{ steps.allure-context.outputs.launch-date }}
     steps:
       - name: install and configure allurectl
         uses: allure-framework/setup-allurectl@v1.0.0
@@ -178,6 +179,9 @@ jobs:
             echo "Using shared Allure job run from parent workflow"
             # Use the provided base64-encoded environment variables directly
             echo "allure-env=${{ inputs.ALLURE_ENV }}" >> $GITHUB_OUTPUT
+            # Same LAUNCH_DATE (MM/DD/YY, America/Los_Angeles) as used for Allure when creating a new job run
+            LAUNCH_DATE=$(TZ=America/Los_Angeles date '+%m/%d/%y')
+            echo "launch-date=${LAUNCH_DATE}" >> $GITHUB_OUTPUT
             # Decode to show what we're using
             echo "${{ inputs.ALLURE_ENV }}" | base64 -d > /tmp/allure-env-decoded
             echo "Environment variables from shared job run:"
@@ -187,8 +191,9 @@ jobs:
 
             # --- Launch title: "Nightly : T0/T1 : Suites : MM/DD/YY" ---
 
-            # Date (MM/DD/YY) in Pacific time (PST/PDT)
+            # Date (MM/DD/YY) in Pacific time (PST/PDT) — single source for launch title, S3 paths, and downstream timestamps
             LAUNCH_DATE=$(TZ=America/Los_Angeles date '+%m/%d/%y')
+            echo "launch-date=${LAUNCH_DATE}" >> $GITHUB_OUTPUT
 
             # Topology label (e.g. t0 -> T0, t1-lag -> T1-lag)
             TOPO=$(cut -d "_" -f 3 <<< "${{ needs.normalize-inputs.outputs.testbed }}")
@@ -522,6 +527,7 @@ jobs:
       AWS_REGION: us-west-2
       HOST: ${{ needs.normalize-inputs.outputs.host }}
       TESTBED: ${{ needs.normalize-inputs.outputs.testbed }}
+      LAUNCH_DATE: ${{ needs.setup-allure.outputs.launch-date }}
 
     steps:
       - name: Detect AWS credentials for Allure S3
@@ -550,25 +556,47 @@ jobs:
           TOPO=$(cut -d "_" -f 3 <<< "${TESTBED}")
           SONIC_MGMT_CONTAINER="sonic-mgmt-ngty-${TOPO}"
           TOPO_LABEL=$(echo "$TOPO" | sed 's/^t/T/')
-          DATE_MM_DD_YY=$(date '+%m-%d-%y')
+          LD="${LAUNCH_DATE:-$(TZ=America/Los_Angeles date '+%m/%d/%y')}"
+          DATE_MM_DD_YY="${LD//\//-}"
           STAGING=$(mktemp -d)
           trap 'rm -rf "$STAGING"' EXIT
-          if ! docker cp "${SONIC_MGMT_CONTAINER}:/var/AzDevOps/tests/allure-results/." "$STAGING/"; then
-            echo "Could not copy allure-results from ${SONIC_MGMT_CONTAINER} (container missing or job ran on a different runner)"
-            exit 0
+          ALLURE_IN_CONTAINER="/var/AzDevOps/tests/allure-results"
+          if ! docker exec "${SONIC_MGMT_CONTAINER}" true 2>/dev/null; then
+            echo "Could not access ${SONIC_MGMT_CONTAINER} (container missing, not running, or job ran on a different runner)"
+            exit 1
           fi
+          if ! docker exec "${SONIC_MGMT_CONTAINER}" test -d "${ALLURE_IN_CONTAINER}"; then
+            echo "No ${ALLURE_IN_CONTAINER} in ${SONIC_MGMT_CONTAINER}"
+            exit 1
+          fi
+          # One .tar.gz per top-level suite directory (e.g. l2_suite_tests_1.tar.gz); optional archive for loose files at allure-results/
+          while IFS= read -r -d '' dirpath; do
+            name=$(basename "$dirpath")
+            echo "Archiving suite directory: ${name}"
+            if ! docker exec "${SONIC_MGMT_CONTAINER}" tar -C "${ALLURE_IN_CONTAINER}" -czf - "${name}" > "${STAGING}/${name}.tar.gz"; then
+              echo "Failed to archive ${name} from ${SONIC_MGMT_CONTAINER}"
+              exit 1
+            fi
+          done < <(docker exec "${SONIC_MGMT_CONTAINER}" find "${ALLURE_IN_CONTAINER}" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
+
+          ROOT_FILE_COUNT=$(docker exec "${SONIC_MGMT_CONTAINER}" find "${ALLURE_IN_CONTAINER}" -mindepth 1 -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+          if [ "${ROOT_FILE_COUNT}" -gt 0 ]; then
+            echo "Archiving ${ROOT_FILE_COUNT} root-level file(s) to allure-results-root-files.tar.gz"
+            if ! docker exec "${SONIC_MGMT_CONTAINER}" bash -c 'cd "'"${ALLURE_IN_CONTAINER}"'" && find . -maxdepth 1 -type f -print0 | tar -czf - --null -T -' > "${STAGING}/allure-results-root-files.tar.gz"; then
+              echo "Failed to archive root-level files from ${SONIC_MGMT_CONTAINER}"
+              exit 1
+            fi
+          fi
+
           if [ -z "$(ls -A "$STAGING" 2>/dev/null)" ]; then
             echo "No Allure files under tests/allure-results"
-            exit 0
+            exit 1
           fi
           S3_URI="s3://${ALLURE_S3_BUCKET}/${DATE_MM_DD_YY}/${TOPO_LABEL}/${HOST}/allure-results/"
           echo "Copying tests/allure-results to ${S3_URI}"
           if ! aws s3 cp "$STAGING/" "$S3_URI" --recursive --region "${AWS_REGION}"; then
-            FALLBACK_DIR="/tmp/allure-results/${DATE_MM_DD_YY}/${TOPO_LABEL}/${HOST}"
-            echo "S3 upload failed; copying artifacts to ${FALLBACK_DIR}"
-            mkdir -p "$FALLBACK_DIR"
-            cp -r "$STAGING/." "$FALLBACK_DIR/"
-            echo "Artifacts saved to ${FALLBACK_DIR}"
+            echo "S3 upload failed to $S3_URI"
+            exit 1
           fi
 
   upload-logs:
