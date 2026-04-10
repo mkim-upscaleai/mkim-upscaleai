@@ -283,6 +283,10 @@ jobs:
 
       - name: Setup test environment
         run: |
+          echo "Reset factory settings on switch and fanout"
+          /usr/bin/sshpass -p "${{ secrets.SWITCH_PASSWORD }}" ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} "sudo config-setup factory keep-basic"
+          /usr/bin/sshpass -p "${{ secrets.SWITCH_PASSWORD }}" ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }} "sudo config-setup factory keep-basic"
+
           echo "SONIC_ROOT=$(pwd)" >> $GITHUB_ENV
           echo "Get management IP address of server"
           DEFAULT_INTERFACE=$(ip route | awk '/default/ { print $5 }')
