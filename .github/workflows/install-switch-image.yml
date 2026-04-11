@@ -108,7 +108,7 @@ jobs:
           echo "SWITCH_IP=$switch_ip" >> $GITHUB_ENV
           echo "Switch IP: $switch_ip"
 
-      - name: Copy the latest installer from s3 onto device
+      - name: Download installer from S3 and copy to switch and fanout
         env:
           SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
         run: |
@@ -137,72 +137,79 @@ jobs:
                   fi
             done
 
-            if [ -n "$S3_PATH" ]; then
-              echo "Downloading file: $S3_PATH"
-              aws s3 cp "$S3_PATH" .
-              BIN_FILE=$(basename "$S3_PATH")
-              echo "BIN_FILE=$BIN_FILE" >> $GITHUB_ENV
-              echo "BIN_FILE: ${BIN_FILE}"
-              /usr/bin/sshpass -v -p ${{ env.SWITCH_PASS }} scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE
-            else
+            if [ -z "$S3_PATH" ]; then
               echo "Unable to find sonic-mellanox-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
               exit 1
             fi
 
-      - name: Copy the latest installer from s3 onto fanout
-        env:
-          SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
-        run: |
-          echo "Copying ${{ env.BIN_FILE }} to fanout ${{ env.FANOUT_IP }}"
-          /usr/bin/sshpass -v -p ${{ env.SWITCH_PASS }} scp ${{ env.SSH_OPTS }} \
-            "${{ env.BIN_FILE }}" ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}:/tmp/${{ env.BIN_FILE }}
+            echo "Downloading file: $S3_PATH"
+            aws s3 cp "$S3_PATH" .
+            BIN_FILE=$(basename "$S3_PATH")
+            echo "BIN_FILE=$BIN_FILE" >> $GITHUB_ENV
+            echo "BIN_FILE: ${BIN_FILE}"
 
-      - name: Install image and reboot switch
+            # Copy to switch and fanout in parallel
+            echo "Copying $BIN_FILE to switch (${{ env.SWITCH_IP }}) and fanout (${{ env.FANOUT_IP }}) simultaneously..."
+            /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE &
+            SCP_SWITCH_PID=$!
+            /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}:/tmp/$BIN_FILE &
+            SCP_FANOUT_PID=$!
+
+            SCP_SWITCH_RC=0; wait $SCP_SWITCH_PID || SCP_SWITCH_RC=$?
+            SCP_FANOUT_RC=0; wait $SCP_FANOUT_PID || SCP_FANOUT_RC=$?
+            [ $SCP_SWITCH_RC -ne 0 ] && echo "ERROR: SCP to switch failed"
+            [ $SCP_FANOUT_RC -ne 0 ] && echo "ERROR: SCP to fanout failed"
+            [ $SCP_SWITCH_RC -ne 0 ] || [ $SCP_FANOUT_RC -ne 0 ] && exit 1
+            echo "Installer copied to both devices"
+
+      - name: Install image and reboot switch and fanout simultaneously
         env:
           BIN_FILE: ${{ env.BIN_FILE }}
           SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
-          SWITCH_IP: ${{ env.SWITCH_IP }}
         run: |
-          /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} \
+          # Helper: poll a host until it responds or max_attempts is exceeded
+          wait_for_host() {
+            local host=$1
+            local label=$2
+            local max_attempts=20
+            local attempt=0
+            until /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
+                ${{ env.SWITCH_USER }}@$host 'echo "online"' 2>/dev/null; do
+              attempt=$((attempt + 1))
+              if [ $attempt -ge $max_attempts ]; then
+                echo "ERROR: $label ($host) did not come back after $max_attempts attempts"
+                return 1
+              fi
+              echo "$label not yet available, retrying in 30 seconds... (attempt $attempt/$max_attempts)"
+              sleep 30
+            done
+            echo "Status check: $label is online after upgrade"
+          }
+
+          # Trigger install+reboot on both devices simultaneously
+          echo "Triggering install and reboot on switch (${{ env.SWITCH_IP }}) and fanout (${{ env.FANOUT_IP }})..."
+          /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
             "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
-            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &"
-          sleep 60
-          echo 'Waiting for ${{ env.SWITCH_IP }} to come back online...'
-          max_attempts=20
-          attempt=0
-          until /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }} 'echo "Server is back online"'; do
-            attempt=$((attempt + 1))
-            if [ $attempt -ge $max_attempts ]; then
-              echo "Switch did not come back after $max_attempts attempts"
-              exit 1
-            fi
-            echo "Server not yet available, retrying in 30 seconds..."
-            sleep 30
-          done
-          echo 'Status check: Switch is online after upgrade'
-
-      - name: Install image and reboot fanout
-        env:
-          BIN_FILE: ${{ env.BIN_FILE }}
-          SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
-        run: |
-          /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} \
+            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &" &
+          /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
             "${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}" \
-            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &"
+            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &" &
+          wait
+          echo "Install commands sent to both devices — waiting 60s for reboots to initiate..."
           sleep 60
-          echo 'Waiting for ${{ env.FANOUT_IP }} to come back online...'
-          max_attempts=20
-          attempt=0
-          until /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }} 'echo "Fanout is back online"'; do
-            attempt=$((attempt + 1))
-            if [ $attempt -ge $max_attempts ]; then
-              echo "Fanout did not come back after $max_attempts attempts"
-              exit 1
-            fi
-            echo "Fanout not yet available, retrying in 30 seconds..."
-            sleep 30
-          done
-          echo 'Status check: Fanout is online after upgrade'
+
+          # Poll both devices in parallel
+          wait_for_host "${{ env.SWITCH_IP }}" "Switch" &
+          SWITCH_PID=$!
+          wait_for_host "${{ env.FANOUT_IP }}" "Fanout" &
+          FANOUT_PID=$!
+
+          SWITCH_RC=0; wait $SWITCH_PID || SWITCH_RC=$?
+          FANOUT_RC=0; wait $FANOUT_PID || FANOUT_RC=$?
+          [ $SWITCH_RC -ne 0 ] && echo "ERROR: Switch did not come back online"
+          [ $FANOUT_RC -ne 0 ] && echo "ERROR: Fanout did not come back online"
+          [ $SWITCH_RC -ne 0 ] || [ $FANOUT_RC -ne 0 ] && exit 1
+          echo "Both switch and fanout are online after upgrade"
 
       - name: Run sanity tests
         run: |
@@ -236,15 +243,13 @@ jobs:
             echo "Sanity tests passed"
           fi
 
-      - name: Cleanup older images
+      - name: Cleanup older images on switch and fanout
         run: |
           /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
             "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
-            "sudo sonic-installer cleanup -y"
-
-      - name: Cleanup older fanout images
-        run: |
+            "sudo sonic-installer cleanup -y" &
           /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
             "${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}" \
-            "sudo sonic-installer cleanup -y"
-            
+            "sudo sonic-installer cleanup -y" &
+          wait
+          echo "Image cleanup complete on both devices"
