@@ -149,6 +149,14 @@ jobs:
               exit 1
             fi
 
+      - name: Copy the latest installer from s3 onto fanout
+        env:
+          SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
+        run: |
+          echo "Copying ${{ env.BIN_FILE }} to fanout ${{ env.FANOUT_IP }}"
+          /usr/bin/sshpass -v -p ${{ env.SWITCH_PASS }} scp ${{ env.SSH_OPTS }} \
+            "${{ env.BIN_FILE }}" ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}:/tmp/${{ env.BIN_FILE }}
+
       - name: Install image and reboot switch
         env:
           BIN_FILE: ${{ env.BIN_FILE }}
@@ -172,6 +180,29 @@ jobs:
             sleep 30
           done
           echo 'Status check: Switch is online after upgrade'
+
+      - name: Install image and reboot fanout
+        env:
+          BIN_FILE: ${{ env.BIN_FILE }}
+          SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
+        run: |
+          /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} \
+            "${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}" \
+            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &"
+          sleep 60
+          echo 'Waiting for ${{ env.FANOUT_IP }} to come back online...'
+          max_attempts=20
+          attempt=0
+          until /usr/bin/sshpass -p ${{ env.SWITCH_PASS }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }} 'echo "Fanout is back online"'; do
+            attempt=$((attempt + 1))
+            if [ $attempt -ge $max_attempts ]; then
+              echo "Fanout did not come back after $max_attempts attempts"
+              exit 1
+            fi
+            echo "Fanout not yet available, retrying in 30 seconds..."
+            sleep 30
+          done
+          echo 'Status check: Fanout is online after upgrade'
 
       - name: Run sanity tests
         run: |
@@ -210,3 +241,10 @@ jobs:
           /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
             "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
             "sudo sonic-installer cleanup -y"
+
+      - name: Cleanup older fanout images
+        run: |
+          /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
+            "${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}" \
+            "sudo sonic-installer cleanup -y"
+            
