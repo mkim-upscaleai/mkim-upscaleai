@@ -1,5 +1,5 @@
 qos/test_buffer.py::test_buffer_deployment
-qos/test_qos_dscp_mapping.py::TestQoSSaiDSCPQueueMapping_IPIP_Base::test_dscp_to_queue_mapping_uniform_mode
+qos/test_qos_dscp_mapping.py
 qos/test_pfc_counters.py
 qos/test_pfc_pause.py
 qos/test_qos_sai.py::TestQosSai::testParameter[single_asic]
