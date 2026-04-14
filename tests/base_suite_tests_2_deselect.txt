@@ -13,6 +13,7 @@ autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-ic
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-macsec]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-mux]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-nat]
+autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-otel]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-sflow]
 autorestart/test_container_autorestart.py::test_containers_autorestart[*-None-telemetry]
 
@@ -21,6 +22,7 @@ container_checker/test_container_checker.py::test_container_checker[*-None-iccpd
 container_checker/test_container_checker.py::test_container_checker[*-None-macsec]
 container_checker/test_container_checker.py::test_container_checker[*-None-mux]
 container_checker/test_container_checker.py::test_container_checker[*-None-nat]
+container_checker/test_container_checker.py::test_container_checker[*-None-otel]
 container_checker/test_container_checker.py::test_container_checker[*-None-sflow]
 container_checker/test_container_checker.py::test_container_checker[*-None-telemetry]
 
@@ -28,7 +30,9 @@ container_hardening/test_container_hardening.py::test_container_privileged[*-Non
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-iccpd]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-macsec]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-mux]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-gnmi]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-nat]
+container_hardening/test_container_hardening.py::test_container_privileged[*-None-otel]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-pmon]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-sflow]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-swss]
@@ -332,3 +336,32 @@ upgrade_path
 
 # Requires mx or m0 topology
 wol
+
+###################################################################
+### Deselect T0 skipped tests confirmed from nightly run 04/08/26
+
+# Only for supervisor node — SN5610 is a fixed-form switch
+snmp/test_snmp_phy_entity.py::test_fabric_card_info
+
+# Requires DPU hardware — SN5610 has no DPUs
+gnmi/test_gnoi_system_reboot.py::test_gnoi_system_reboot_halt_dpus
+
+# Skips when /var/core is on tmpfs (sonic-buildimage issues #20950 and #15101)
+show_techsupport/test_auto_techsupport.py::TestAutoTechSupport::test_max_limit[core]
+
+# secure_boot_image is not 'yes' on this device
+platform_tests/test_secure_upgrade.py::test_non_secure_boot_upgrade_failure
+
+# Skipped due to open GitHub issue sonic-mgmt #20787
+tacacs/test_ro_disk.py::test_ro_disk
+
+# telemetry feature is not enabled on this device
+gnmi_e2e/test_telemetry_auth.py::test_telemetry_authorize_failed_with_invalid_cname
+gnmi_e2e/test_telemetry_auth.py::test_telemetry_authorize_passed_with_valid_cname
+
+# Requires --container_test pytest flag, not used in nightly run
+telemetry/test_telemetry_show_cli.py::test_telemetry_show_get
+telemetry/test_telemetry_show_cli.py::test_telemetry_show_non_get
+
+# No PTF mapping for DUT port Ethernet64 in this testbed topology
+counter/test_xon_xoff.py::test_xon_xoff_does_not_increase_rx_drop

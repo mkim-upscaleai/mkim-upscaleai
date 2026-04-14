@@ -246,7 +246,7 @@ def verify_counterpoll_status(duthost, counterpoll_list, expected):
         verified_output_dict = {}
         for counterpoll_parsed_dict in counterpoll_output:
             for k, v in list(CounterpollConstants.COUNTERPOLL_MAPPING.items()):
-                if k in counterpoll_parsed_dict[CounterpollConstants.TYPE]:
+                if k == counterpoll_parsed_dict[CounterpollConstants.TYPE]:
                     verified_output_dict[v] = counterpoll_parsed_dict[CounterpollConstants.STATUS]
 
         # Validate all of the relevant keys are disabled - QUEUE/WATERMARK/PG-DROP
