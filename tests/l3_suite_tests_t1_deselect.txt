@@ -205,3 +205,7 @@ vxlan/test_vxlan_underlay_ecmp.py
 vxlan/test_vxlan_multi_tunnel.py::test_vxlan_error_null_tunnel_id
 # Skipped: test requires topology t0 and cisco-8000 asic
 vxlan/test_vxlan_vnet_bgp_subintf.py::test_vnet_with_bgp_intf_smacrewrite
+
+# IPv6-only management not supported on T1-lag testbed
+ip/test_mgmt_ipv6_only.py::test_syslog_ipv6_only[fd82:b34f:cc99::100-fd82:b34f:cc99::200]
+ip/test_mgmt_ipv6_only.py::test_syslog_ipv6_only[fd82:b34f:cc99::100-None]

@@ -20,6 +20,11 @@ dhcp_relay/test_dhcp_relay.py
 dhcp_relay.test_dhcp_relay_stress.py
 # Skipped: test not stable on T1 topology
 dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_restart_with_stress
+# ack/offer require T0/m0 topology; discover/request skipped per GitHub issue #14851
+dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[ack]
+dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[discover]
+dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[offer]
+dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_stress[request]
 dhcp_relay/test_dhcpv6_relay.py
 
 ###############################################################################
@@ -43,6 +48,10 @@ drop_packets/test_drop_counters.py::test_dst_ip_absent[vlan_members-*]
 drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[vlan_members-*]
 drop_packets.test_drop_counters.py::test_equal_smac_dmac_drop
+# No port_channel/rif/vlan members available for T1-lag topology
+drop_packets/drop_packets.py::test_equal_smac_dmac_drop[port_channel_members-*]
+drop_packets/drop_packets.py::test_equal_smac_dmac_drop[rif_members-*]
+drop_packets/drop_packets.py::test_equal_smac_dmac_drop[vlan_members-*]
 drop_packets/test_drop_counters.py::test_ip_is_zero_addr[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_ip_is_zero_addr[vlan_members-*]
 drop_packets/test_drop_counters.pytest_ip_pkt_with_exceeded_mtu[port_channel_members-*]

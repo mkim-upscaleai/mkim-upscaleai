@@ -238,3 +238,8 @@ upgrade_path
 
 # Requires mx or m0 topology
 wol
+
+# DUT has no IPv6 default route for syslog server — skips on T1-lag topology
+syslog/test_syslog.py::test_syslog[fd82:b34f:cc99::100-7.0.80.166]
+syslog/test_syslog.py::test_syslog[fd82:b34f:cc99::100-fd82:b34f:cc99::200]
+syslog/test_syslog.py::test_syslog[fd82:b34f:cc99::100-None]
