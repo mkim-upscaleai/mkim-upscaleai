@@ -159,4 +159,15 @@ qos_params:
                 limit: 80
                 pkts_num_leak_out: 48
                 lossy_weight: 8
-                lossless_weight: 8
+                #lossless_weight: 8
+                # lossless queues (Q3, Q4) hold 300 pkts each vs 80 pkts for each lossy queue.
+                # lossless_weight must be set proportionally so all queues drain simultaneously:
+                #   drain_time = pkts / (weight / total_weight)
+                #   For simultaneous drain: 300 / lossless_weight = 80 / lossy_weight
+                #   => lossless_weight = (300 / 80) * lossy_weight = 3.75 * 8 = 30
+                # With lossless_weight=30 and lossy_weight=8:
+                #   total_weight = 2*30 + 5*8 = 100
+                #   Q3/Q4 each get 30% BW -> drain 300 pkts in 1000 time units
+                #   Q0/Q1/Q2/Q5/Q6 each get 8% BW -> drain 80 pkts in 1000 time units
+                # All 7 queues empty simultaneously, keeping diff well within limit=80.
+                lossless_weight: 30
