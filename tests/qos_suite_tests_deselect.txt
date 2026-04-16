@@ -17,6 +17,7 @@ pfcwd/test_pfcwd_warm_reboot.py               # Skipped due to "https://github.c
 
 # multi-dut is not supported
 qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[multi_dut_*]
+qos/test_qos_sai.py::TestQosSai::testQosSaiDwrrWeightChange[multi_dut_*]
 # multi-dut is not supported
 qos/test_qos_sai.py::TestQosSai::testQosSaiDwrr[single_dut_multi_asic]
 # multi-dut is not supported
@@ -37,3 +38,6 @@ qos/test_qos_sai.py::TestQosSai::testQosSaiPfcXonLimit[single_asic-xon_4]
 
 #For mellanox device, testQosSaiDscpToPgMapping can cover the scenarios / Unsupported testbed type.
 qos/test_qos_sai.py::TestQosSai::testIPIPQosSaiDscpToPgMapping[single_asic-uniform]
+
+#separated DSCP_TO_TC_MAP is not applied
+qos/test_qos_sai.py::TestQosSai::testQosSaiSeparatedDscpQueueMapping
