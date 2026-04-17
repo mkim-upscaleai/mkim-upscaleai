@@ -120,12 +120,12 @@ all:
           sonicadmin_password: "YourPaSsWoRd"
           hwsku: Mellanox-SN5610-C256S2
           model: SN5610
-          serial: UMT2535601Q8WI
+          serial: MT2535601Q8W
           base_mac: E8:9E:49:78:D4:50
           syseeprom_info:
             "0x21": "SN5610"
             "0x22": "920-9N42F-00RI-3C1"
-            "0x23": "UMT2535601Q8WI"
+            "0x23": "MT2535601Q8W"
             "0x24": "E8:9E:49:78:D4:50"
             "0x25":  "09/04/2025 14:19:28"
             "0x26":  "1"
@@ -346,12 +346,12 @@ all:
           sonicadmin_password: "YourPaSsWoRd"
           hwsku: Mellanox-SN5610-O64S2
           model: SN5610
-          serial: UMT2535601Q8WI
+          serial: MT2535601Q8W
           base_mac: E8:9E:49:78:D4:50
           syseeprom_info:
             "0x21": "SN5610"
             "0x22": "920-9N42F-00RI-3C1"
-            "0x23": "UMT2535601Q8WI"
+            "0x23": "MT2535601Q8W"
             "0x24": "E8:9E:49:78:D4:50"
             "0x25":  "09/04/2025 14:19:28"
             "0x26":  "1"
