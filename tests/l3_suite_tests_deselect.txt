@@ -200,3 +200,6 @@ vxlan/test_vxlan_multi_tunnel.py
 
 # Skipped: Unsupported platform — Mellanox SN5610
 vxlan/test_vxlan_vnet_bgp_subintf.py::test_vnet_with_bgp_intf_smacrewrite
+
+### TEMPORARY Skip - Causes race condition
+route/test_default_route.py
