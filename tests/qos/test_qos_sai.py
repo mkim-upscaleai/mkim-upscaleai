@@ -1171,7 +1171,7 @@ class TestQosSai(QosSaiBase):
     @pytest.mark.parametrize("bufPool", ["wm_buf_pool_lossless", "wm_buf_pool_lossy"])
     def testQosSaiBufferPoolWatermark(
         self, request, get_src_dst_asic_and_duts, bufPool, ptfhost, dutTestParams, dutConfig, dutQosConfig,
-        ingressLosslessProfile, egressLossyProfile, resetWatermark,
+        ingressLosslessProfile, ingressLossyProfile, egressLossyProfile, resetWatermark,
         skip_src_dst_different_asic
     ):
         """
@@ -1184,6 +1184,7 @@ class TestQosSai(QosSaiBase):
                     and test ports
                 dutQosConfig (Fixture, dict): Map containing DUT host QoS configuration
                 ingressLosslessProfile (Fixture): Map of ingress lossless buffer profile attributes
+                ingressLossyProfile (Fixture): Map of ingress lossy buffer profile attributes
                 egressLossyProfile (Fixture): Map of egress lossy buffer profile attributes
                 resetWatermark (Fixture): reset watermarks
 
@@ -1196,7 +1197,7 @@ class TestQosSai(QosSaiBase):
         disableTest = request.config.getoption("--disable_test")
         if dutTestParams["basicParams"]["sonic_asic_type"] == 'cisco-8000' or \
                 ('platform_asic' in dutTestParams["basicParams"] and
-                 dutTestParams["basicParams"]["platform_asic"] in ["broadcom-dnx", "marvell-teralynx"]):
+                 dutTestParams["basicParams"]["platform_asic"] in ["broadcom-dnx", "marvell-teralynx", "mellanox"]):
             disableTest = False
         if disableTest:
             pytest.skip("Buffer Pool watermark test is disabled")
@@ -1210,6 +1211,10 @@ class TestQosSai(QosSaiBase):
                     pytest.skip("Skip buffer pool watermark lossless test since port speed "
                                 "cable length is different between src and dst asic")
             qosConfig = dutQosConfig["param"][portSpeedCableLength]
+            if ('platform_asic' in dutTestParams["basicParams"] and
+                    dutTestParams["basicParams"]["platform_asic"] == "mellanox" and
+                    bufPool not in qosConfig):
+                qosConfig = dutQosConfig["param"]
             triggerDrop = qosConfig[bufPool]["pkts_num_trig_pfc"]
             fillMin = qosConfig[bufPool]["pkts_num_fill_ingr_min"]
             buf_pool_roid = ingressLosslessProfile["bufferPoolRoid"]
@@ -1221,8 +1226,19 @@ class TestQosSai(QosSaiBase):
             except KeyError:
                 qosConfig = baseQosConfig
                 triggerDrop = qosConfig[bufPool]["pkts_num_trig_egr_drp"]
-            fillMin = qosConfig[bufPool]["pkts_num_fill_egr_min"]
-            buf_pool_roid = egressLossyProfile["bufferPoolRoid"]
+            # On Spectrum-4/5 the TX-disable mechanism holds lossy packets in the
+            # ingress_lossy_pool rather than the egress_lossy_pool.  The egress pool
+            # watermark therefore always reads 0, and the ingress pool OID must be used.
+            # pkts_num_trig_egr_drp is still calibrated against egress_lossy_size (the
+            # smaller quota), which matches the number of cells that fill the ingress pool
+            # under this architecture.
+            dut_asic = dutConfig.get("dutAsic", "")
+            if dut_asic in ["spc4", "spc5"]:
+                buf_pool_roid = ingressLossyProfile["bufferPoolRoid"]
+                fillMin = qosConfig[bufPool]["pkts_num_fill_ingr_min"]
+            else:
+                buf_pool_roid = egressLossyProfile["bufferPoolRoid"]
+                fillMin = qosConfig[bufPool]["pkts_num_fill_egr_min"]
         else:
             pytest.fail("Unknown pool type")
 
@@ -1240,9 +1256,10 @@ class TestQosSai(QosSaiBase):
             "src_port_ip": dutConfig["testPorts"]["src_port_ip"],
             "pkts_num_leak_out": dutQosConfig["param"][portSpeedCableLength]["pkts_num_leak_out"],
             "pkts_num_fill_min": fillMin,
-            "pkts_num_fill_shared": triggerDrop - 1,
+            "pkts_num_fill_shared": qosConfig[bufPool].get("pkts_num_fill_shared", triggerDrop - 1),
             "cell_size": qosConfig[bufPool]["cell_size"],
-            "buf_pool_roid": buf_pool_roid
+            "buf_pool_roid": buf_pool_roid,
+            "dut_asic": dutConfig.get("dutAsic", "")
         })
 
         if "platform_asic" in dutTestParams["basicParams"]:
@@ -1873,6 +1890,8 @@ class TestQosSai(QosSaiBase):
             testParams["platform_asic"] = dutTestParams["basicParams"]["platform_asic"]
         else:
             testParams["platform_asic"] = None
+
+        testParams["dut_asic"] = dutConfig.get("dutAsic", "")
 
         if "pkts_num_egr_mem" in list(qosConfig.keys()):
             testParams["pkts_num_egr_mem"] = qosConfig["pkts_num_egr_mem"]

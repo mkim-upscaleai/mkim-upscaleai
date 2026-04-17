@@ -300,6 +300,13 @@ class QosSaiBase(QosBase):
             pg_q_buffer_profile["pg_q_alpha"] = pg_q_alpha
             pg_q_buffer_profile["port_alpha"] = port_alpha
             pg_q_buffer_profile["pool_size"] = buffer_size
+            # pg_q_reserved_size is the per-port-pool minimum buffer guaranteed
+            # allocation. Packets within this allocation are admitted to the shared
+            # pool but are NOT counted by SBPR pool statistics, creating a "dead zone"
+            # in pool-level watermarks. The buffer pool watermark test needs to send
+            # at least this many packets (in cells) before the watermark becomes
+            # non-zero.
+            pg_q_buffer_profile["pg_q_reserved_size"] = int(pg_q_reserved_size)
             logger.info(f'pg_q_buffer_profile: {pg_q_buffer_profile}')
         else:
             raise Exception("Not found port dynamic th")
@@ -2319,8 +2326,9 @@ class QosSaiBase(QosBase):
                 is_lossy_queue_only = True
                 queue_table_postfix_list = ['0', '1', '2', '3', '4', '5']
                 queue_to_dscp_map = self.get_queue_to_dscp_map(duthost)
-                queue_weights_list = self.get_queue_weights_based_dynamic_th(duthost, queue_table_postfix_list)
-                queues = random.choices(queue_table_postfix_list, weights=queue_weights_list, k=1)[0]
+                queue_weights_list, lossy_queue_list = self.get_queue_weights_based_dynamic_th(
+                    duthost, queue_table_postfix_list)
+                queues = random.choices(lossy_queue_list, weights=queue_weights_list, k=1)[0]
             else:
                 queues = "0-2"
 
@@ -3173,15 +3181,22 @@ def set_queue_pir(interface, queue, rate):
                 queue_dynamic_th_map[queue] = dynamic_th_res[0]
         logging.info(f"queue_dynamic_th_map: {queue_dynamic_th_map}")
 
+        # Only queues whose per-queue profile is named "queueN_downlink_lossy_profile" are
+        # included.  Lossless queues (e.g. 3 and 4) use "egress_lossless_profile" instead,
+        # so HGET returns empty for them and they are absent from queue_dynamic_th_map.
+        # The caller must use lossy_queue_list (not the original queue_table_postfix_list)
+        # to ensure random.choices cannot accidentally pick a lossless queue for lossy tests.
+        lossy_queue_list = list(queue_dynamic_th_map.keys())
         dynamic_th_list = list(queue_dynamic_th_map.values())
-        if len(queue_table_postfix_list) == len(dynamic_th_list):
+        if lossy_queue_list:
             weights_list.extend(
-                1/dynamic_th_list.count(queue_dynamic_th_map[queue]) for queue in queue_table_postfix_list)
+                1/dynamic_th_list.count(queue_dynamic_th_map[queue]) for queue in lossy_queue_list)
         else:
+            lossy_queue_list = queue_table_postfix_list
             weights_list = [1] * len(queue_table_postfix_list)
         logging.info(f"weights_list: {weights_list}")
 
-        return weights_list
+        return weights_list, lossy_queue_list
 
     def is_port_alpha_enabled(self, duthost):
         # only spc4 and above support enable or disable port alpha function

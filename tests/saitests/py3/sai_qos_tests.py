@@ -5484,6 +5484,7 @@ class PGHeadroomWatermarkTest(sai_base_test.ThriftInterfaceDataPlane):
         cell_size = int(self.test_params['cell_size'])
         hwsku = self.test_params['hwsku']
         platform_asic = self.test_params['platform_asic']
+        dut_asic = self.test_params.get('dut_asic', '')
 
         # Prepare TCP packet data
         ttl = 64
@@ -5562,8 +5563,8 @@ class PGHeadroomWatermarkTest(sai_base_test.ThriftInterfaceDataPlane):
 
             q_wm_res, pg_shared_wm_res, pg_headroom_wm_res = sai_thrift_read_port_watermarks(
                 self.src_client, port_list['src'][src_port_id])
-            if platform_asic and platform_asic == "broadcom-dnx":
-                logging.info("On J2C+ don't support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES " +
+            if (platform_asic and platform_asic == "broadcom-dnx") or dut_asic in ['spc4', 'spc5']:
+                logging.info("Platform does not support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES " +
                              "stat - so ignoring this step for now")
             else:
                 assert pg_headroom_wm_res[pg] == 0, "Non-zero initial PG HR watermark {}".format(pg_headroom_wm_res[pg])
@@ -5601,8 +5602,8 @@ class PGHeadroomWatermarkTest(sai_base_test.ThriftInterfaceDataPlane):
                     ),
                     file=sys.stderr)
 
-                if platform_asic and platform_asic == "broadcom-dnx":
-                    logging.info("On J2C+ don't support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES " +
+                if (platform_asic and platform_asic == "broadcom-dnx") or dut_asic in ['spc4', 'spc5']:
+                    logging.info("Platform does not support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES " +
                                  "stat - so ignoring this step for now")
                 else:
                     assert (pg_headroom_wm_res[pg] <= (
@@ -5623,8 +5624,8 @@ class PGHeadroomWatermarkTest(sai_base_test.ThriftInterfaceDataPlane):
                    ((expected_wm + margin) * cell_size * cell_occupancy)), file=sys.stderr)
             assert (expected_wm == total_hdrm)
 
-            if platform_asic and platform_asic == "broadcom-dnx":
-                logging.info("On J2C+ don't support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES " +
+            if (platform_asic and platform_asic == "broadcom-dnx") or dut_asic in ['spc4', 'spc5']:
+                logging.info("Platform does not support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES " +
                              "stat - so ignoring this step for now")
             else:
                 assert (pg_headroom_wm_res[pg] <= (
@@ -6141,6 +6142,7 @@ class BufferPoolWatermarkTest(sai_base_test.ThriftInterfaceDataPlane):
         src_port_ip = self.test_params['src_port_ip']
 
         asic_type = self.test_params['sonic_asic_type']
+        dut_asic = self.test_params.get('dut_asic', '')
         pkts_num_leak_out = int(self.test_params['pkts_num_leak_out'])
         pkts_num_fill_min = int(self.test_params['pkts_num_fill_min'])
         pkts_num_fill_shared = int(self.test_params['pkts_num_fill_shared'])
@@ -6333,8 +6335,13 @@ class BufferPoolWatermarkTest(sai_base_test.ThriftInterfaceDataPlane):
             assert (expected_wm == total_shared)
             assert ((expected_wm - lower_bound_margin)
                     * cell_size <= buffer_pool_wm)
-            assert (buffer_pool_wm <= (
-                expected_wm + extra_cap_margin) * cell_size)
+            # On Spectrum-4/5 the lossy pool watermark is read from ingress_lossy_pool,
+            # which has far larger capacity than pkts_num_trig_egr_drp (calibrated against
+            # egress_lossy_size).  Overflow packets accumulate freely with no cap at
+            # total_shared, so the upper-bound cap check does not apply.
+            if dut_asic not in ['spc4', 'spc5']:
+                assert (buffer_pool_wm <= (
+                    expected_wm + extra_cap_margin) * cell_size)
 
         finally:
             self.sai_thrift_port_tx_enable(self.dst_client, asic_type, [dst_port_id])

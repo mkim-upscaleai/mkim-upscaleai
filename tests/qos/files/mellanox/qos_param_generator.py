@@ -155,6 +155,7 @@ class QosParamMellanox(object):
         self.qos_parameters['pkts_num_dismiss_pfc'] = pkts_num_dismiss_pfc
         self.qos_parameters['pkts_num_trig_egr_drp'] = pkts_num_trig_egr_drp
         self.qos_parameters['pkts_num_hysteresis'] = hysteresis
+        self.qos_parameters['xon'] = xon
 
     def calculate_parameters(self):
         """

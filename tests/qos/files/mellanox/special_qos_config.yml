@@ -16,6 +16,12 @@ qos_params:
                 packet_size: 800
             wm_q_shared_lossless:
                 packet_size: 700
+                # pkts_num_trig_drp is computed from a static formula.  SPC4/SPC5
+                # evaluates the alpha-based admission threshold dynamically per cell,
+                # so the actual drop point is ~130-180 cells above the static estimate.
+                # margin=200 covers this systematic offset (same behavior as
+                # wm_pg_shared_lossless; see comment there for full explanation).
+                pkts_num_margin: 200
             hdrm_pool_size:
                 packet_size: 800
         xon_1:
