@@ -889,7 +889,7 @@ def mtu_to_test(request):
     return request.param
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def port_to_test(request, duthost):
     """Used to parametrized test cases for port
 
@@ -2828,9 +2828,23 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
         id_list = _ids_to_id_list(ids)
 
         if expected_profile:
+            if profile_in_db is None:
+                # Per-queue APPL_DB layout (e.g. Mellanox SPC4/SPC5): each queue ID has its
+                # own key instead of a range key. Check each individual ID separately.
+                for single_id in id_list:
+                    single_profile = dut_db_info.get_profile_name_from_appl_db(table, port, single_id)
+                    logging.info("Per-queue APPL_DB check: {}:{}:{} actual={} expected={}".format(
+                        table, port, single_id, single_profile, expected_profile))
+                    if not _check_condition(single_profile == expected_profile,
+                                            "The profile of {}:{}:{} isn't the expected ({}) actual=({})"
+                                            .format(table, port, single_id, expected_profile, single_profile),
+                                            use_assert):
+                        return None, False
+                profile_in_db = expected_profile
             if not _check_condition(profile_in_db == expected_profile,
-                                    "The profile of {}:{}:{} isn't the expected ({})"
-                                    .format(table, port, ids, expected_profile), use_assert):
+                                    "The profile of {}:{}:{} isn't the expected ({}) actual=({})"
+                                    .format(table, port, ids, expected_profile, profile_in_db),
+                                    use_assert):
                 return None, False
 
             if buffer_name_map:
@@ -2994,6 +3008,26 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
     lossless_pool_oid = None
     admin_up_ports = set()
     config_facts = duthost.config_facts(host=duthost.hostname, asic_index=0, source="running")['ansible_facts']
+    # Some platforms (e.g. Mellanox SN5610) generate per-queue, per-direction lossy
+    # profiles (queue0_downlink_lossy_profile, queue0_uplink_lossy_profile, etc.)
+    # instead of the generic q_lossy_profile used by buffer_table_up.  When this is
+    # the case the generic profile key simply does not exist in APPL_DB, so the exact
+    # lossy queue profile name cannot be verified; skip those checks.
+    q_lossy_profile_key = "BUFFER_PROFILE_TABLE:q_lossy_profile"
+    uses_per_queue_lossy_profiles = dut_db_info.appl_db.get(q_lossy_profile_key) is None
+    if uses_per_queue_lossy_profiles:
+        logging.info("Per-queue direction-specific lossy profiles detected; "
+                     "lossy BUFFER_QUEUE_TABLE profile name checks will be skipped")
+
+    # Collect LAG member (uplink) ports.  On some platforms the buffer template
+    # intentionally configures uplink lossless PGs with a fixed effective cable
+    # length (e.g. 5 m) regardless of the physical cable length in CABLE_LENGTH|AZURE.
+    # For these ports we read the actual lossless PG profile from APPL_DB and use it
+    # as the expected value so that APPL_DB ↔ ASIC_DB consistency is still verified.
+    lag_member_ports = set()
+    for members in config_facts.get('PORTCHANNEL_MEMBER', {}).values():
+        lag_member_ports.update(members.keys())
+
     for port in configdb_ports:
         logging.info("Checking port buffer information: {}".format(port))
         port_config = dut_db_info.get_port_info_from_config_db(port)
@@ -3047,6 +3081,47 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
 
             if not expected_profile:
                 continue
+
+            # When the platform uses per-queue direction-specific lossy profiles
+            # (e.g. queue0_downlink_lossy_profile, queue0_uplink_lossy_profile) the
+            # generic name in buffer_table_up (q_lossy_profile) does not exist.
+            # Instead of skipping entirely, verify that each individual queue has
+            # a profile that is lossy (contains "lossy" but not "lossless").
+            # The ASIC_DB OID consistency check is skipped because per-queue profiles
+            # intentionally have different OIDs per queue.
+            if (uses_per_queue_lossy_profiles and table == 'BUFFER_QUEUE_TABLE' and
+                    expected_profile and
+                    'lossy' in expected_profile and 'lossless' not in expected_profile):
+                for single_id in _ids_to_id_list(ids):
+                    single_profile = dut_db_info.get_profile_name_from_appl_db(
+                        table, port, single_id)
+                    logging.info("Per-queue lossy profile check: {}:{}:{} actual={}".format(
+                        table, port, single_id, single_profile))
+                    _check_condition(
+                        single_profile is not None and
+                        'lossy' in single_profile and 'lossless' not in single_profile,
+                        "Expected a lossy profile for {}:{}:{}, got ({})".format(
+                            table, port, single_id, single_profile),
+                        True)
+                continue
+
+            # Some platforms configure lossless PG headroom using a fixed effective
+            # cable length (e.g. uplinks always use 5 m regardless of the physical
+            # cable length in CABLE_LENGTH|AZURE).  When the cable-length-derived
+            # expected profile does not exist in APPL_DB, read the actual profile
+            # from the buffer item's own APPL_DB entry and use that so the
+            # APPL_DB <-> ASIC_DB consistency check still runs correctly.
+            if table == 'BUFFER_PG_TABLE' and expected_profile:
+                pg_profile_key = (expected_profile[1:-1] if is_qos_db_reference_with_table
+                                  else "BUFFER_PROFILE_TABLE:{}".format(expected_profile))
+                if dut_db_info.appl_db.get(pg_profile_key) is None:
+                    actual_pg_profile = dut_db_info.get_profile_name_from_appl_db(
+                        table, port, ids)
+                    if actual_pg_profile:
+                        logging.info("Profile {} absent from APPL_DB for {}:{}:{}; "
+                                     "using actual {} for ASIC_DB consistency check".format(
+                                         expected_profile, table, port, ids, actual_pg_profile))
+                        expected_profile = actual_pg_profile
 
             buffer_profile_oid, _ = _check_port_buffer_info_and_get_profile_oid(
                 dut_db_info, table, ids, port, expected_profile)

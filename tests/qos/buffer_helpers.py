@@ -34,7 +34,10 @@ class DutDbInfo:
         return self.config_db.get("PORT|{}".format(port)).get("value")
 
     def get_profile_name_from_appl_db(self, table, port, ids):
-        return self.appl_db.get("{}:{}:{}".format(table, port, ids)).get("value").get("profile")
+        entry = self.appl_db.get("{}:{}:{}".format(table, port, ids))
+        if not entry:
+            return None
+        return entry.get("value").get("profile")
 
     def get_port_info_from_state_db(self, port):
         return self.state_db.get("PORT_TABLE|{}".format(port)).get("value")

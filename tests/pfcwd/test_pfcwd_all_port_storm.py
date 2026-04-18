@@ -42,17 +42,14 @@ def degrade_pfcwd_detection(duthosts, enum_rand_one_per_hwsku_frontend_hostname,
     """
     duthost = duthosts[enum_rand_one_per_hwsku_frontend_hostname]
     dut_asic_type = duthost.facts["asic_type"].lower()
-    skip_fixture = False
+    # Only skip for non-Mellanox DUTs. For Mellanox DUTs the degraded script is always
+    # needed: the original SWSS lua script requires occupancy_bytes > 0 to detect a storm,
+    # but only ports receiving background traffic satisfy this. The degraded script adds a
+    # fallback path (pfc_duration > 80% poll_time) that fires on all ports when PFC frames
+    # are being received, regardless of queue occupancy. This is confirmed empirically:
+    # show pfc counters shows ~1M PFC3 frames on ALL ports, but without the degraded script
+    # only the 5 ports with active background traffic trigger PFCWD storm detection.
     if dut_asic_type != "mellanox":
-        skip_fixture = True
-    # The workaround is not applicable for Mellanox leaf-fanout running ONYX or SONiC
-    # as we can leverage ASIC to generate PFC pause frames
-    for fanouthost in list(fanouthosts.values()):
-        fanout_os = fanouthost.get_fanout_os()
-        if fanout_os == 'onyx' or fanout_os == 'sonic' and fanouthost.facts['asic_type'] == "mellanox":
-            skip_fixture = True
-            break
-    if skip_fixture:
         yield
         return
     logger.info("--- Degrade PFCWD detection logic --")
