@@ -134,7 +134,7 @@ all:
             "0x2A":  "290"
             "0x2B":  "Nvidia"
             "0x2D":  "Nvidia"
-            "0xFE":  "0x87C123C8"
+            "0xFE":  "0xC5941E0B"
           skip_modules:
             psus:
               - PSU 1
@@ -360,7 +360,7 @@ all:
             "0x2A":  "290"
             "0x2B":  "Nvidia"
             "0x2D":  "Nvidia"
-            "0xFE":  "0x87C123C8"
+            "0xFE":  "0xC5941E0B"
           skip_modules:
             psus:
               - PSU 1
