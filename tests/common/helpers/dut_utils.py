@@ -464,6 +464,7 @@ def create_duthost_console(duthost, localhost, conn_graph_facts, creds):  # noqa
 
     # Set up console host
     host = None
+    last_exc = None
     for attempt in range(1, 4):
         try:
             host = ConsoleHost(console_type=console_type,
@@ -476,10 +477,22 @@ def create_duthost_console(duthost, localhost, conn_graph_facts, creds):  # noqa
                                console_device=console_device)
             break
         except Exception as e:
-            logger.warning(f"Attempt {attempt}/3 failed: {e}")
+            last_exc = e
+            logger.warning(
+                f"Attempt {attempt}/3 to connect to console port {console_host}:{console_port} "
+                f"for {dut_hostname} failed: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             continue
     else:
-        raise Exception("Failed to set up connection to console port. See warning logs for details.")
+        # Surface the actual underlying failure in the raised exception so the
+        # root cause is visible in pytest output without digging through
+        # captured warning logs.
+        raise Exception(
+            f"Failed to set up connection to console port "
+            f"{console_host}:{console_port} for {dut_hostname} after 3 attempts. "
+            f"Last error: {type(last_exc).__name__}: {last_exc}"
+        ) from last_exc
 
     return host
 

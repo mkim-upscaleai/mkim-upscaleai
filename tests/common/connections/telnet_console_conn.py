@@ -28,8 +28,13 @@ class TelnetConsoleConn(BaseConsoleConn):
         self,
         pri_prompt_terminator=r".*# ",
         alt_prompt_terminator=r".*\$ ",
-        username_pattern=r"(?:user:|username|login|user name)",
-        pwd_pattern=r"assword",
+        # NOTE: patterns require a trailing colon so that stale terminal-server
+        # output like "Login incorrect" (no colon) does not falsely match the
+        # username prompt and cause us to send the username in response to a
+        # "Password:" prompt that is actually still on the line from a prior
+        # failed session.
+        username_pattern=r"(?:user:|username:|login:|user name:)",
+        pwd_pattern=r"assword:",
         delay_factor=1,
         max_loops=20,
     ):
