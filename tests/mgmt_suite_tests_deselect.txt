@@ -98,12 +98,6 @@ restapi/test_restapi_vxlan_ecmp.py
 restapi
 
 ###################################################################
-### crm deselect tests
-# Skipping IPv4 CRM route test — spine7-800 and spine8-800 are IPv6-only topologies
-crm/test_crm.py::test_crm_route[upscalelab2-spine7-800-None-ipv4]
-crm/test_crm.py::test_crm_route[upscalelab2-spine8-800-None-ipv4]
-
-###################################################################
 ### everflow multi-binding ACL deselect tests
 # Multi-binding ACL is not supported for egress ACL stage
 everflow/test_everflow_testbed.py::TestEverflowV4EgressAclEgressMirror::test_everflow_multi_binding_acl

@@ -102,8 +102,6 @@ everflow/test_everflow_per_interface.py::test_everflow_per_interface[ipv6-erspan
 
 # Unsupported topology, expected to run only on 'T0*' or 'M0/MX' topology
 crm/test_crm.py::test_crm_fdb_entry
-# Skipped on T1 topology
-crm/test_crm.py::test_crm_route
 
 ###################################################################
 ### restapi deselect tests
