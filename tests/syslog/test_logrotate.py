@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.topology("any"),
+    # logrotate/I/O and baseline swss % can trip docker memory_high_threshold unrelated to assertions
+    pytest.mark.disable_memory_utilization,
     pytest.mark.disable_loganalyzer
 ]
 
