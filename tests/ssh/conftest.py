@@ -42,18 +42,38 @@ def load_source(modname, filename):
     return module
 
 
+def _query_local_ssh_algorithms(ssh_q_arg):
+    # pexpect.spawn("ssh ...") in the tests runs the sonic-mgmt container's own
+    # ssh binary, which may be older than both the PTF and the DUT. Intersect its
+    # advertised algorithms too so we never parametrize a name the local client
+    # rejects at CLI parse time (e.g. sntrup761x25519-sha512 on OpenSSH < 9.9).
+    try:
+        raw_output = subprocess.check_output(
+            ["ssh", "-Q", ssh_q_arg],
+            stderr=subprocess.STDOUT, universal_newlines=True)
+        return raw_output.split()
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        logger.warning(
+            "Failed to query local ssh client for '{}' algorithms; skipping local "
+            "intersection: {}".format(ssh_q_arg, e))
+        return None
+
+
 def generate_ssh_ciphers(request, typename):
     if typename == "enc":
         remote_cmd_C = "ssh -Q cipher"
         remote_cmd_S = "sudo sshd -T | grep -i '^ciphers'"
+        local_ssh_q_arg = "cipher"
         permitted_list = PERMITTED_ENC_CIPHERS
     elif typename == "mac":
         remote_cmd_C = "ssh -Q mac"
         remote_cmd_S = "sudo sshd -T | grep -i '^macs'"
+        local_ssh_q_arg = "mac"
         permitted_list = PERMITTED_MACS
     elif typename == "kex":
         remote_cmd_C = "ssh -Q kex"
         remote_cmd_S = "sudo sshd -T | grep -i '^kexalgorithms'"
+        local_ssh_q_arg = "kex"
         permitted_list = PERMITTED_KEXS
 
     # If --collect-only is specified, return the permitted list directly. Otherwise, pytest will try to
@@ -91,8 +111,13 @@ def generate_ssh_ciphers(request, typename):
         cipher_list_S = raw_output.split("rc=0 >>", 1)[1].split(" ")[1].strip("\n").split(",")
         logger.debug('server cipher full list: {}'.format(cipher_list_S))
 
-        # Get the common cipher list between ssh clint(ptf) and server(DUT)
-        common_cipher_list = list(set(cipher_list_C) & set(cipher_list_S))
+        cipher_list_local = _query_local_ssh_algorithms(local_ssh_q_arg)
+        if cipher_list_local is not None:
+            logger.debug('local sonic-mgmt client cipher full list: {}'.format(cipher_list_local))
+            common_cipher_list = list(
+                set(cipher_list_C) & set(cipher_list_S) & set(cipher_list_local))
+        else:
+            common_cipher_list = list(set(cipher_list_C) & set(cipher_list_S))
         logger.debug('common cipher list: {}'.format(common_cipher_list))
 
         cipher_param_list = []

@@ -44,11 +44,18 @@ def connect_with_specified_ciphers(duthosts, rand_one_dut_hostname, specified_ci
             pytest_assert(i == 0, "Failed to connect")
             return
         except Exception as e:
-            output = connect.before.decode()
+            output = connect.before.decode() if connect.before else ""
             if "Permission denied" in output:
                 continue
-            else:
-                pytest.fail(e)
+            # The local ssh client (on the sonic-mgmt container) rejected the
+            # option at CLI parse time. That's an environmental limitation of
+            # the test runner, not a DUT defect; skip rather than fail so the
+            # DUT's actual cipher support is still reported cleanly.
+            if "Unsupported" in output or "Bad SSH2" in output:
+                pytest.skip(
+                    "Local ssh client does not support {} '{}': {}".format(
+                        typename, specified_cipher, output.strip()))
+            pytest.fail(str(e))
     pytest.fail("Cannot connect to DUT host via SSH")
 
 
