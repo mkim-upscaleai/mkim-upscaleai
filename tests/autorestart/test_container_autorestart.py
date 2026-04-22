@@ -29,6 +29,7 @@ DHCP_SERVER = "dhcp_server"
 POST_CHECK_INTERVAL_SECS = 1
 POST_CHECK_THRESHOLD_SECS = 360
 POST_CHECK_THRESHOLD_SECS_T2 = 600
+POST_CHECK_THRESHOLD_SECS_T1 = 600
 PROGRAM_STATUS = "RUNNING"
 
 
@@ -426,7 +427,8 @@ def check_all_critical_processes_status(duthost):
     return True
 
 
-def postcheck_critical_processes_status(duthost, feature_autorestart_states, up_bgp_neighbors):
+def postcheck_critical_processes_status(duthost, feature_autorestart_states, up_bgp_neighbors,
+                                        tbinfo=None):
     """Restarts the containers which hit the restart limitation. Then post checks
        to see whether all the critical processes are alive and
        expected BGP sessions are up after testing the autorestart feature.
@@ -436,6 +438,7 @@ def postcheck_critical_processes_status(duthost, feature_autorestart_states, up_
       feature_autorestart_states: A dictionary includes the feature name (key) and
         its auto-restart state (value).
       up_bgp_neighbors: A list includes the IP of neighbors whose BGP session are up.
+      tbinfo: Testbed info dict, used to select a topology-aware threshold.
 
     Returns:
       True if post check succeeds; Otherwise False.
@@ -461,8 +464,11 @@ def postcheck_critical_processes_status(duthost, feature_autorestart_states, up_
             if is_hiting_start_limit(duthost, feature_name):
                 clear_failed_flag_and_restart(duthost, feature_name, feature_name)
 
-    post_check_threshold = POST_CHECK_THRESHOLD_SECS_T2 if duthost.get_facts().get("modular_chassis") \
-        else POST_CHECK_THRESHOLD_SECS
+    post_check_threshold = POST_CHECK_THRESHOLD_SECS
+    if duthost.get_facts().get("modular_chassis"):
+        post_check_threshold = POST_CHECK_THRESHOLD_SECS_T2
+    elif tbinfo and tbinfo.get("topo", {}).get("type") == "t1":
+        post_check_threshold = POST_CHECK_THRESHOLD_SECS_T1
 
     critical_proceses = wait_until(
         post_check_threshold, POST_CHECK_INTERVAL_SECS, 0,
@@ -552,7 +558,7 @@ def run_test_on_single_container(duthost, container_name, service_name, tbinfo):
             break
 
     critical_proceses, bgp_check = postcheck_critical_processes_status(
-        duthost, feature_autorestart_states, up_bgp_neighbors
+        duthost, feature_autorestart_states, up_bgp_neighbors, tbinfo=tbinfo
     )
     if not (critical_proceses and bgp_check):
         config_reload(duthost, safe_reload=True)
