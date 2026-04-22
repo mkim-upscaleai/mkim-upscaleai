@@ -199,7 +199,7 @@ reset_factory
 show_techsupport/test_techsupport.py::test_techsupport_on_dpu
 
 # /var/core is on tmpfs — known sonic-buildimage issues #20950 and #15101
-show_techsupport/test_auto_techsupport.py::test_max_limit[core]
+show_techsupport/test_auto_techsupport.py::TestAutoTechSupport::test_max_limit[core]
 
 # not smartswitch topology
 smartswitch

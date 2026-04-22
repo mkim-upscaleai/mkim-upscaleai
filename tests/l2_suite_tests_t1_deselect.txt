@@ -47,11 +47,6 @@ drop_packets/test_drop_counters.py::test_dst_ip_absent[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_dst_ip_absent[vlan_members-*]
 drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[vlan_members-*]
-drop_packets.test_drop_counters.py::test_equal_smac_dmac_drop
-# No port_channel/rif/vlan members available for T1-lag topology
-drop_packets/drop_packets.py::test_equal_smac_dmac_drop[port_channel_members-*]
-drop_packets/drop_packets.py::test_equal_smac_dmac_drop[rif_members-*]
-drop_packets/drop_packets.py::test_equal_smac_dmac_drop[vlan_members-*]
 drop_packets/test_drop_counters.py::test_ip_is_zero_addr[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_ip_is_zero_addr[vlan_members-*]
 drop_packets/test_drop_counters.pytest_ip_pkt_with_exceeded_mtu[port_channel_members-*]
@@ -71,6 +66,8 @@ drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[vlan_membe
 drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[port_channel_members*]
 drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[vlan_members*]
 
+# No fanout support, fanout needs to be running Onyx
+drop_packets/test_drop_counters.py::test_equal_smac_dmac_drop
 
 #MLX platforms do not drop DIP linklocal packets
 drop_packets/test_drop_counters.py::test_dst_ip_link_local
