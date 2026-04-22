@@ -36,10 +36,17 @@ class TelnetConsoleConn(BaseConsoleConn):
         username_pattern=r"(?:user:|username:|login:|user name:)",
         pwd_pattern=r"assword:",
         delay_factor=1,
-        max_loops=20,
+        max_loops=60,
     ):
         """Telnet login. Can be username/password or just password."""
-        delay_factor = self.select_delay_factor(delay_factor)
+        # Netmiko's select_delay_factor() collapses delay_factor to ~0.1 when
+        # fast_cli=True (which BaseConsoleConn sets). Upstream's 20-loop default
+        # was tuned for delay_factor=1 (~20 s of patience); with 0.1 that shrinks
+        # to ~1-2 s, which is not enough for console login over a terminal server
+        # where the DUT may replay a buffered banner, run PAM, and render a
+        # multi-line motd before printing the shell prompt. Floor the delay so
+        # our 60-loop budget yields ~30 s of real patience regardless of fast_cli.
+        delay_factor = max(self.select_delay_factor(delay_factor), 0.5)
         time.sleep(1 * delay_factor)
 
         output = ""
