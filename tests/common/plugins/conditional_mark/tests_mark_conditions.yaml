@@ -3473,10 +3473,9 @@ pfcwd/test_pfcwd_function.py::TestPfcwdFunc::test_pfcwd_actions:
 
 pfcwd/test_pfcwd_function.py::TestPfcwdFunc::test_pfcwd_no_traffic:
    skip:
-     reason: "This test is applicable only for cisco-8000 / Pfcwd tests skipped on M* testbed."
+     reason: "Pfcwd tests skipped on M* testbed."
      conditions_logical_operator: or
      conditions:
-        - "asic_type != 'cisco-8000'"
         - "topo_type in ['m0', 'mx', 'm1']"
         - *lossyTopos
 

@@ -12,7 +12,6 @@ qos/test_buffer.py::test_lossless_pg           # Skip test in traditional model
 qos/test_buffer.py::test_port_admin_down       # Skip test in traditional model
 qos/test_buffer.py::test_port_auto_neg         # Skip test in traditional model
 qos/test_buffer.py::test_shared_headroom_pool_configure    # Skip test in traditional model
-pfcwd/test_pfcwd_function.py::TestPfcwdFunc::test_pfcwd_no_traffic   # Applicable only for cisco-8000
 pfcwd/test_pfcwd_warm_reboot.py               # Skipped due to "https://github.com/sonic-net/sonic-mgmt/issues/15942 and asic_type in ['broadcom', 'mellanox']"
 
 # multi-dut is not supported
@@ -46,9 +45,8 @@ qos/test_qos_sai.py::TestQosSai::testQosSaiSeparatedDscpToPgMapping
 #Pipe decap mode not supported due to either SAI or platform limitation
 qos/test_qos_dscp_mapping.py::TestQoSSaiDSCPQueueMapping_IPIP_Base::test_dscp_to_queue_mapping[pipe]
 
-#This test is applicable only for cisco-8000
-pfcwd/test_pfcwd_function.py::TestPfcwdFunc::test_pfcwd_no_traffic
-
 #Platform does not support SAI_INGRESS_PRIORITY_GROUP_STAT_XOFF_ROOM_WATERMARK_BYTES
 qos/test_qos_sai.py::TestQosSai#testQosSaiPgHeadroomWatermark
 
+#Fanout needs to send PFC frames fast enough to completely pause the queue.Covered in covered by ixia tests — ixia/pfc/test_pfc_pause_lossless.py
+qos/test_pfc_pause.py::test_pfc_pause_lossless
