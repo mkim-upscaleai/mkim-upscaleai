@@ -62,6 +62,9 @@ env:
   ANSIBLE_INVENTORY: ${{ inputs.ansible_inventory }}
   SONIC_MGMT_CONTAINER: sonic-mgmt-install-image
   AWS_BUCKET: ${{ inputs.aws_bucket || 'upscale-ai-sonic-builds' }}
+  # Platform filter for selecting the correct build artifact. Physical switches
+  # run 'mellanox'; 'vs' is the virtual-switch image and must not be installed here.
+  PLATFORM: mellanox
 
 jobs:
   install-image:
@@ -112,9 +115,12 @@ jobs:
         env:
           SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
         run: |
-            echo "Install latest image for caspian from branch ${{ env.BRANCH_NAME }}"
+            echo "Install latest image for caspian from branch ${{ env.BRANCH_NAME }} (platform: ${{ env.PLATFORM }})"
             # List timestamp directories under caspian/${BRANCH_NAME}/
             # Path structure: caspian/${BRANCH_NAME}/YYYY-MM-DD-HH_MM_SS/build_artifacts/
+            # Both 'vs' and 'mellanox' builds share the prod tag and live in sibling
+            # timestamp dirs, so we iterate newest-first and pick the first dir that
+            # contains a sonic-${PLATFORM}-<timestamp>.bin artifact.
             DIRECTORIES=$(aws s3api list-objects-v2 \
               --bucket "${{ env.AWS_BUCKET }}" \
               --prefix "caspian/${{ env.BRANCH_NAME }}/" \
@@ -123,12 +129,11 @@ jobs:
               --output text | tr '\t' '\n')
 
             for dir in $DIRECTORIES; do
-                # Look for the specific bin file in build_artifacts subdirectory
-                # Pattern: sonic-mellanox-YYYY-MM-DD-HH_MM_SS.bin
+                # Pattern: sonic-${PLATFORM}-YYYY-MM-DD-HH_MM_SS.bin
                 S3_FILE=$(aws s3api list-objects-v2 \
                   --bucket "${{ env.AWS_BUCKET }}" \
                   --prefix "${dir}build_artifacts/" \
-                  --query "Contents[?contains(Key, 'sonic-mellanox-')].Key" \
+                  --query "Contents[?contains(Key, 'sonic-${{ env.PLATFORM }}-')].Key" \
                   --output text | grep '\.bin$' | head -n1)
                   echo "S3_FILE: ${S3_FILE}"
                   if [ -n "$S3_FILE" ]; then
@@ -138,7 +143,7 @@ jobs:
             done
 
             if [ -z "$S3_PATH" ]; then
-              echo "Unable to find sonic-mellanox-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
+              echo "Unable to find sonic-${{ env.PLATFORM }}-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
               exit 1
             fi
 

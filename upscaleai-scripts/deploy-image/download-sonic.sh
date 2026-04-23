@@ -2,17 +2,19 @@
 # download-sonic.sh — Download a SONiC image from the Sonic Ops dashboard
 #
 # Usage:
-#   ./download-sonic.sh                        # latest prod build
-#   ./download-sonic.sh -t gating              # latest gating build
+#   ./download-sonic.sh                        # latest prod mellanox build
+#   ./download-sonic.sh -t gating              # latest gating mellanox build
+#   ./download-sonic.sh -t prod -p vs          # latest prod vs build
 #   ./download-sonic.sh -t prod -b upscaleai-202511  # specific branch
 #   ./download-sonic.sh -i 449                 # specific build by ID
 #   ./download-sonic.sh -t prod -o sonic.bin   # custom output filename
 #
 # Options:
-#   -i <id>       Download a specific build by ID (overrides -t and -b)
-#   -t <tag>      Build tag to filter by  (default: prod)
-#   -b <branch>   Branch to filter by     (default: any)
-#   -o <file>     Output filename         (default: auto from URL)
+#   -i <id>       Download a specific build by ID (overrides -t, -b, -p)
+#   -t <tag>      Build tag to filter by     (default: prod)
+#   -p <plat>     Platform to filter by: mellanox | vs  (default: mellanox)
+#   -b <branch>   Branch to filter by        (default: any)
+#   -o <file>     Output filename            (default: auto from URL)
 #   -f            Force re-download even if image already exists
 #   -h            Show this help
 
@@ -22,6 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DASHBOARD="http://192.168.218.28:5010"
 TAG="prod"
+PLATFORM="mellanox"
 BRANCH=""
 BUILD_ID_ARG=""
 OUTFILE=""
@@ -33,10 +36,11 @@ usage() {
   exit 0
 }
 
-while getopts "i:t:b:o:fh" opt; do
+while getopts "i:t:p:b:o:fh" opt; do
   case $opt in
     i) BUILD_ID_ARG="$OPTARG" ;;
     t) TAG="$OPTARG" ;;
+    p) PLATFORM="$OPTARG" ;;
     b) BRANCH="$OPTARG" ;;
     o) OUTFILE="$OPTARG" ;;
     f) FORCE=true ;;
@@ -52,10 +56,10 @@ if [ -n "$BUILD_ID_ARG" ]; then
     exit 1
   }
 else
-  QUERY="tag=${TAG}&status=success"
+  QUERY="tag=${TAG}&status=success&platform=${PLATFORM}"
   [ -n "$BRANCH" ] && QUERY="${QUERY}&branch=${BRANCH}"
 
-  echo "Fetching latest '${TAG}' build info..."
+  echo "Fetching latest '${TAG}' build info (platform: ${PLATFORM})..."
   META=$(curl -sf "${DASHBOARD}/api/builds/latest?${QUERY}") || {
     echo "Error: could not reach dashboard at ${DASHBOARD}" >&2
     exit 1
@@ -72,7 +76,7 @@ if [ -z "$ARTIFACT" ] || [ "$ARTIFACT" = "None" ]; then
   if [ -n "$BUILD_ID_ARG" ]; then
     echo "Error: no artifact URL found for build #${BUILD_ID_ARG}" >&2
   else
-    echo "Error: no artifact URL found for tag='${TAG}'" >&2
+    echo "Error: no artifact URL found for tag='${TAG}' platform='${PLATFORM}'" >&2
   fi
   exit 1
 fi

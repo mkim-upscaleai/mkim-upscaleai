@@ -4,20 +4,23 @@
 # Usage:
 #   ./deploy-switch.sh -s <switch_ip>
 #   ./deploy-switch.sh -s <switch_ip> -t <tag>
+#   ./deploy-switch.sh -s <switch_ip> -p <platform>
 #   ./deploy-switch.sh -s <switch_ip> -b <build_id>
 #   ./deploy-switch.sh -s <switch_ip> -i <image.bin>
 #
 # Options:
-#   -s <ip>     Switch IP address                              (required)
-#   -t <tag>    Build tag to download: prod | gating | upload | dev  (default: prod)
-#   -b <id>     Download a specific build by ID from the dashboard
-#   -i <path>   Use a local .bin image instead of downloading  (skips download)
-#   -f          Force re-download even if image already exists
-#   -h          Show this help
+#   -s <ip>       Switch IP address                                    (required)
+#   -t <tag>      Build tag to download: prod | gating | upload | dev  (default: prod)
+#   -p <plat>     Platform to download: mellanox | vs                  (default: mellanox)
+#   -b <id>       Download a specific build by ID from the dashboard
+#   -i <path>     Use a local .bin image instead of downloading        (skips download)
+#   -f            Force re-download even if image already exists
+#   -h            Show this help
 #
 # Examples:
-#   ./deploy-switch.sh -s 10.9.100.61                          # download latest prod
-#   ./deploy-switch.sh -s 10.9.100.61 -t gating               # download latest gating
+#   ./deploy-switch.sh -s 10.9.100.61                          # latest prod mellanox
+#   ./deploy-switch.sh -s 10.9.100.61 -t gating               # latest gating mellanox
+#   ./deploy-switch.sh -s 10.9.100.61 -p vs                   # latest prod vs
 #   ./deploy-switch.sh -s 10.9.100.61 -b 449                  # specific build by ID
 #   ./deploy-switch.sh -s 10.9.100.61 -i downloaded-images/sonic-mellanox.bin  # use local file
 
@@ -31,6 +34,7 @@ check_deps "curl python3 sshpass" "pv"
 
 SWITCH_IP=""
 TAG="prod"
+PLATFORM="mellanox"
 BUILD_ID=""
 LOCAL_IMAGE=""
 FORCE_DL=""
@@ -40,10 +44,11 @@ usage() {
   exit 0
 }
 
-while getopts "s:t:b:i:fh" opt; do
+while getopts "s:t:p:b:i:fh" opt; do
   case $opt in
     s) SWITCH_IP="$OPTARG" ;;
     t) TAG="$OPTARG" ;;
+    p) PLATFORM="$OPTARG" ;;
     b) BUILD_ID="$OPTARG" ;;
     i) LOCAL_IMAGE="$OPTARG" ;;
     f) FORCE_DL="-f" ;;
@@ -174,7 +179,7 @@ elif [ -n "$BUILD_ID" ]; then
   echo "╚══════════════════════════════════════════════════════════════╝"
 else
   echo "╔══════════════════════════════════════════════════════════════╗"
-  echo "  deploy-switch  →  ${SWITCH_IP}  [tag: ${TAG}]"
+  echo "  deploy-switch  →  ${SWITCH_IP}  [tag: ${TAG}, platform: ${PLATFORM}]"
   echo "╚══════════════════════════════════════════════════════════════╝"
 fi
 
@@ -187,8 +192,8 @@ else
     step_banner "1/6" "Downloading build #${BUILD_ID}..."
     DOWNLOAD_OUTPUT=$("${SCRIPT_DIR}/deploy-image/download-sonic.sh" -i "$BUILD_ID" $FORCE_DL)
   else
-    step_banner "1/6" "Downloading image (tag: ${TAG})..."
-    DOWNLOAD_OUTPUT=$("${SCRIPT_DIR}/deploy-image/download-sonic.sh" -t "$TAG" $FORCE_DL)
+    step_banner "1/6" "Downloading image (tag: ${TAG}, platform: ${PLATFORM})..."
+    DOWNLOAD_OUTPUT=$("${SCRIPT_DIR}/deploy-image/download-sonic.sh" -t "$TAG" -p "$PLATFORM" $FORCE_DL)
   fi
   echo "$DOWNLOAD_OUTPUT"
 
