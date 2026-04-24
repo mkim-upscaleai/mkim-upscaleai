@@ -362,7 +362,8 @@ jobs:
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
 
           echo "Run pretest"
-          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${{ env.HOST }} -n ${{ env.TESTBED }} -f ../ansible/${{ env.TESTBEDFILE }} -i ../ansible/${{ env.ANSIBLE_INVENTORY }} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--skip_sanity' -t ${TOPO_FOR_TESTS},any"
+          # removing --skip_sanity and adding --allow_recover to prevent incomplete metadata generation
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${{ env.HOST }} -n ${{ env.TESTBED }} -f ../ansible/${{ env.TESTBEDFILE }} -i ../ansible/${{ env.ANSIBLE_INVENTORY }} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--allow_recover' -t ${TOPO_FOR_TESTS},any"
 
           echo "Pull rpc image"
           NEXTHOP=$(echo "${{ env.SWITCH_IP }}" | cut -d'.' -f1-3).1
