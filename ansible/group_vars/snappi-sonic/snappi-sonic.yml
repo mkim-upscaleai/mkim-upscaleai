@@ -3,7 +3,7 @@
 # file: group_vars/lab.yml
 
 # ntp variables
-ntp_servers: ['10.0.0.1', '10.0.0.2']
+ntp_servers: ['216.239.35.0', '216.239.35.4']
 
 # syslog variables
 syslog_servers: ['10.0.0.5', '10.0.0.6']

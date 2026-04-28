@@ -80,7 +80,7 @@ orchagent_docker_volumes: "{{ orchagent_docker_volumes_dict.keys() }}"
 sonic_qos_profile: "BALANCED"    # Possible values: DEFAULT, RDMA-CENTRIC, TCP-CENTRIC, BALANCED
 
 # ntp variables
-ntp_servers: ['192.168.218.200'] # made my mini pc an ntp server
+ntp_servers: ['216.239.35.0', '216.239.35.4', '192.168.218.200'] # made my mini pc an ntp server
 
 # syslog variables
 syslog_servers: ['10.11.0.5', '10.11.0.6']

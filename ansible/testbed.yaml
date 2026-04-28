@@ -287,7 +287,7 @@
   group-name: sp8-t164
   topo: t1-64
   ptf_image_name: docker-ptf
-  ptf: ptf_sp8-t164 
+  ptf: ptf_sp8-t164
   ptf_ip: 192.168.223.27/24
   ptf_ipv6: 2001:db8:123::27/64
   server: server_3
@@ -297,7 +297,7 @@
   inv_name: veos
   auto_recover: 'False'
   comment: Test ptf Mellanox 64-port
-  
+
 - conf-name: caspian_testbed_t0_spine9
   group-name: sp9-t0
   topo: t0
@@ -478,3 +478,20 @@
   inv_name: veos
   auto_recover: 'False'
   comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_snappi_sonic
+  group-name: vms6-1
+  topo: snappi-sonic
+  ptf_image_name: docker-ptf-snappi
+  ptf: snappi-sonic-ptf
+  ptf_ip: 10.9.108.101
+  ptf_ipv6:
+  server: server_10
+  vm_base:
+  dut:
+    - upscale-sys-spine1
+    - upscale-sys-leaf1
+  inv_name: snappi-sonic
+  auto_recover: 'False'
+  comment: Test snappi Mellanox
+

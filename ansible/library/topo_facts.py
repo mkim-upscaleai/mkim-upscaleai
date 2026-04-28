@@ -344,6 +344,30 @@ class ParseTestbedTopoinfo():
                     self.parse_topo_defintion(
                         asic_definition[asic], po_map_asic, 1, 'NEIGH_ASIC')
 
+        if 'dut_type' not in vm_topo_config:
+            try:
+                vm_topo_config['dut_type'] = \
+                    topo_definition['configuration_properties']['common']['dut_type']
+            except (KeyError, TypeError):
+                vm_topo_config['dut_type'] = 'Unknown'
+
+        if 'dut_asn' not in vm_topo_config:
+            try:
+                vm_topo_config['dut_asn'] = \
+                    topo_definition['configuration_properties']['common']['dut_asn']
+            except (KeyError, TypeError):
+                vm_topo_config['dut_asn'] = 65100
+
+        if 'topo_type' not in vm_topo_config:
+            vm_topo_config['topo_type'] = \
+                topo_definition['topology'].get('topo_type', '')
+
+        if 'console_interfaces' not in vm_topo_config:
+            vm_topo_config['console_interfaces'] = []
+
+        if 'vm' not in vm_topo_config:
+            vm_topo_config['vm'] = {}
+
         vm_topo_config['host_interfaces_by_dut'] = [[] for i in range(dut_num)]
         if 'host_interfaces' in topo_definition['topology']:
             vm_topo_config['host_interfaces'] = topo_definition['topology']['host_interfaces']

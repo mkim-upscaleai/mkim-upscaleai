@@ -1,23 +1,26 @@
-[sonic_dell64_40]
-sonic-s6100-dut1     ansible_host=10.251.0.233
-sonic-s6100-dut2     ansible_host=10.251.0.234
+[sonic_sn5600_o64s1]
+upscale-sys-spine1     ansible_host=10.9.100.49
+upscale-sys-leaf1     ansible_host=10.9.100.31
 
-[sonic_dell64_40:vars]
-hwsku="Force10-S6100"
-iface_speed='40000'
+[sonic_sn5600_o64s1:vars]
+hwsku="Mellanox-SN5600-O64S1"
+iface_speed='800000'
 
-[Server_6]
-snappi-sonic          ansible_host=10.251.0.234   os=snappi
+[snappi_chassis]
+snappi-sonic          ansible_host=10.9.108.101   os=ixia
 
 [sonic:children]
-sonic_dell64_40
+sonic_sn5600_o64s1
 
 [sonic:vars]
-mgmt_subnet_mask_length='23'
+mgmt_subnet_mask_length='16'
 
 [snappi-sonic:children]
 sonic
 snappi_chassis
 
 [ptf]
-snappi-sonic-ptf     ansible_host='10.251.0.232'
+snappi-sonic-ptf     ansible_host='10.9.108.101'
+
+[server_10]
+localhost             ansible_connection=local

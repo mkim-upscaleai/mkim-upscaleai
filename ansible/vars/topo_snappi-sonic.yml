@@ -1,0 +1,425 @@
+topology:
+  # 2 DUTs: spine1 (dut 0) and leaf1 (dut 1)
+  #
+  # Connections:
+  #   spine1 Ethernet504 (port 63) <-> Snappi Card1/Port1
+  #   spine1 Ethernet496 (port 62) <-> Snappi Card1/Port5
+  #   leaf1  Ethernet504 (port 63) <-> Snappi Card1/Port3
+  #   spine1 Ethernet0-56 (ports 0-7) <-> leaf1 Ethernet0-56 (ports 0-7)  [8 inter-DUT links]
+  #
+  # All active ports are modelled as VMs so the minigraph assigns IP addresses,
+  # causing sonic-cfggen to set admin_status=up on those interfaces.
+
+  dut_num: 2
+  VMs:
+    # ---------- Snappi traffic-generator ports ----------
+    Snappi_Port1:         # spine1 Ethernet504 (port index 63)
+      vlans:
+        - 0.63@0
+      vm_offset: 0
+    Snappi_Port5:         # spine1 Ethernet496 (port index 62)
+      vlans:
+        - 0.62@1
+      vm_offset: 1
+    Snappi_Port3:         # leaf1 Ethernet504 (port index 63)
+      vlans:
+        - 1.63@2
+      vm_offset: 2
+    # ---------- Inter-DUT links: leaf1 side as seen from spine1 (DUT0) ----------
+    Leaf1_Eth0:
+      vlans:
+        - 0.0@3
+      vm_offset: 3
+    Leaf1_Eth8:
+      vlans:
+        - 0.1@4
+      vm_offset: 4
+    Leaf1_Eth16:
+      vlans:
+        - 0.2@5
+      vm_offset: 5
+    Leaf1_Eth24:
+      vlans:
+        - 0.3@6
+      vm_offset: 6
+    Leaf1_Eth32:
+      vlans:
+        - 0.4@7
+      vm_offset: 7
+    Leaf1_Eth40:
+      vlans:
+        - 0.5@8
+      vm_offset: 8
+    Leaf1_Eth48:
+      vlans:
+        - 0.6@9
+      vm_offset: 9
+    Leaf1_Eth56:
+      vlans:
+        - 0.7@10
+      vm_offset: 10
+    # ---------- Inter-DUT links: spine1 side as seen from leaf1 (DUT1) ----------
+    Spine1_Eth0:
+      vlans:
+        - 1.0@11
+      vm_offset: 11
+    Spine1_Eth8:
+      vlans:
+        - 1.1@12
+      vm_offset: 12
+    Spine1_Eth16:
+      vlans:
+        - 1.2@13
+      vm_offset: 13
+    Spine1_Eth24:
+      vlans:
+        - 1.3@14
+      vm_offset: 14
+    Spine1_Eth32:
+      vlans:
+        - 1.4@15
+      vm_offset: 15
+    Spine1_Eth40:
+      vlans:
+        - 1.5@16
+      vm_offset: 16
+    Spine1_Eth48:
+      vlans:
+        - 1.6@17
+      vm_offset: 17
+    Spine1_Eth56:
+      vlans:
+        - 1.7@18
+      vm_offset: 18
+
+  DUT:
+    loopback:
+      ipv4:
+        - 10.1.0.1/32
+        - 10.1.0.2/32
+      ipv6:
+        - FC00:10::1/128
+        - FC00:11::1/128
+
+configuration_properties:
+  common:
+    dut_asn: 65100
+    dut_type: LeafRouter
+    nhipv4: 10.10.246.254
+    nhipv6: FC0A::FF
+    podset_number: 400
+    tor_number: 16
+    tor_subnet_number: 8
+    max_tor_subnet_number: 32
+    tor_subnet_size: 128
+
+configuration:
+  # ---------- Snappi ports (eBGP ASN 65200) ----------
+  Snappi_Port1:
+    properties:
+      - common
+    bgp:
+      asn: 65200
+      peers:
+        65100:
+          - 10.10.0.1     # spine1 Ethernet504 IP
+    interfaces:
+      Ethernet1:
+        ipv4: 10.10.0.0/31
+        ipv6: FC00:A::0/126
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.1/24
+      ipv6: fc0a::2/64
+
+  Snappi_Port5:
+    properties:
+      - common
+    bgp:
+      asn: 65200
+      peers:
+        65100:
+          - 10.10.0.3     # spine1 Ethernet496 IP
+    interfaces:
+      Ethernet1:
+        ipv4: 10.10.0.2/31
+        ipv6: FC00:A::4/126
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.2/24
+      ipv6: fc0a::3/64
+
+  Snappi_Port3:
+    properties:
+      - common
+    bgp:
+      asn: 65200
+      peers:
+        65100:
+          - 10.10.0.5     # leaf1 Ethernet504 IP
+    interfaces:
+      Ethernet1:
+        ipv4: 10.10.0.4/31
+        ipv6: FC00:A::8/126
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.3/24
+      ipv6: fc0a::4/64
+
+  # ---------- Inter-DUT links: leaf1 side connecting to spine1 (DUT0) ----------
+  Leaf1_Eth0:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.1     # spine1 Ethernet0 IP
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.0/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.10/24
+      ipv6: fc0a::10/64
+
+  Leaf1_Eth8:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.3
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.2/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.11/24
+      ipv6: fc0a::11/64
+
+  Leaf1_Eth16:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.5
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.4/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.12/24
+      ipv6: fc0a::12/64
+
+  Leaf1_Eth24:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.7
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.6/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.13/24
+      ipv6: fc0a::13/64
+
+  Leaf1_Eth32:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.9
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.8/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.14/24
+      ipv6: fc0a::14/64
+
+  Leaf1_Eth40:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.11
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.10/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.15/24
+      ipv6: fc0a::15/64
+
+  Leaf1_Eth48:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.13
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.12/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.16/24
+      ipv6: fc0a::16/64
+
+  Leaf1_Eth56:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.15
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.14/31
+        dut_index: 0
+    bp_interface:
+      ipv4: 10.10.246.17/24
+      ipv6: fc0a::17/64
+
+  # ---------- Inter-DUT links: spine1 side connecting to leaf1 (DUT1) ----------
+  Spine1_Eth0:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.0     # leaf1 Ethernet0 IP
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.1/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.20/24
+      ipv6: fc0a::20/64
+
+  Spine1_Eth8:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.2
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.3/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.21/24
+      ipv6: fc0a::21/64
+
+  Spine1_Eth16:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.4
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.5/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.22/24
+      ipv6: fc0a::22/64
+
+  Spine1_Eth24:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.6
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.7/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.23/24
+      ipv6: fc0a::23/64
+
+  Spine1_Eth32:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.8
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.9/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.24/24
+      ipv6: fc0a::24/64
+
+  Spine1_Eth40:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.10
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.11/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.25/24
+      ipv6: fc0a::25/64
+
+  Spine1_Eth48:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.12
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.13/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.26/24
+      ipv6: fc0a::26/64
+
+  Spine1_Eth56:
+    properties:
+      - common
+    bgp:
+      asn: 65100
+      peers:
+        65100:
+          - 10.0.0.14
+    interfaces:
+      Ethernet1:
+        ipv4: 10.0.0.15/31
+        dut_index: 1
+    bp_interface:
+      ipv4: 10.10.246.27/24
+      ipv6: fc0a::27/64

@@ -222,6 +222,11 @@
     with_items: "{{ host_if_indexes }}"
     when: "('host_interfaces_by_dut' in vm_topo_config) and ('tor' in vm_topo_config['dut_type'] | lower)"
 
+  - name: set default vlan_intfs for snappi/ixia testbeds
+    set_fact:
+      vlan_intfs: []
+    when: vlan_intfs is not defined and ('snappi' in ptf_image or is_ixia_testbed | bool)
+
   - name: set default dualtor facts
     set_fact:
       dual_tor_facts: {}
