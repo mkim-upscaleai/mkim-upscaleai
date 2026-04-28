@@ -90,13 +90,27 @@
       when: dry_run is not defined and incremental is not defined
   when: "'202505' in fanout_sonic_version['build_version']"
 
-- name: deploy SONiC fanout with image version 202511
+- name: deploy SONiC fanout with image version 202511 (default for any unrecognized build)
   block:
+    - debug:
+        msg: >-
+          Falling back to fanout_sonic_202511.yml for build_version
+          '{{ fanout_sonic_version["build_version"] }}'
+          (no explicit older-release match).
+      when: "'202511' not in fanout_sonic_version['build_version']"
+
     - name: deploy SONiC fanout not incremental and not dry_run with 202511 images
       include_tasks:
         sonic/fanout_sonic_202511.yml
       when: dry_run is not defined and incremental is not defined
-  when: "'202511' in fanout_sonic_version['build_version']"
+  when: >-
+    '20181130' not in fanout_sonic_version['build_version']
+    and '20201231' not in fanout_sonic_version['build_version']
+    and '20220531' not in fanout_sonic_version['build_version']
+    and 'internal'  not in fanout_sonic_version['build_version']
+    and '2023'      not in fanout_sonic_version['build_version']
+    and '2024'      not in fanout_sonic_version['build_version']
+    and '202505'    not in fanout_sonic_version['build_version']
 
 - name: Configure FEC rs and disable autoneg for trunk ports
   shell: |
