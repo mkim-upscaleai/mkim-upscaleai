@@ -200,3 +200,127 @@ def is_mgmt_vrf_enabled(dut):
     """
     show_mgmt_vrf = dut.command("show mgmt-vrf")["stdout"]
     return "ManagementVRF : Disabled" not in show_mgmt_vrf
+
+
+def _run_or_raise(duthost, cmd, allow_rc=None):
+    """Run a shell command on the DUT and raise a RuntimeError with rich
+    diagnostic context (rc, stdout, stderr) if it fails.
+
+    `module_ignore_errors=True` is always passed to ansible so we can inspect
+    the result dict ourselves; the rc check below is what surfaces failures.
+
+    Args:
+        duthost: ansible host fixture.
+        cmd: shell command to run.
+        allow_rc: optional iterable of additional non-zero rc values that
+            should be treated as success (e.g. {1} for ``grep -q`` whose
+            "no match" exit is semantically meaningful, not a failure).
+
+    Returns:
+        The ansible result dict.
+    """
+    allow_rc = set(allow_rc or ())
+    allow_rc.add(0)
+    result = duthost.shell(cmd, module_ignore_errors=True)
+    rc = result.get('rc')
+    if rc not in allow_rc:
+        raise RuntimeError(
+            "Command failed (rc={rc}): {cmd}\n"
+            "stdout: {stdout}\n"
+            "stderr: {stderr}".format(
+                rc=rc,
+                cmd=cmd,
+                stdout=result.get('stdout', ''),
+                stderr=result.get('stderr', ''),
+            )
+        )
+    return result
+
+
+def disable_swss_rsyslog_rate_limit(duthost):
+    """Disable rsyslog rate-limiting for swss container(s).
+
+    Implementation: edit /etc/rsyslog.conf inside swss container(s) and restart rsyslogd.
+    Uses $SystemLogRateLimitInterval and $SystemLogRateLimitBurst.
+
+    Returns list of containers that were modified (for later restoration).
+    """
+    # Determine swss container names (single- or multi-asic)
+    try:
+        if getattr(duthost, 'is_multi_asic', False):
+            asic_ids = duthost.get_asic_ids()
+            containers = [f'swss{aid}' for aid in asic_ids]
+        else:
+            containers = ['swss']
+    except Exception:
+        containers = ['swss']
+
+    edited_containers = []
+    for c in containers:
+        try:
+            # Backup original config once. Failures here (e.g. container missing,
+            # no permission) must surface — silently continuing would mean we
+            # later overwrite a config we have no backup of.
+            backup_cmd = (
+                f"docker exec -i {c} bash -lc "
+                "'if [ ! -f /etc/rsyslog.conf.orig.bak ]; then "
+                "cp -f /etc/rsyslog.conf /etc/rsyslog.conf.orig.bak; fi'"
+            )
+            _run_or_raise(duthost, backup_cmd)
+
+            # Idempotency check: grep -q exits 1 when the pattern is not found,
+            # which is the expected first-run case and drives the append below.
+            # rc>=2 indicates a real grep error (missing file, etc) and must
+            # still surface, hence allow_rc={1} (and not module_ignore_errors).
+            check_cmd = (
+                f"docker exec -i {c} bash -lc "
+                "'grep -q \"^\\$SystemLogRateLimitInterval 0\" /etc/rsyslog.conf'"
+            )
+            check_result = _run_or_raise(duthost, check_cmd, allow_rc={1})
+
+            if check_result['rc'] != 0:
+                # Append directives to disable system log rate-limiting using printf (robust across shells)
+                cmd_body = (
+                    'printf "\\n%s\\n" '
+                    '"\\$SystemLogRateLimitInterval 0" '
+                    '"\\$SystemLogRateLimitBurst 0" '
+                    '>> /etc/rsyslog.conf'
+                )
+                append_cmd = f"docker exec -i {c} bash -lc '{cmd_body}'"
+                _run_or_raise(duthost, append_cmd)
+                # Restart rsyslogd so the appended directives actually take
+                # effect; a silent failure here would let the test run with
+                # rate-limiting still enabled.
+                _run_or_raise(
+                    duthost,
+                    f"docker exec -i {c} bash -lc 'supervisorctl restart rsyslogd'",
+                )
+            edited_containers.append(c)
+        except Exception as e:
+            logger.warning('Failed to disable rsyslog rate limit in container %s: %s', c, repr(e))
+            continue
+
+    return edited_containers
+
+
+def restore_swss_rsyslog_rate_limit(duthost, edited_containers):
+    """Restore original rsyslog config for swss container(s) that were modified.
+
+    NOTE: This is typically called from a `finally` block. The outer
+    try/except below logs full rc/stdout/stderr if restore fails, but does
+    NOT re-raise — re-raising in `finally` would mask the original test
+    exception. The error is loud in logs so it's still actionable.
+    """
+    for c in edited_containers:
+        try:
+            restore_body = (
+                "if [ -f /etc/rsyslog.conf.orig.bak ]; then "
+                "cp -f /etc/rsyslog.conf.orig.bak /etc/rsyslog.conf; "
+                "supervisorctl restart rsyslogd; "
+                "rm -f /etc/rsyslog.conf.orig.bak; "
+                "fi"
+            )
+            restore_cmd = f"docker exec -i {c} bash -lc '{restore_body}'"
+            _run_or_raise(duthost, restore_cmd)
+        except Exception as e:
+            logger.warning('Failed to restore rsyslog.conf in container %s: %s', c, repr(e))
