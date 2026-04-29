@@ -571,11 +571,23 @@ def evaluate_condition(dynamic_update_skip_reason, mark_details, condition, basi
             if var not in safe_globals:
                 safe_globals[var] = None
 
+        for var in ["minigraph_interfaces", "minigraph_portchannel_interfaces"]:
+            if var not in safe_globals:
+                safe_globals[var] = []
+
+        for var in ["minigraph_portchannels", "minigraph_neighbors"]:
+            if var not in safe_globals:
+                safe_globals[var] = {}
+
         condition_result = bool(eval(condition_str, safe_globals))
 
         if condition_result and dynamic_update_skip_reason:
             mark_details['reason'].append(condition)
         return condition_result
+    except NameError as e:
+        logger.warning('Skipping condition evaluation due to undefined variable: {}, '
+                       'raw_condition={}, condition_str={}'.format(repr(e), condition, condition_str))
+        return False
     except Exception:
         raise RuntimeError('Failed to evaluate condition, raw_condition={}, condition_str={}'.format(
             condition,

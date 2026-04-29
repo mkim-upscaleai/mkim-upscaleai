@@ -1,34 +1,34 @@
-vms-snappi-sonic-multidut:
+caspian_testbed_snappi_sonic:
   multidut_port_info:
+    # --- external_pause_storms topology (2, 1): 2 ingress TX, 1 egress RX ---
+    # tgen_port_info picks tx_count=2 from tx_ports, rx_count=1 from rx_ports.
+    # multi_dut_ports = [rx0=leaf1, tx0=spine1_E504, tx1=spine1_E496]
+    # helper: egress=leaf1, ingress=[spine1_E504, spine1_E496]
     - multi-dut-single-asic:
         rx_ports:
-          - hostname: sonic-s6100-dut1
-            port_name: Ethernet72
-          - hostname: sonic-s6100-dut2
-            port_name: Ethernet76
+          - hostname: upscale-sys-leaf1
+            port_name: Ethernet504
         tx_ports:
-          - hostname: sonic-s6100-dut2
-            port_name: Ethernet64
-          - hostname: sonic-s6100-dut2
-            port_name: Ethernet68
-    - single-dut-single-asic:
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet504
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet496
+    # --- throttling_pause_storms topology (1, 2): 1 tx_port, 2 rx_ports ---
+    # tgen_port_info picks tx_count=1 from tx_ports, rx_count=2 from rx_ports.
+    # multi_dut_ports = [rx0=leaf1, rx1=spine1_E504, tx0=spine1_E496]
+    # helper: egress=leaf1, ingress=[spine1_E504, spine1_E496]
+    - multi-dut-single-asic:
         rx_ports:
-          - hostname: sonic-s6100-dut1
-            port_name: Ethernet72
-          - hostname: sonic-s6100-dut1
-            port_name: Ethernet76
+          - hostname: upscale-sys-leaf1
+            port_name: Ethernet504
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet504
         tx_ports:
-          - hostname: sonic-s6100-dut1
-            port_name: Ethernet64
-          - hostname: sonic-s6100-dut1
-            port_name: Ethernet68
-  mixed_speed_port_info:
-    vms-snappi-sonic-multidut:
-      - multidut-any-asic:
-        rx_ports:
-          - hostname: sonic-s6100-dut1
-            port_name: Ethernet0
-        tx_ports:
-          - hostname: sonic-s6100-dut2
-            port_name: Ethernet0
-  pfcQueueGroupSize: 8
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet496
+  pfcQueueGroupSize: 4
+  # DUTs that must advertise their directly-connected subnets into BGP so that
+  # traffic generators attached to them can be reached by other DUTs.
+  bgp_redistribute_connected_hosts:
+    - upscale-sys-leaf1
+    - upscale-sys-spine1

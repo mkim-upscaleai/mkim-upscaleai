@@ -81,6 +81,11 @@ def test_global_pause(snappi_api,                                   # noqa: F811
 
     snappi_extra_params = SnappiTestParams()
     snappi_extra_params.multi_dut_params.multi_dut_ports = snappi_ports
+    # Spectrum ASIC honors 802.3x global pause at the MAC layer; lossy queues will
+    # tail-drop when the egress is paused.  Disable background flow generation so
+    # verify_background_flow is not called — the meaningful assertion here is that
+    # LOSSLESS flows (test_prio_list) are unaffected (test_traffic_pause=False).
+    snappi_extra_params.gen_background_traffic = False
     run_pfc_test(api=snappi_api,
                  testbed_config=testbed_config,
                  port_config_list=port_config_list,

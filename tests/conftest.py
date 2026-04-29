@@ -379,7 +379,7 @@ def pytest_collection_modifyitems(config, items):
             logger.info("Deselected %d tests out of %d total tests", len(deselected_items), len(items))
             config.hook.pytest_deselected(items=deselected_items)
             items[:] = remaining_items
-    
+
     # Second: Skip all stress_tests if --run-stress-test is not set
     if not config.getoption("--run-stress-tests"):
         skip_stress_tests = pytest.mark.skip(reason="Stress tests run only if --run-stress-tests is passed")
@@ -835,7 +835,10 @@ def ptfhosts(enhance_inventory, ansible_adhoc, tbinfo, duthost, request):
         return None
     if tbinfo['topo']['name'].startswith("nut-"):
         return None
-    if "ptf_image_name" in tbinfo and "docker-keysight-api-server" in tbinfo["ptf_image_name"]:
+    if "ptf_image_name" in tbinfo and ("docker-keysight-api-server" in tbinfo["ptf_image_name"]
+                                       or "docker-ptf-snappi" in tbinfo["ptf_image_name"]):
+        return None
+    if tbinfo['topo']['name'].startswith('snappi'):
         return None
     if "ptf" in tbinfo:
         _hosts.append(PTFHost(ansible_adhoc, tbinfo["ptf"], duthost, tbinfo,
@@ -1115,10 +1118,18 @@ def fanouthosts(enhance_inventory, ansible_adhoc, tbinfo, conn_graph_facts, cred
 
         mg_facts = duthost.minigraph_facts(host=duthost.hostname)['ansible_facts']
 
+        # Collect DUT hostnames to skip inter-DUT connections
+        dut_names = [d.hostname for d in duthosts]
+
         # Process each Ethernet port connection
         for dut_port, fanout_rec in ethernet_ports.items():
             fanout_host = str(fanout_rec['peerdevice'])
             fanout_port = str(fanout_rec['peerport'])
+
+            # Skip inter-DUT connections (peer is another DUT, not a fanout switch)
+            if fanout_host in dut_names:
+                logging.info(f"Skipping inter-DUT connection: {dut_host}:{dut_port} -> {fanout_host}:{fanout_port}")
+                continue
 
             # Create or get fanout object
             fanout = create_or_get_fanout(fanout_hosts, fanout_host, dut_host)

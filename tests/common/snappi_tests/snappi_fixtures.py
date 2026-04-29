@@ -76,6 +76,8 @@ def snappi_api(snappi_api_serv_ip,
     # TODO - Uncomment to use. Prefer to use environment vars to retrieve this information
     # api._username = "<please mention the username if other than default username>"
     # api._password = "<please mention the password if other than default password>"
+    api._username = "snappi"
+    api._password = "snappi123"
     yield api
 
     if getattr(api, 'assistant', None) is not None:

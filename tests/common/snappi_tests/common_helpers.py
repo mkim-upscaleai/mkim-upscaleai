@@ -1475,6 +1475,21 @@ def get_pfcQueueGroupSize(default=8):
         return override_data
     return default
 
+def get_bgp_redistribute_connected_hosts():
+    """
+    Return the list of DUT hostnames that need BGP 'redistribute connected' applied
+    before running snappi tests, as defined in variables.override.yml under
+    bgp_redistribute_connected_hosts.
+
+    Returns:
+        list[str]: hostnames, or empty list if not configured
+    """
+    testbed_name = get_testbed_from_args()
+    is_override, override_data = parse_override(testbed_name, 'bgp_redistribute_connected_hosts')
+    if is_override and override_data is not None:
+        return override_data
+    return []
+
 
 @lru_cache
 def get_testbed_from_args():

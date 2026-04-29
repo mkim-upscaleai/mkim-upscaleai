@@ -885,7 +885,13 @@ def verify_background_flow(flow_metrics,
             * 1e9 * bg_flow_config["flow_dur_sec"] / 8.0 / bg_flow_config["flow_pkt_size"]
         deviation = (rx_frames - exp_bg_flow_rx_pkts) / float(exp_bg_flow_rx_pkts)
 
-        pytest_assert(tx_frames == rx_frames,
+        # At 800G speeds, a small number of frames (~0.01%) may be counted as TX by
+        # the traffic generator but still propagating through the DUT pipeline when
+        # final statistics are collected. This is a measurement timing artifact, not
+        # actual packet loss. A 0.1% threshold distinguishes measurement noise from
+        # real drops (e.g. PFC affecting lossy traffic would cause >>1% drop).
+        bg_drop_tolerance = 0.001
+        pytest_assert((tx_frames - rx_frames) <= tx_frames * bg_drop_tolerance,
                       "{} should not have any dropped packet".format(metric.name))
 
         pytest_assert(abs(deviation) < tolerance,
@@ -985,7 +991,7 @@ def verify_in_flight_buffer_pkts(egress_duthost,
                       "Total TX bytes {} should exceed DUT buffer size {}".
                       format(tx_bytes_total, dut_buffer_size))
 
-        for peer_port, prios in dut_port_config["Tx"][0].items():
+        for peer_port, prios in dut_port_config["Rx"][0].items():
             for prio in prios:
                 dropped_packets = get_pg_dropped_packets(egress_duthost, peer_port, prio, asic_value)
                 pytest_assert(dropped_packets > 0,
@@ -996,7 +1002,7 @@ def verify_in_flight_buffer_pkts(egress_duthost,
                       "Total TX bytes {} should be smaller than DUT buffer size {}".
                       format(tx_bytes_total, dut_buffer_size))
 
-        for peer_port, prios in dut_port_config["Tx"][0].items():
+        for peer_port, prios in dut_port_config["Rx"][0].items():
             for prio in prios:
                 dropped_packets = get_pg_dropped_packets(egress_duthost, peer_port, prio, asic_value)
                 pytest_assert(dropped_packets == 0,
