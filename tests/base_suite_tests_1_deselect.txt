@@ -59,6 +59,9 @@ dash/test_config_churn.py
 dash/test_fnic.py
 dash/test_plnsg.py
 
+# Skipped due to known issue upstream: https://github.com/sonic-net/sonic-mgmt/pull/21494
+dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_monitor_checksum_validation
+
 # Static ip configured, will not use dynamic ip
 dns/static_dns/test_static_dns.py::TestDynamicMgmtPortIP
 
