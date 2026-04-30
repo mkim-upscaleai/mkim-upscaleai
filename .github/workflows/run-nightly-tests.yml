@@ -254,6 +254,24 @@ jobs:
       ANSIBLE_INVENTORY: ${{ needs.normalize-inputs.outputs.ansible_inventory }}
       TEST_FILES: ${{ needs.normalize-inputs.outputs.test_files }}
     steps:
+      # Re-reserve the testbed at the start of setup. The standalone reserve-testbed
+      # job in the parent workflow can race with a prior workflow's release-testbed
+      # (because both queue for the same self-hosted runner). Reserving here, in the
+      # same job that performs setup, guarantees the reservation is held while we
+      # actually use the testbed.
+      - name: Reserve testbed (pre-setup)
+        run: |
+          TESTBED_ID=$(echo "${{ env.HOST }}" | sed -E 's/.*spine([0-9]+).*/\1/')
+          if ! [[ "$TESTBED_ID" =~ ^[0-9]+$ ]]; then
+            echo "WARNING: Could not derive numeric testbed id from host '${{ env.HOST }}'; skipping reserve"
+            exit 0
+          fi
+          echo "Reserving testbed ${TESTBED_ID} (host=${{ env.HOST }}) on testbed reservation system"
+          curl -sS --fail --connect-timeout 5 --max-time 30 -X POST "http://192.168.218.28:8001/api/reserve/testbed/${TESTBED_ID}/force" \
+            -H "Content-Type: application/json" \
+            -d '{"user":"sonic-mgmt","duration_hours":24,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
+            || { echo "ERROR: reserve API call failed for testbed ${TESTBED_ID}"; exit 1; }
+
       - name: Fix permissions before checkout
         run: |
           sudo chown -R $USER:$USER ansible tests allure-history allure-report tests/allure-results sanity/__pycache__ .pytest_cache || true
