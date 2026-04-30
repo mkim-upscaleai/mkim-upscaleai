@@ -292,8 +292,9 @@ def check_bgp(duthosts, tbinfo):
             logger.info("No VMs in topology, skip checking bgp status on host %s ..." % dut.hostname)
             results[dut.hostname] = check_result
             return
-        if 'tgen' in tbinfo['topo'] or 'ixia' in tbinfo['topo']:
-            logger.info("TGEN/IXIA topology, skip checking bgp status on host %s ..." % dut.hostname)
+        topo_name = tbinfo['topo']['name']
+        if 'tgen' in topo_name or 'ixia' in topo_name or 'snappi' in topo_name:
+            logger.info("TGEN/IXIA/Snappi topology, skip checking bgp status on host %s ..." % dut.hostname)
             results[dut.hostname] = check_result
             return
 

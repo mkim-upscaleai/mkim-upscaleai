@@ -898,7 +898,8 @@ def nbrhosts(enhance_inventory, ansible_adhoc, tbinfo, creds, request):
     """
     logger.info("Fixture nbrhosts started")
     devices = {}
-    if ('vm_base' in tbinfo and not tbinfo['vm_base'] and 'tgen' in tbinfo['topo']['name']) or \
+    if ('vm_base' in tbinfo and not tbinfo['vm_base'] and
+            ('tgen' in tbinfo['topo']['name'] or 'snappi' in tbinfo['topo']['name'])) or \
         'ptf' in tbinfo['topo']['name'] or \
             'ixia' in tbinfo['topo']['name']:
         logger.info("No VMs exist for this topology: {}".format(tbinfo['topo']['name']))
@@ -1118,8 +1119,9 @@ def fanouthosts(enhance_inventory, ansible_adhoc, tbinfo, conn_graph_facts, cred
 
         mg_facts = duthost.minigraph_facts(host=duthost.hostname)['ansible_facts']
 
-        # Collect DUT hostnames to skip inter-DUT connections
-        dut_names = [d.hostname for d in duthosts]
+        # Use all DUT hostnames from tbinfo so inter-DUT links are skipped even
+        # when only a subset of DUTs is loaded into duthosts (e.g. single-DUT run).
+        dut_names = tbinfo.get('duts', [d.hostname for d in duthosts])
 
         # Process each Ethernet port connection
         for dut_port, fanout_rec in ethernet_ports.items():

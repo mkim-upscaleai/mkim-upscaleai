@@ -92,7 +92,7 @@ def print_logs(duthosts, ptfhost, print_dual_tor_logs=False, check_ptf_mgmt=True
             cmds.remove(constants.PRINT_LOGS['mux_status'])
             cmds.remove(constants.PRINT_LOGS['mux_config'])
 
-        if check_ptf_mgmt:
+        if check_ptf_mgmt and ptf is not None:
             # check PTF device reachability
             if ptf.mgmt_ip:
                 cmds.append("ping {} -c 1 -W 3".format(ptf.mgmt_ip))

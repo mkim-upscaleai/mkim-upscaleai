@@ -468,6 +468,9 @@ def test_update_saithrift_ptf(request, ptfhost, duthosts, enum_dut_hostname):
     if not py_saithrift_url:
         pytest.skip("No URL specified for python saithrift package")
 
+    if not ptfhost:
+        pytest.skip("No PTF host available for this testbed topology")
+
     pkg_name = py_saithrift_url.split("/")[-1]
     ptfhost.shell("rm -f {}".format(pkg_name))
 
