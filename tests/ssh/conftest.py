@@ -128,6 +128,7 @@ def generate_ssh_ciphers(request, typename):
     except subprocess.CalledProcessError as e:
         logger.error('Failed to get DUT\'s {} ciphers full list: {}'.format(
             typename, e.output))
+        return []
 
 
 def pytest_generate_tests(metafunc):
