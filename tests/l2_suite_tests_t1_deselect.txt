@@ -17,7 +17,7 @@ dhcp_relay/test_dhcp_counter_stress.py
 dhcp_relay/test_dhcp_pkt_recv.py::TestDhcpv6WithEmptyAclTable
 dhcp_relay/test_dhcp_pkt_recv.py::TestDhcpv6WithMulticastAccpectAcl
 dhcp_relay/test_dhcp_relay.py
-dhcp_relay.test_dhcp_relay_stress.py
+dhcp_relay/test_dhcp_relay_stress.py
 # Skipped: test not stable on T1 topology
 dhcp_relay/test_dhcp_relay_stress.py::test_dhcp_relay_restart_with_stress
 # ack/offer require T0/m0 topology; discover/request skipped per GitHub issue #14851
@@ -49,8 +49,8 @@ drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[port_channel_me
 drop_packets/test_drop_counters.py::test_dst_ip_is_loopback_addr[vlan_members-*]
 drop_packets/test_drop_counters.py::test_ip_is_zero_addr[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_ip_is_zero_addr[vlan_members-*]
-drop_packets/test_drop_counters.pytest_ip_pkt_with_exceeded_mtu[port_channel_members-*]
-drop_packets/test_drop_counters.pytest_ip_pkt_with_exceeded_mtu[vlan_members-*]
+drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[port_channel_members-*]
+drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[vlan_members-*]
 drop_packets/test_drop_counters.py::test_multicast_smac_drop
 drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_no_egress_drop_on_down_link[vlan_members-*]
@@ -63,8 +63,6 @@ drop_packets/test_drop_counters.py::test_src_ip_is_multicast_addr[port_channel_m
 drop_packets/test_drop_counters.py::test_src_ip_is_multicast_addr[vlan_members-*]
 drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[port_channel_members-*]
 drop_packets/test_drop_counters.py::test_unicast_ip_incorrect_eth_dst[vlan_members-*]
-drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[port_channel_members*]
-drop_packets/test_drop_counters.py::test_ip_pkt_with_exceeded_mtu[vlan_members*]
 
 # No fanout support, fanout needs to be running Onyx
 drop_packets/test_drop_counters.py::test_equal_smac_dmac_drop

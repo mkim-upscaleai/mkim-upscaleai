@@ -469,7 +469,12 @@ jobs:
             file="${filelist[$i]}"
             parseout=($(echo ${file} | tr "." "\n"))
             suite_name="${parseout[0]}"
-            deselect_file="${suite_name}_deselect.txt"
+            # Strip trailing _<digits> so that all numbered splits of a suite
+            # (e.g. base_suite_tests_1, base_suite_tests_2, base_suite_tests_t1_3)
+            # share a single canonical deselect file (base_suite_tests_deselect.txt,
+            # base_suite_tests_t1_deselect.txt, etc.).
+            canonical_suite=$(echo "$suite_name" | sed -E 's/_[0-9]+$//')
+            deselect_file="${canonical_suite}_deselect.txt"
 
             echo "echo env vars"
             docker exec ${{ env.SONIC_MGMT_CONTAINER }} env

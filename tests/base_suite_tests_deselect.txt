@@ -30,7 +30,6 @@ container_hardening/test_container_hardening.py::test_container_privileged[*-Non
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-iccpd]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-macsec]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-mux]
-container_hardening/test_container_hardening.py::test_container_privileged[*-None-gnmi]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-nat]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-otel]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-pmon]
@@ -114,9 +113,6 @@ gnmi/test_gnoi_killprocess.py
 # Only on smartswitch
 gnmi/test_gnmi_smartswitch.py::test_gnmi_appldb_01
 
-# From test skip case: This case is not supported on many platforms and often encounters issues. We can still run it, but we won’t rely on or validate the results
-hash
-
 # Not supported on Mellanox leaf-fanout running sonic
 iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_port_flap
 iface_loopback_action/test_iface_loopback_action.py::test_loopback_action_reload
@@ -164,9 +160,6 @@ smartswitch
 # Not supporting first time boot password change
 platform_tests/test_first_time_boot_password_change/test_first_time_boot_password_change.py
 
-# Not supporting first time boot password change
-platform_tests/test_first_time_boot_password_change/test_first_time_boot_password_change.py
-
 # Deprecated as Mellanox do not use ethtool in release 202305 or higher / Mellanox platform tests only supported on Mellanox devices
 platform_tests/mellanox/test_check_sfp_using_ethtool.py
 
@@ -201,6 +194,15 @@ platform_tests/test_auto_negotiation.py::test_verify_portspeed_configuration_acr
 
 # Only for Snappi topology
 platform_tests/test_reboot.py::test_soft_reboot
+
+# TEMPORARY: kdump is crashing dut in future tests because of limited file system size
+platform_tests/test_kdump.py
+
+# Dual-ToR warm reboot variants are not applicable to single-ToR T0
+platform_tests/test_advanced_reboot.py::test_warm_reboot[dual-*]
+
+# Other-vendor fast reboot path is not applicable to our SONiC->SONiC fanout setup
+platform_tests/test_advanced_reboot.py::test_fast_reboot_from_other_vendor
 
 # Restarting Syncd not supported yet
 platform_tests/test_sequential_restart.py::test_restart_syncd

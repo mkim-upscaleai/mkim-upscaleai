@@ -3,7 +3,7 @@
 ### test_acl.py
 
 # TODO: need to add back once qinq fanout is available
-acl/test_acl_outer_vlan
+acl/test_acl_outer_vlan.py
 
 # Deselect as dualtor topo is needed
 acl/test_acl.py::TestMultiBindingAcl

@@ -72,12 +72,6 @@ bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-soft]
 bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-hard]
 
 ###################################################################
-### bmp deselect tests
-
-# Skipped: https://github.com/sonic-net/sonic-buildimage/issues/23777
-bmp
-
-###################################################################
 ### decap deselect tests
 
 # Skipped: Skip on mellanox all releases
@@ -153,7 +147,7 @@ route/test_static_route.py
 # Skipped: It's a new test case, skip it for other topologies except cisco vs nodes and force nodes.
 srv6/test_srv6_basic_sanity.py
 
-# Skipped: 202505 has issue with SRv6 config. https:/ithub.com/sonic-net/sonic-buildimage/issues/23585
+# Skipped: 202505 has issue with SRv6 config. https://github.com/sonic-net/sonic-buildimage/issues/23585
 srv6/test_srv6_dataplane.py
 srv6/test_srv6_static_config.py
 srv6/test_srv6_vlan_forwarding.py
