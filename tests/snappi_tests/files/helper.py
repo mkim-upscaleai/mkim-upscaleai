@@ -17,7 +17,8 @@ from tests.common.snappi_tests.snappi_fixtures import get_snappi_ports_for_rdma,
     snappi_dut_base_config, is_snappi_multidut
 from tests.common.snappi_tests.qos_fixtures import reapply_pfcwd, get_pfcwd_config
 from tests.common.snappi_tests.common_helpers import \
-        stop_pfcwd, disable_packet_aging, enable_packet_aging
+        stop_pfcwd, disable_packet_aging, enable_packet_aging, \
+        get_bgp_redistribute_connected_hosts
 from tests.snappi_tests.cisco.helper import modify_voq_watchdog_cisco_8000
 
 logger = logging.getLogger(__name__)
@@ -443,8 +444,13 @@ def reboot_duts_and_disable_wd(tgen_port_info, localhost, request):
     skip_warm_reboot(snappi_ports[0]['duthost'], reboot_type)
     skip_warm_reboot(snappi_ports[1]['duthost'], reboot_type)
 
+    # Gather BGP neighbor state sequentially before parallel reboot to avoid
+    # Ansible module cache race condition when both processes call bgp_facts simultaneously.
+    args = set((snappi_ports[0]['duthost'], snappi_ports[1]['duthost']))
+    bgp_neighbors_map = {node: node.get_bgp_neighbors_per_asic("established") for node in args}
+
     def save_config_and_reboot(node, results=None):
-        up_bgp_neighbors = node.get_bgp_neighbors_per_asic("established")
+        up_bgp_neighbors = bgp_neighbors_map[node]
         logger.info("Issuing a {} reboot on the dut {}".format(reboot_type, node.hostname))
         node.shell("mkdir /etc/sonic/orig_configs; mv /etc/sonic/config_db* /etc/sonic/orig_configs/")
         node.shell("sudo config save -y")
@@ -457,6 +463,27 @@ def reboot_duts_and_disable_wd(tgen_port_info, localhost, request):
     # Convert the list of duthosts into a list of tuples as required for parallel func.
     args = set((snappi_ports[0]['duthost'], snappi_ports[1]['duthost']))
     parallel_run(save_config_and_reboot, {}, {}, list(args), timeout=900)
+
+    # Re-apply BGP 'redistribute connected' after reboot — FRR restarts during
+    # reboot and loses any vtysh-only config that was not saved to ConfigDB.
+    redistribute_hosts = set(get_bgp_redistribute_connected_hosts())
+    for duthost in list(args):
+        if duthost.hostname in redistribute_hosts:
+            bgp_asn = duthost.shell(
+                "redis-cli -n 4 hget 'DEVICE_METADATA|localhost' bgp_asn"
+            )["stdout"].strip()
+            if bgp_asn:
+                duthost.shell(
+                    "docker exec bgp vtysh "
+                    "-c 'configure terminal' "
+                    "-c 'router bgp {}' "
+                    "-c 'address-family ipv4 unicast' "
+                    "-c 'redistribute connected' "
+                    "-c 'end'".format(bgp_asn),
+                    module_ignore_errors=True
+                )
+                logger.info("{}: re-applied BGP redistribute connected in ASN {} after reboot".format(
+                    duthost.hostname, bgp_asn))
 
     pfcwd_value = {}
 

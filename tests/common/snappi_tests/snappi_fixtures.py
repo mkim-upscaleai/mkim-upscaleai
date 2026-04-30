@@ -1756,17 +1756,19 @@ def tgen_port_info(request: pytest.FixtureRequest, snappi_port_selection, get_sn
                 "Need Minimum of 2 ports defined in ansible/files/*links.csv"
                 " file, got:{}".format(len(get_snappi_ports)))
 
-        if len(rdma_ports['tx_ports']) < tx_port_count:
+        if len(rdma_ports['tx_ports']) != tx_port_count:
             pytest.skip(
-                "Doesn't have the required Tx ports defined for "
-                "testbed {}, subtype {} in variables.override.yml".format(
-                    testbed, testbed_subtype))
+                "Tx port count mismatch for testbed {}, subtype {} in variables.override.yml: "
+                "entry has {} TX ports, test requires {}".format(
+                    testbed, testbed_subtype,
+                    len(rdma_ports['tx_ports']), tx_port_count))
 
-        if len(rdma_ports['rx_ports']) < rx_port_count:
+        if len(rdma_ports['rx_ports']) != rx_port_count:
             pytest.skip(
-                "Doesn't have the required Rx ports defined for "
-                "testbed {}, subtype {} in variables.override.yml".format(
-                    testbed, testbed_subtype))
+                "Rx port count mismatch for testbed {}, subtype {} in variables.override.yml: "
+                "entry has {} RX ports, test requires {}".format(
+                    testbed, testbed_subtype,
+                    len(rdma_ports['rx_ports']), rx_port_count))
 
         snappi_ports = get_snappi_ports
         if is_snappi_multidut(duthosts):

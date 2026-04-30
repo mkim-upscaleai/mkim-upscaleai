@@ -10,6 +10,7 @@ MULTIDUT_PORT_INFO = {MULTIDUT_TESTBED: (
         'multi-dut-single-asic': {
             # spine1:Ethernet504 -> snappi Card1/Port1 (tx)
             # leaf1:Ethernet504  -> snappi Card1/Port3 (rx)
+            # Multi-DUT path: traffic crosses the inter-DUT links.
             'rx_ports': [
                 {'port_name': 'Ethernet504', 'hostname': "upscale-sys-leaf1"},
             ],
@@ -18,17 +19,6 @@ MULTIDUT_PORT_INFO = {MULTIDUT_TESTBED: (
             ]
         }
     }),
-    ({
-        'single-dut-single-asic': {
-            # Both ports on spine1: Ethernet504 -> Card1/Port1 (tx), Ethernet496 -> Card1/Port5 (rx)
-            'rx_ports': [
-                {'port_name': 'Ethernet496', 'hostname': "upscale-sys-spine1"},
-            ],
-            'tx_ports': [
-                {'port_name': 'Ethernet504', 'hostname': "upscale-sys-spine1"},
-            ]
-        }
-    })
 )}
 # rx port is 400Gbps port receiving traffic in mixed-speed mode.
 # tx port is 100Gbps port sending traffic to IXIA.

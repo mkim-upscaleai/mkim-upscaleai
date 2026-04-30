@@ -1,9 +1,25 @@
 caspian_testbed_snappi_sonic:
   multidut_port_info:
-    # --- external_pause_storms topology (2, 1): 2 ingress TX, 1 egress RX ---
-    # tgen_port_info picks tx_count=2 from tx_ports, rx_count=1 from rx_ports.
-    # multi_dut_ports = [rx0=leaf1, tx0=spine1_E504, tx1=spine1_E496]
-    # helper: egress=leaf1, ingress=[spine1_E504, spine1_E496]
+    # --- (1, 1) multi-DUT: spine1:E504 (Card1/Port1) TX -> leaf1:E504 (Card1/Port3) RX ---
+    # Used by all tests with number_of_tx_rx_ports=(1,1). Traffic crosses the inter-DUT links.
+    - multi-dut-single-asic:
+        rx_ports:
+          - hostname: upscale-sys-leaf1
+            port_name: Ethernet504
+        tx_ports:
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet504
+    # --- (1, 1) single-DUT: spine1:E504 (Card1/Port1) TX -> spine1:E496 (Card1/Port5) RX ---
+    # Used by all tests with number_of_tx_rx_ports=(1,1). Both ports on spine1 (loopback path).
+    - single-dut-single-asic:
+        rx_ports:
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet496
+        tx_ports:
+          - hostname: upscale-sys-spine1
+            port_name: Ethernet504
+    # --- (2, 1) multi-DUT: spine1:E504+E496 TX -> leaf1:E504 RX (2:1 oversubscription) ---
+    # Used by tests with number_of_tx_rx_ports=(2,1), e.g. test_lossless_response_to_external_pause_storms.
     - multi-dut-single-asic:
         rx_ports:
           - hostname: upscale-sys-leaf1
@@ -13,10 +29,9 @@ caspian_testbed_snappi_sonic:
             port_name: Ethernet504
           - hostname: upscale-sys-spine1
             port_name: Ethernet496
-    # --- throttling_pause_storms topology (1, 2): 1 tx_port, 2 rx_ports ---
-    # tgen_port_info picks tx_count=1 from tx_ports, rx_count=2 from rx_ports.
-    # multi_dut_ports = [rx0=leaf1, rx1=spine1_E504, tx0=spine1_E496]
-    # helper: egress=leaf1, ingress=[spine1_E504, spine1_E496]
+    # --- (1, 2) multi-DUT: spine1:E496 TX -> leaf1:E504+spine1:E504 RX (1:2 diverging) ---
+    # Used by tests with number_of_tx_rx_ports=(1,2), e.g. test_lossless_response_to_throttling_pause_storms,
+    # test_m2o_oversubscribe_*, test_m2o_fluctuating_lossless.
     - multi-dut-single-asic:
         rx_ports:
           - hostname: upscale-sys-leaf1
