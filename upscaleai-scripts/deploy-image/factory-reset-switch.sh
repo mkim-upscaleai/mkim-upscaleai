@@ -135,7 +135,7 @@ fi
 
 # ── Step 2: Backup current config ────────────────────────────────────────────
 echo "  [2/5] Backing up config_db.json..."
-run_ssh "sudo cp /etc/sonic/config_db.json /etc/sonic/config_db.json.bak-before-deploy"
+run_ssh "sudo mv /etc/sonic/config_db.json /etc/sonic/config_db.json.bak-before-deploy"
 echo "        Saved as /etc/sonic/config_db.json.bak-before-deploy"
 
 # ── Step 3: Factory reset ─────────────────────────────────────────────────────
