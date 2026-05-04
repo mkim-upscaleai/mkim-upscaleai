@@ -19,8 +19,9 @@ on:
         required: true
       fanoutip:
         type: string
-        default: 192.168.213.11
-        required: true
+        description: Fanout IP (optional). Empty skips fanout copy/install/cleanup.
+        required: false
+        default: ""
       switch_user:
         type: string
         description: User name to login to switch
@@ -171,19 +172,24 @@ jobs:
             echo "BIN_FILE=$BIN_FILE" >> $GITHUB_ENV
             echo "BIN_FILE: ${BIN_FILE}"
 
-            # Copy to switch and fanout in parallel
-            echo "Copying $BIN_FILE to switch (${{ env.SWITCH_IP }}) and fanout (${{ env.FANOUT_IP }}) simultaneously..."
-            /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE &
-            SCP_SWITCH_PID=$!
-            /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}:/tmp/$BIN_FILE &
-            SCP_FANOUT_PID=$!
-
-            SCP_SWITCH_RC=0; wait $SCP_SWITCH_PID || SCP_SWITCH_RC=$?
-            SCP_FANOUT_RC=0; wait $SCP_FANOUT_PID || SCP_FANOUT_RC=$?
-            [ $SCP_SWITCH_RC -ne 0 ] && echo "ERROR: SCP to switch failed"
-            [ $SCP_FANOUT_RC -ne 0 ] && echo "ERROR: SCP to fanout failed"
-            [ $SCP_SWITCH_RC -ne 0 ] || [ $SCP_FANOUT_RC -ne 0 ] && exit 1
-            echo "Installer copied to both devices"
+            # Copy to switch; fanout optional
+            if [ -n "$FANOUT_IP" ]; then
+              echo "Copying $BIN_FILE to switch ($SWITCH_IP) and fanout ($FANOUT_IP) simultaneously..."
+              /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE &
+              SCP_SWITCH_PID=$!
+              /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@$FANOUT_IP:/tmp/$BIN_FILE &
+              SCP_FANOUT_PID=$!
+              SCP_SWITCH_RC=0; wait $SCP_SWITCH_PID || SCP_SWITCH_RC=$?
+              SCP_FANOUT_RC=0; wait $SCP_FANOUT_PID || SCP_FANOUT_RC=$?
+              [ $SCP_SWITCH_RC -ne 0 ] && echo "ERROR: SCP to switch failed"
+              [ $SCP_FANOUT_RC -ne 0 ] && echo "ERROR: SCP to fanout failed"
+              [ $SCP_SWITCH_RC -ne 0 ] || [ $SCP_FANOUT_RC -ne 0 ] && exit 1
+              echo "Installer copied to switch and fanout"
+            else
+              echo "Copying $BIN_FILE to switch only (no fanout IP)"
+              /usr/bin/sshpass -p $SWITCH_PASS scp ${{ env.SSH_OPTS }} "$BIN_FILE" ${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}:/tmp/$BIN_FILE
+              echo "Installer copied to switch"
+            fi
 
       - name: Install image and reboot switch and fanout simultaneously
         env:
@@ -209,30 +215,38 @@ jobs:
             echo "Status check: $label is online after upgrade"
           }
 
-          # Trigger install+reboot on both devices simultaneously
-          echo "Triggering install and reboot on switch (${{ env.SWITCH_IP }}) and fanout (${{ env.FANOUT_IP }})..."
-          /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
-            "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
-            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &" &
-          /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
-            "${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}" \
-            "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &" &
-          wait
-          echo "Install commands sent to both devices — waiting 60s for reboots to initiate..."
-          sleep 60
-
-          # Poll both devices in parallel
-          wait_for_host "${{ env.SWITCH_IP }}" "Switch" &
-          SWITCH_PID=$!
-          wait_for_host "${{ env.FANOUT_IP }}" "Fanout" &
-          FANOUT_PID=$!
-
-          SWITCH_RC=0; wait $SWITCH_PID || SWITCH_RC=$?
-          FANOUT_RC=0; wait $FANOUT_PID || FANOUT_RC=$?
-          [ $SWITCH_RC -ne 0 ] && echo "ERROR: Switch did not come back online"
-          [ $FANOUT_RC -ne 0 ] && echo "ERROR: Fanout did not come back online"
-          [ $SWITCH_RC -ne 0 ] || [ $FANOUT_RC -ne 0 ] && exit 1
-          echo "Both switch and fanout are online after upgrade"
+          if [ -n "$FANOUT_IP" ]; then
+            echo "Triggering install and reboot on switch ($SWITCH_IP) and fanout ($FANOUT_IP)..."
+            /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
+              "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
+              "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &" &
+            /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
+              "${{ env.SWITCH_USER }}@$FANOUT_IP" \
+              "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &" &
+            wait
+            echo "Install commands sent to both devices — waiting 60s for reboots to initiate..."
+            sleep 60
+            wait_for_host "${{ env.SWITCH_IP }}" "Switch" &
+            SWITCH_PID=$!
+            wait_for_host "$FANOUT_IP" "Fanout" &
+            FANOUT_PID=$!
+            SWITCH_RC=0; wait $SWITCH_PID || SWITCH_RC=$?
+            FANOUT_RC=0; wait $FANOUT_PID || FANOUT_RC=$?
+            [ $SWITCH_RC -ne 0 ] && echo "ERROR: Switch did not come back online"
+            [ $FANOUT_RC -ne 0 ] && echo "ERROR: Fanout did not come back online"
+            [ $SWITCH_RC -ne 0 ] || [ $FANOUT_RC -ne 0 ] && exit 1
+            echo "Both switch and fanout are online after upgrade"
+          else
+            echo "Triggering install and reboot on switch only ($SWITCH_IP)..."
+            /usr/bin/sshpass -p "$SWITCH_PASS" ssh ${{ env.SSH_OPTS }} \
+              "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
+              "set -e; export BINFILE='${BIN_FILE}'; sudo sonic-installer install -y /tmp/\$BINFILE; sudo nohup reboot >/dev/null 2>&1 &"
+            wait
+            echo "Install command sent — waiting 60s for reboot..."
+            sleep 60
+            wait_for_host "${{ env.SWITCH_IP }}" "Switch" || exit 1
+            echo "Switch is online after upgrade"
+          fi
 
       - name: Run sanity tests
         run: |
@@ -271,8 +285,16 @@ jobs:
           /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
             "${{ env.SWITCH_USER }}@${{ env.SWITCH_IP }}" \
             "sudo sonic-installer cleanup -y" &
-          /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
-            "${{ env.SWITCH_USER }}@${{ env.FANOUT_IP }}" \
-            "sudo sonic-installer cleanup -y" &
-          wait
-          echo "Image cleanup complete on both devices"
+          SWITCH_CLEAN_PID=$!
+          if [ -n "$FANOUT_IP" ]; then
+            /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} \
+              "${{ env.SWITCH_USER }}@$FANOUT_IP" \
+              "sudo sonic-installer cleanup -y" &
+            FANOUT_CLEAN_PID=$!
+            wait $SWITCH_CLEAN_PID
+            wait $FANOUT_CLEAN_PID
+            echo "Image cleanup complete on switch and fanout"
+          else
+            wait $SWITCH_CLEAN_PID
+            echo "Image cleanup complete on switch only"
+          fi

@@ -1,4 +1,6 @@
-name: RunNightlyTests
+# Snappi / snappi-sonic test path: single topology variable TOPO=tgen for pytest -t, container name, and Allure/S3 labels. No runner-side ansible IP resolution.
+# Invoked from call-nightly-tests.yml when test_profile is snappi.
+name: RunSnappiNightlyTests
 permissions:
   contents: read
 on:
@@ -6,7 +8,7 @@ on:
     inputs:
       host:
         type: string
-        description: DUT host name(s) — comma-separated for multiple DUTs (inventory IP resolution, factory reset, RPC on each). Snappi uses workflow run-snappi-nightly-tests.yml instead.
+        description: DUT inventory hostname(s), comma-separated for multidut (passed to run_tests.sh -d). No runner-side mgmt IP resolution.
         required: true
       testbed:
         type: string
@@ -66,77 +68,6 @@ on:
       AWS_SECRET_ACCESS_KEY:
         required: false
 
-  workflow_dispatch:
-    inputs:
-      host:
-        type: choice
-        description: DUT Host name in testbed file
-        options:
-          - upscalelab2-spine6
-          - upscalelab2-spine7
-          - upscalelab2-spine8
-          - upscalelab2-spine9
-          - upscalelab2-spine6-800
-          - upscalelab2-spine7-800
-          - upscalelab2-spine8-800
-          - upscalelab2-spine9-800
-        default: upscalelab2-spine7
-        required: true
-      testbed:
-        type: choice
-        description: Testbed name to run test on
-        options:
-          - caspian_testbed_t0_spine6
-          - caspian_testbed_t0_spine7
-          - caspian_testbed_t0_spine8
-          - caspian_testbed_t0_spine9
-          - caspian_testbed_t0_spine6-800
-          - caspian_testbed_t0_spine7-800
-          - caspian_testbed_t0_spine8-800
-          - caspian_testbed_t0_spine9-800
-        default: caspian_testbed_t0_spine7
-        required: true
-      ansible_inventory:
-        type: choice
-        description: Inventory file to use for ansible commands
-        options:
-          - veos
-          - inventory
-        default: veos
-        required: true
-      fanoutip:
-        type: string
-        description: Fanout IP (optional). Leave empty to skip fanout steps.
-        required: false
-        default: ""
-      switch_user:
-        type: string
-        description: User name to login to switch
-        default: admin
-        required: true
-      test_files:
-        type: string
-        description: Comma separated test files to run
-        default: "base_suite_tests.txt,mgmt_suite_tests.txt,l2_suite_tests.txt,l3_suite_tests.txt"
-      runner_label:
-        type: string
-        required: true
-      ALLURE_JOB_RUN_ID:
-        description: "ALLURE_JOB_RUN_ID service parameter. Leave blank."
-        required: false
-      ALLURE_USERNAME:
-        description: "ALLURE_USERNAME service parameter. Leave blank"
-        required: false
-      ALLURE_ENV:
-        description: "Base64-encoded Allure environment variables from shared job run. Leave blank if not using shared job run."
-        required: false
-      sonic_version:
-        description: "Image tag to use for sonic-mgmt and syncd-rpc containers (e.g. 202505)"
-        required: true
-      port_count:
-        description: "Port count descriptor for Allure launch title (e.g. 32-Port, 64-Port)"
-        default: "32-Port"
-        required: false
 env:
   SSH_OPTS: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   ALLURE_PROJECT_ID: 78
@@ -148,11 +79,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       host: ${{ inputs.host || github.event.inputs.host || 'undefined' }}
-      testbed: ${{ inputs.testbed || github.event.inputs.testbed || github.event.client_payload.testbed || 'caspian_testbed_t0_spine7' }}
+      testbed: ${{ inputs.testbed || github.event.inputs.testbed || github.event.client_payload.testbed || 'caspian_testbed_snappi_sonic' }}
       fanout_ip: ${{ inputs.fanoutip || github.event.inputs.fanoutip || github.event.client_payload.fanout_ip || '' }}
       switch_user: ${{ inputs.switch_user || github.event.inputs.switch_user || github.event.client_payload.switch_user || 'admin' }}
-      ansible_inventory: ${{ inputs.ansible_inventory || github.event.inputs.ansible_inventory || github.event.client_payload.ansible_inv || 'veos' }}
-      test_files: ${{ inputs.test_files || github.event.inputs.test_files || github.event.client_payload.test_files || 'base_suite_tests.txt,mgmt_suite_tests.txt,l2_suite_tests.txt,l3_suite_tests.txt' }}
+      ansible_inventory: ${{ inputs.ansible_inventory || 'snappi-sonic' }}
+      test_files: ${{ inputs.test_files || github.event.inputs.test_files || github.event.client_payload.test_files || 'snappi_tgen_suite_tests.txt' }}
       runner_label: ${{ inputs.runner_label || github.event.inputs.runner_label }}
       port_count: ${{ inputs.port_count || github.event.inputs.port_count || '32-Port' }}
     steps:
@@ -198,13 +129,10 @@ jobs:
             LAUNCH_DATE=$(TZ=America/Los_Angeles date '+%m/%d/%y')
             echo "launch-date=${LAUNCH_DATE}" >> $GITHUB_OUTPUT
 
-            # Topology label (e.g. t0 -> T0, t1-lag -> T1-lag)
-            TOPO=$(cut -d "_" -f 3 <<< "${{ needs.normalize-inputs.outputs.testbed }}")
+            TOPO=tgen
             TOPO_LABEL=$(echo "$TOPO" | sed 's/^t/T/')
 
             # Suite labels: derived dynamically from test_files input order
-            # Strips "_suite_tests*" suffix, deduplicates, then title-cases each prefix.
-            # Special cases: l2->L2, l3->L3, qos->QoS; everything else gets first-letter cap.
             IFS=',' read -ra TEST_FILE_ARRAY <<< "${{ needs.normalize-inputs.outputs.test_files }}"
             declare -A suite_seen
             suite_order=()
@@ -262,35 +190,25 @@ jobs:
       # (because both queue for the same self-hosted runner). Reserving here, in the
       # same job that performs setup, guarantees the reservation is held while we
       # actually use the testbed.
-      - name: Reserve testbed (pre-setup)
-        run: |
-          TESTBED_ID=$(echo "${{ env.HOST }}" | sed -E 's/.*spine([0-9]+).*/\1/')
-          if ! [[ "$TESTBED_ID" =~ ^[0-9]+$ ]]; then
-            echo "WARNING: Could not derive numeric testbed id from host '${{ env.HOST }}'; skipping reserve"
-            exit 0
-          fi
-          echo "Reserving testbed ${TESTBED_ID} (host=${{ env.HOST }}) on testbed reservation system"
-          curl -sS --fail --connect-timeout 5 --max-time 30 -X POST "http://192.168.218.28:8001/api/reserve/testbed/${TESTBED_ID}/force" \
-            -H "Content-Type: application/json" \
-            -d '{"user":"sonic-mgmt","duration_hours":24,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
-            || { echo "ERROR: reserve API call failed for testbed ${TESTBED_ID}"; exit 1; }
+      #- name: Reserve testbed (pre-setup)
+      #  run: |
+      #    TESTBED_ID=$(echo "${{ env.HOST }}" | sed -E 's/.*spine([0-9]+).*/\1/')
+      #    if ! [[ "$TESTBED_ID" =~ ^[0-9]+$ ]]; then
+      #      echo "WARNING: Could not derive numeric testbed id from host '${{ env.HOST }}'; skipping reserve"
+      #      exit 0
+      #    fi
+      #    echo "Reserving testbed ${TESTBED_ID} (host=${{ env.HOST }}) on testbed reservation system"
+      #    curl -sS --fail --connect-timeout 5 --max-time 30 -X POST "http://192.168.218.28:8001/api/reserve/testbed/${TESTBED_ID}/force" \
+      #      -H "Content-Type: application/json" \
+      #      -d '{"user":"sonic-mgmt","duration_hours":24,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
+      #      || { echo "ERROR: reserve API call failed for testbed ${TESTBED_ID}"; exit 1; }
 
       - name: Fix permissions before checkout
         run: |
           sudo chown -R $USER:$USER ansible tests allure-history allure-report tests/allure-results sanity/__pycache__ .pytest_cache || true
           echo "TESTBEDFILE=testbed.yaml" >> $GITHUB_ENV
-          TOPO=$(cut -d "_" -f 3 <<< "${{ env.TESTBED }}")
-          echo "TOPO=$TOPO" >> $GITHUB_ENV
-          # Map topology variants to base topology for run_tests.sh command, but keep original TOPO for container naming
-          if [[ "$TOPO" == t1-* ]]; then
-            TOPO_FOR_TESTS="t1"
-          elif [[ "$TOPO" == t0-* ]]; then
-            TOPO_FOR_TESTS="t0"
-          else
-            TOPO_FOR_TESTS="$TOPO"
-          fi
-          echo "TOPO_FOR_TESTS=$TOPO_FOR_TESTS" >> $GITHUB_ENV
-          echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-${TOPO}" >> $GITHUB_ENV
+          echo "TOPO=tgen" >> $GITHUB_ENV
+          echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-tgen" >> $GITHUB_ENV
 
       - name: Stop ${{ env.SONIC_MGMT_CONTAINER }} docker container
         run: docker stop ${{ env.SONIC_MGMT_CONTAINER }} && docker rm ${{ env.SONIC_MGMT_CONTAINER }} || true
@@ -298,83 +216,29 @@ jobs:
       - name: Checkout sonic-mgmt repo
         uses: actions/checkout@v4
 
-      - name: Get the IP address(es) from ansible inventory file
+      - name: Skip runner-side DUT mgmt IPs (snappi uses inventory from container)
         run: |
           set -e
-          # Works for YAML (e.g. veos) and INI inventories: ansible-inventory --host merges host vars.
-          lookup_mgmt_ip() {
-            local inv_name="$1" host="$2"
-            local inv_path="ansible/${inv_name}" json ip=""
-            json=$(ANSIBLE_NOCOLOR=1 ansible-inventory -i "$inv_path" --host "$host" 2>/dev/null) || true
-            if [ -n "$json" ] && [ "$json" != "{}" ]; then
-              ip=$(printf '%s' "$json" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('ansible_host') or d.get('ansible_ssh_host') or '',end='')" 2>/dev/null || true)
-            fi
-            if [ -z "$ip" ]; then
-              ip=$(ANSIBLE_NOCOLOR=1 ansible -i "$inv_path" -m debug -a 'var=ansible_host' "$host" 2>/dev/null | sed -n 's/.*"ansible_host": "\([^"]*\)".*/\1/p' | head -1)
-            fi
-            printf '%s' "$ip"
-          }
-          INV="${{ env.ANSIBLE_INVENTORY }}"
-          HOST_STR="${{ env.HOST }}"
-          IPS_CSV=""
-          while IFS= read -r h; do
-            h=$(echo "$h" | xargs)
-            [ -z "$h" ] && continue
-            ip=$(lookup_mgmt_ip "$INV" "$h")
-            if [ -z "$ip" ]; then
-              echo "Error: could not resolve ansible_host for '$h' in inventory ansible/${INV} (try: ansible-inventory -i ansible/${INV} --host '$h')" >&2
-              exit 1
-            fi
-            if [ -z "$IPS_CSV" ]; then IPS_CSV="$ip"; else IPS_CSV="$IPS_CSV,$ip"; fi
-          done <<< "$(echo "$HOST_STR" | tr ',' '\n')"
-          echo "SWITCH_IPS=$IPS_CSV" >> "$GITHUB_ENV"
-          echo "SWITCH_IP=$(echo "$IPS_CSV" | cut -d',' -f1)" >> "$GITHUB_ENV"
-          echo "Resolved DUT ansible_host(s): $IPS_CSV"
+          echo "SWITCH_IPS=" >> "$GITHUB_ENV"
+          echo "SWITCH_IP=" >> "$GITHUB_ENV"
 
       - name: Setup test environment
         run: |
           echo "HOST=${HOST}"
           echo "SWITCH_IPS=${SWITCH_IPS:-<unset>}"
-          echo "Reset factory settings on all DUT switch(es)"
-          # Use shell $SWITCH_IPS (from GITHUB_ENV), not ${{ env.SWITCH_IPS }} — the latter can be empty/stale for comma-separated values in some runners.
-          SIP_ARR=()
-          while IFS= read -r _sip || [ -n "${_sip}" ]; do
-            _sip=$(echo "$_sip" | xargs)
-            [ -z "$_sip" ] && continue
-            SIP_ARR+=("$_sip")
-          done < <(echo "${SWITCH_IPS}" | tr ',' '\n')
-          echo "Parsed ${#SIP_ARR[@]} DUT IP(s) for factory reset / reload: ${SIP_ARR[*]}"
-          if [ "${#SIP_ARR[@]}" -eq 0 ]; then
-            echo "Error: SWITCH_IPS is empty — cannot reset DUT(s). Check HOST and inventory resolution." >&2
-            exit 1
-          fi
-          # Preserve for RPC block later: `export $(cat /tmp/allure-env)` can overwrite env vars if names collide.
-          _DUT_IPS_CSV="${SWITCH_IPS}"
-          for sip in "${SIP_ARR[@]}"; do
-            sip=$(echo "$sip" | xargs)
-            echo "config-setup factory keep-basic on DUT $sip"
-            /usr/bin/sshpass -p "${{ secrets.SWITCH_PASSWORD }}" ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$sip" "sudo config-setup factory keep-basic"
-          done
-          if [ -n "$FANOUT_IP" ]; then
-            echo "config-setup factory keep-basic on fanout $FANOUT_IP"
+          echo "Snappi: skip DUT factory reset / config reload from workflow (no mgmt IPs on runner)."
+          _DUT_IPS_CSV=""
+          if [ -n "${FANOUT_IP:-}" ]; then
+            echo "Fanout only: config-setup factory keep-basic on fanout $FANOUT_IP"
             /usr/bin/sshpass -p "${{ secrets.SWITCH_PASSWORD }}" ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$FANOUT_IP" "sudo config-setup factory keep-basic"
-          else
-            echo "No fanout IP — skipping fanout factory reset"
-          fi
-
-          echo "Reload config on all DUT(s)"
-          for sip in "${SIP_ARR[@]}"; do
-            sip=$(echo "$sip" | xargs)
-            /usr/bin/sshpass -p "${{ secrets.SWITCH_PASSWORD }}" ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$sip" "sudo config reload -y -f"
-          done
-          if [ -n "$FANOUT_IP" ]; then
+            echo "Fanout: config reload"
             /usr/bin/sshpass -p "${{ secrets.SWITCH_PASSWORD }}" ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$FANOUT_IP" "sudo config reload -y -f"
+            echo "Waiting 60 seconds after fanout config reload"
+            sleep 60
           else
-            echo "No fanout IP — skipping fanout config reload"
+            echo "No fanout IP — no switch-side factory/reload in workflow for snappi."
+            sleep 5
           fi
-
-          echo "Waiting 60 seconds for config reload to complete"
-          sleep 60
 
           echo "SONIC_ROOT=$(pwd)" >> $GITHUB_ENV
           echo "Get management IP address of server"
@@ -416,87 +280,18 @@ jobs:
           echo "Install public key on remote server"
           cat ./id_rsa.pub | /usr/bin/sshpass -p ${{ secrets.TESTSERVER_PWD }} ssh ${{ env.SSH_OPTS }} ${USER}@${DEFAULT_IP} "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
 
-          echo "Remove T0 and T1 topo"
-          testbed=${{ env.TESTBED }}
-          if [ "${TOPO}" == "t1" ]; then
-              testbed="${testbed},${testbed/t1/t0}"
-          elif [ "${TOPO}" == "t0" ]; then
-              testbed="${testbed},${testbed/t0/t1}"
-          elif [ "${TOPO}" == "t1-lag" ]; then
-              testbed="${testbed},${testbed/t1-lag/t0},${testbed/t1-lag/t1}"
-          elif [ "${TOPO}" == "t1-64" ]; then
-              testbed="${testbed},${testbed/t1-64/t0},${testbed/t1-64/t1},${testbed/t1-64/t0-64}"
-          elif [ "${TOPO}" == "t0-64" ]; then
-              testbed="${testbed},${testbed/t0-64/t0},${testbed/t0-64/t1},${testbed/t0-64/t1-64}"
-          fi
-          remove_topo_filelist=($(echo "${testbed}" | tr "," "\n"))
-          for tb_name in ${remove_topo_filelist[@]}; do
-            echo "Running remove-topo for ${tb_name}"
-            docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${tb_name} ./password.txt -vvvv"
-          done
-
-          echo "Add topo"
-          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
           echo "Deploy minigraph"
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
 
           echo "Run pretest"
           # removing --skip_sanity and adding --allow_recover to prevent incomplete metadata generation
-          TOPOLOGY_FILTER="${TOPO_FOR_TESTS},any"
-          echo "Pretest topology filter: TOPO=${TOPO} TOPO_FOR_TESTS=${TOPO_FOR_TESTS} -> -t ${TOPOLOGY_FILTER}"
-          PRET_INNER="cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${HOST} -n ${TESTBED} -f ../ansible/${TESTBEDFILE} -i ../ansible/${ANSIBLE_INVENTORY} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--allow_recover' -t ${TOPOLOGY_FILTER}"
+          echo "Pretest: TOPO=${TOPO} -> -t ${TOPO}"
+          PRET_INNER="cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${HOST} -n ${TESTBED} -f ../ansible/${TESTBEDFILE} -i ../ansible/${ANSIBLE_INVENTORY} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--allow_recover' -t ${TOPO}"
           echo "Pretest command (inside container): ${PRET_INNER}"
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "${PRET_INNER}"
 
           rpc_pull_success=false
-          echo "RPC: route, docker registry, reboot — on each DUT"
-          RPC_SIP_ARR=()
-          while IFS= read -r _sip || [ -n "${_sip}" ]; do
-            _sip=$(echo "$_sip" | xargs)
-            [ -z "$_sip" ] && continue
-            RPC_SIP_ARR+=("$_sip")
-          done < <(echo "${_DUT_IPS_CSV}" | tr ',' '\n')
-          echo "RPC round: ${#RPC_SIP_ARR[@]} DUT(s): ${RPC_SIP_ARR[*]}"
-          for sip in "${RPC_SIP_ARR[@]}"; do
-            sip=$(echo "$sip" | xargs)
-            NEXTHOP=$(echo "$sip" | cut -d'.' -f1-3).1
-            echo "DUT $sip: nexthop ${NEXTHOP} for route to registry subnet"
-            /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$sip" "sudo config route add prefix 192.168.218.0/24 nexthop ${NEXTHOP}"
-            /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$sip" "echo '{\"insecure-registries\": [\"192.168.218.28:5000\"] }' | sudo tee /etc/docker/daemon.json"
-            /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$sip" "sudo reboot"
-          done
-          sleep 60
-          for sip in "${RPC_SIP_ARR[@]}"; do
-            sip=$(echo "$sip" | xargs)
-            echo "Waiting for DUT $sip to come back online..."
-            until /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ env.SWITCH_USER }}@"$sip" 'echo "Switch is back online"'; do
-              echo "Switch $sip not yet available, retrying in 30 seconds..."
-              sleep 30
-            done
-          done
-
-          max_attempts=10
-          attempt=0
-          while [ $attempt -lt $max_attempts ]; do
-            pull_round_ok=true
-            for sip in "${RPC_SIP_ARR[@]}"; do
-              sip=$(echo "$sip" | xargs)
-              if ! /usr/bin/sshpass -p ${{ secrets.SWITCH_PASSWORD }} ssh ${{ env.SSH_OPTS }} ${{ env.SWITCH_USER }}@"$sip" "docker pull 192.168.218.28:5000/docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} && docker tag 192.168.218.28:5000/docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} && docker tag 192.168.218.28:5000/docker-syncd-mlnx-rpc:${{ inputs.sonic_version }} docker-syncd-mlnx-rpc:latest"; then
-                echo "RPC docker pull failed on $sip (attempt $((attempt + 1)))"
-                pull_round_ok=false
-              fi
-            done
-            if [ "$pull_round_ok" = true ]; then
-              echo "RPC image pulled on all DUT(s) on attempt $((attempt + 1))"
-              rpc_pull_success=true
-              break
-            fi
-            attempt=$((attempt + 1))
-            if [ $attempt -lt $max_attempts ]; then
-              echo "Retrying RPC pull in 30 seconds..."
-              sleep 30
-            fi
-          done
+          echo "Snappi: skipping RPC docker route/pull/reboot on runner."
           # Save RPC pull status to file for use in output step
           echo "$rpc_pull_success" > /tmp/rpc_pull_status.txt
 
@@ -528,64 +323,15 @@ jobs:
     steps:
       - name: Export env vars
         run: |
-          TOPO=$(cut -d "_" -f 3 <<< "${{ env.TESTBED }}")
-          echo "TOPO=$TOPO" >> $GITHUB_ENV
-          # Map topology variants to base topology for run_tests.sh command, but keep original TOPO for container naming
-          if [[ "$TOPO" == t1-* ]]; then
-            TOPO_FOR_TESTS="t1"
-          elif [[ "$TOPO" == t0-* ]]; then
-            TOPO_FOR_TESTS="t0"
-          else
-            TOPO_FOR_TESTS="$TOPO"
-          fi
-          echo "TOPO_FOR_TESTS=$TOPO_FOR_TESTS" >> $GITHUB_ENV
-          echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-${TOPO}" >> $GITHUB_ENV
+          echo "TOPO=tgen" >> $GITHUB_ENV
+          echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-tgen" >> $GITHUB_ENV
           echo "TESTBEDFILE=testbed.yaml" >> $GITHUB_ENV
-          lookup_mgmt_ip() {
-            local inv_name="$1" host="$2"
-            local inv_path="ansible/${inv_name}" json ip=""
-            json=$(ANSIBLE_NOCOLOR=1 ansible-inventory -i "$inv_path" --host "$host" 2>/dev/null) || true
-            if [ -n "$json" ] && [ "$json" != "{}" ]; then
-              ip=$(printf '%s' "$json" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('ansible_host') or d.get('ansible_ssh_host') or '',end='')" 2>/dev/null || true)
-            fi
-            if [ -z "$ip" ]; then
-              ip=$(ANSIBLE_NOCOLOR=1 ansible -i "$inv_path" -m debug -a 'var=ansible_host' "$host" 2>/dev/null | sed -n 's/.*"ansible_host": "\([^"]*\)".*/\1/p' | head -1)
-            fi
-            printf '%s' "$ip"
-          }
-          INV="${{ env.ANSIBLE_INVENTORY }}"
-          HOST_STR="${{ env.HOST }}"
-          IPS_CSV=""
-          while IFS= read -r h; do
-            h=$(echo "$h" | xargs)
-            [ -z "$h" ] && continue
-            ip=$(lookup_mgmt_ip "$INV" "$h")
-            [ -z "$ip" ] && { echo "Error: could not resolve ansible_host for '$h' in ansible/${INV}" >&2; exit 1; }
-            if [ -z "$IPS_CSV" ]; then IPS_CSV="$ip"; else IPS_CSV="$IPS_CSV,$ip"; fi
-          done <<< "$(echo "$HOST_STR" | tr ',' '\n')"
-          echo "SWITCH_IPS=$IPS_CSV" >> "$GITHUB_ENV"
-          echo "SWITCH_IP=$(echo "$IPS_CSV" | cut -d',' -f1)" >> "$GITHUB_ENV"
+          echo "SWITCH_IPS=" >> "$GITHUB_ENV"
+          echo "SWITCH_IP=" >> "$GITHUB_ENV"
 
       - name: Run tests
         run: |
           filelist=($(echo ${{ env.TEST_FILES }} | tr "," "\n"))
-
-          rpc_pull_success="${{ needs.setup.outputs.rpc_pull_success }}"
-          if [ "$rpc_pull_success" == "false" ]; then
-            echo "RPC image pull failed - filtering out qos test files"
-            filtered_filelist=()
-            for file in "${filelist[@]}"; do
-              file_trimmed=$(echo "$file" | xargs)
-              if [[ ! "$file_trimmed" =~ [qQ][oO][sS] ]]; then
-                filtered_filelist+=("$file_trimmed")
-              else
-                echo "Skipping test file containing 'qos': $file_trimmed (RPC image not available)"
-              fi
-            done
-            filelist=("${filtered_filelist[@]}")
-          else
-            echo "RPC image pull succeeded - including all test files including qos"
-          fi
 
           num_files=${#filelist[@]}
 
@@ -614,9 +360,8 @@ jobs:
             if grep -q 'sflow' tests/${file}; then
               extra_flags="${extra_flags} --enable_sflow_feature"
             fi
-            TOPOLOGY_FILTER="${TOPO_FOR_TESTS},any"
-            echo "Suite run_tests.sh: TOPO=${TOPO} TOPO_FOR_TESTS=${TOPO_FOR_TESTS} file=${file} -t ${TOPOLOGY_FILTER}"
-            docker exec ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${{ env.HOST }}  -f ../ansible/${{ env.TESTBEDFILE }} -i ../ansible/${{ env.ANSIBLE_INVENTORY }} -k debug -l debug -p test_logs/logs-${suite_name} -F ${file} -t ${TOPOLOGY_FILTER} -n ${{ env.TESTBED }} -e '${extra_flags}' -u" || TEST_EXIT_CODE=$?
+            echo "Suite run_tests.sh: TOPO=${TOPO} file=${file} -t ${TOPO}"
+            docker exec ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${{ env.HOST }}  -f ../ansible/${{ env.TESTBEDFILE }} -i ../ansible/${{ env.ANSIBLE_INVENTORY }} -k debug -l debug -p test_logs/logs-${suite_name} -F ${file} -t ${TOPO} -n ${{ env.TESTBED }} -e '${extra_flags}' -u" || TEST_EXIT_CODE=$?
 
             if [ $TEST_EXIT_CODE -ne 0 ]; then
               echo "ERROR: Test file ${file} failed with exit code $TEST_EXIT_CODE"
@@ -646,13 +391,7 @@ jobs:
                 fi
 
                 if [[ "$should_skip_cleanup" == "false" ]]; then
-                    echo "Run cleanup between suites"
-                    echo "Remove topo"
-                    docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${{ env.TESTBED }} ./password.txt -vvvv"
-
-                    echo "Add topo"
-                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
-                    echo "Deploy minigraph"
+                    echo "Deploy minigraph (snappi: no remove-topo/add-topo between suites)"
                     docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
                 fi
             fi
@@ -694,7 +433,7 @@ jobs:
       - name: Copy Allure results from sonic-mgmt container to S3
         if: steps.aws_for_allure.outputs.available == 'true'
         run: |
-          TOPO=$(cut -d "_" -f 3 <<< "${TESTBED}")
+          TOPO=tgen
           SONIC_MGMT_CONTAINER="sonic-mgmt-ngty-${TOPO}"
           TOPO_LABEL=$(echo "$TOPO" | sed 's/^t/T/')
           LD="${LAUNCH_DATE:-$(TZ=America/Los_Angeles date '+%m/%d/%y')}"
