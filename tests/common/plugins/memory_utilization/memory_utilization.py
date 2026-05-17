@@ -1,6 +1,7 @@
 import logging
 import re
 import json
+from functools import partial
 from os.path import join, split
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,29 @@ class MemoryMonitor:
         self.commands = []
         self.memory_values = {}
         self.memory_errors = []
+        self.host_total_memory_bytes = self._fetch_host_total_memory()
+
+    def _fetch_host_total_memory(self):
+        """Fetch total host memory in bytes for normalizing docker stats percentages.
+
+        When container memory limits are set (cgroup v2 resource management),
+        docker stats MEM% is relative to the container limit, not host total.
+        We need host total to convert back to host-relative percentages so
+        thresholds remain consistent regardless of limit configuration.
+        """
+        try:
+            response = self.ansible_host.shell(
+                "awk '/MemTotal/{print $2}' /proc/meminfo",
+                module_ignore_errors=True)
+            kb_str = response.get('stdout', '').strip()
+            if kb_str:
+                total_bytes = int(kb_str) * 1024
+                logger.info("Host total memory: {} bytes ({} GB)".format(
+                    total_bytes, round(total_bytes / (1024**3), 1)))
+                return total_bytes
+        except Exception as e:
+            logger.warning("Failed to fetch host total memory: {}".format(e))
+        return 0
 
     def register_command(self, name, cmd, memory_params, memory_check_fn):
         """Register a command with its associated memory parameters and check function."""
@@ -432,7 +456,10 @@ class MemoryMonitor:
             for mem_item, thresholds in param['memory_params'].items():
                 param['memory_params'][mem_item] = self._normalize_thresholds(thresholds)
 
-            self.register_command(param['name'], param['cmd'], param['memory_params'], eval(param['memory_check_fn']))
+            fn = eval(param['memory_check_fn'])
+            if fn is parse_docker_stats_output and self.host_total_memory_bytes > 0:
+                fn = partial(fn, host_total_bytes=self.host_total_memory_bytes)
+            self.register_command(param['name'], param['cmd'], param['memory_params'], fn)
 
 
 def parse_top_output(output, memory_params):
@@ -527,8 +554,23 @@ def parse_monit_validate_output(output, memory_params):
     return memory_values
 
 
-def parse_docker_stats_output(output, memory_params):
-    """Parse the 'docker stats' command output to extract memory usage information."""
+_DOCKER_MEM_UNITS = {
+    'B': 1, 'KiB': 1024, 'MiB': 1024**2, 'GiB': 1024**3, 'TiB': 1024**4,
+}
+_DOCKER_USAGE_RE = re.compile(
+    r'(\d+\.?\d*)\s*(B|KiB|MiB|GiB|TiB)\s*/\s*(\d+\.?\d*)\s*(B|KiB|MiB|GiB|TiB)')
+_DOCKER_PCT_RE = re.compile(r'(\d+\.\d+)%.*?(\d+\.\d+)%')
+
+
+def parse_docker_stats_output(output, memory_params, host_total_bytes=0):
+    """Parse 'docker stats' output to extract memory usage as host-relative %.
+
+    When containers have cgroup memory limits, docker stats MEM% is relative
+    to the container limit rather than host total.  If host_total_bytes is
+    provided, this function extracts raw usage from the MEM USAGE / LIMIT
+    column and computes percentage against host total, keeping thresholds
+    consistent regardless of whether container limits are set.
+    """
     memory_values = {}
 
     if not output:
@@ -536,7 +578,6 @@ def parse_docker_stats_output(output, memory_params):
         return memory_values
 
     length = 0
-    pattern = r"(\d+\.\d+)%.*?(\d+\.\d+)%"
 
     for line in output.split('\n'):
         if "NAME" in line and "CPU" in line and "MEM" in line:
@@ -546,15 +587,24 @@ def parse_docker_stats_output(output, memory_params):
 
         if length != 0:
             for mem_item, thresholds in memory_params.items():
-                if mem_item in line:
-                    match = re.search(pattern, line)
-                    if match:
-                        mem_usage = match.group(2)
-                        memory_values[mem_item] = round(float(mem_usage), 1)
-                    else:
-                        logger.error("Failed to parse memory usage from line: {}".format(line))
-                else:
+                if mem_item not in line:
                     continue
+
+                if host_total_bytes > 0:
+                    usage_match = _DOCKER_USAGE_RE.search(line)
+                    if usage_match:
+                        usage_bytes = float(usage_match.group(1)) * _DOCKER_MEM_UNITS.get(usage_match.group(2), 1)
+                        host_pct = round((usage_bytes / host_total_bytes) * 100, 1)
+                        memory_values[mem_item] = host_pct
+                        logger.debug("{}: {}B / {}B host = {}%".format(
+                            mem_item, int(usage_bytes), host_total_bytes, host_pct))
+                        continue
+
+                match = _DOCKER_PCT_RE.search(line)
+                if match:
+                    memory_values[mem_item] = round(float(match.group(2)), 1)
+                else:
+                    logger.error("Failed to parse memory usage from line: {}".format(line))
 
     logger.debug("Parsed memory values: {}".format(memory_values))
     return memory_values
