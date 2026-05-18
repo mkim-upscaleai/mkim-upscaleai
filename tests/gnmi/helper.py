@@ -37,7 +37,7 @@ def apply_cert_config(duthost):
         if status == "RUNNING":
             dut_command = "docker exec %s supervisorctl stop %s" % (env.gnmi_container, program)
             duthost.shell(dut_command, module_ignore_errors=True)
-    dut_command = "docker exec %s pkill %s" % (env.gnmi_container, env.gnmi_process)
+    dut_command = "docker exec %s pkill -x %s" % (env.gnmi_container, env.gnmi_process)
     duthost.shell(dut_command, module_ignore_errors=True)
     dut_command = "docker exec %s bash -c " % env.gnmi_container
     dut_command += "\"/usr/bin/nohup /usr/sbin/%s -logtostderr --port %s " % (env.gnmi_process, env.gnmi_port)
@@ -74,7 +74,7 @@ def check_gnmi_process(duthost):
     Make sure there's no GNMI process running.
     """
     env = GNMIEnvironment(duthost, GNMIEnvironment.GNMI_MODE)
-    dut_command = "docker exec %s pgrep -f %s" % (env.gnmi_container, env.gnmi_process)
+    dut_command = "docker exec %s pgrep -x %s" % (env.gnmi_container, env.gnmi_process)
     output = duthost.shell(dut_command, module_ignore_errors=True)
     return output['stdout'].strip() == ""
 
@@ -88,10 +88,12 @@ def check_gnmi_status(duthost):
 
 def recover_cert_config(duthost):
     env = GNMIEnvironment(duthost, GNMIEnvironment.GNMI_MODE)
-    # Kill the GNMI process
-    dut_command = "docker exec %s pkill %s" % (env.gnmi_container, env.gnmi_process)
+    # Stop via supervisord first to prevent autorestart, then kill any remaining processes
+    dut_command = "docker exec %s supervisorctl stop %s" % (env.gnmi_container, env.gnmi_program)
     duthost.shell(dut_command, module_ignore_errors=True)
-    wait_until(60, 1, 0, check_gnmi_process, duthost)
+    dut_command = "docker exec %s pkill -x %s" % (env.gnmi_container, env.gnmi_process)
+    duthost.shell(dut_command, module_ignore_errors=True)
+    wait_until(30, 1, 0, check_gnmi_process, duthost)
     # Recover all stopped program
     dut_command = "docker exec %s supervisorctl status" % (env.gnmi_container)
     output = duthost.shell(dut_command, module_ignore_errors=True)
