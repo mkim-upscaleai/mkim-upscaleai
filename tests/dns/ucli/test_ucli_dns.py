@@ -300,6 +300,13 @@ def test_dns_nameserver(request, duthost, ptfhost, localhost, backup_and_restore
 
 @pytest.mark.device_type('vs') # VRFs are dangerous
 def test_dns_mgmt_vrf(request, duthost, ptfhost, localhost, backup_and_restore_config_db): # noqa F811
+    # The device_type('vs') marker is only enforced when --device_type is passed on the
+    # pytest CLI (see tests/common/plugins/custom_markers/__init__.py). Guard at runtime
+    # so this test cannot brick a physical DUT: 'config vrf add mgmt' moves eth0 into the
+    # mgmt VRF and cuts off the Ansible/SSH session, leaving the box unreachable until
+    # someone clears the VRF over console.
+    if duthost.facts.get('asic_type') != 'vs':
+        pytest.skip("test_dns_mgmt_vrf is vs-only; adding the mgmt VRF can disconnect a physical DUT")
     try:
         duthost.shell('sudo config vrf add mgmt')
         with allure.step("DNS-REQ-06: DNS MGMT VRF"):
