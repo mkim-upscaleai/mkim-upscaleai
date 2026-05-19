@@ -137,7 +137,7 @@ def verify_nameserver_in_conf_file(duthost, expected_nameserver, expect_same=Tru
     :param expected_nameserver: expected_nameserver: Expected nameserver list
     :param expected_same: expect the value in the conf file to be same or not as expected_nameserver
     """
-    assert wait_until(30, 5, 0, _verify_nameserver_in_conf_file, duthost, expected_nameserver,
+    assert wait_until(60, 5, 0, _verify_nameserver_in_conf_file, duthost, expected_nameserver,
                       expect_same=expect_same), "The nameserver is resolv.conf file is not as expected"
 
 

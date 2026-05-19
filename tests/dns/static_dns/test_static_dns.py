@@ -96,13 +96,13 @@ def test_static_dns_basic(request, duthost, localhost, backup_and_restore_config
             pytest_assert(wait_until(300, 20, 0, check_interface_status_of_up_ports, duthost),
                           "Not all ports that are admin up on are operationally up")
 
+    pytest_assert(wait_until(180, 5, 0, duthost.is_host_service_running, "hostcfgd"), "hostcfgd is not running.")
+
     with allure.step("Verify the nameserver is persistent after reload"):
         with allure.step("Verify the nameserver in config db is persistent"):
             verify_nameserver_in_config_db(duthost, expected_nameservers)
         with allure.step(f"Verify nameserver in the {RESOLV_CONF_FILE} is persistent"):
             verify_nameserver_in_conf_file(duthost, expected_nameservers)
-
-    pytest_assert(wait_until(180, 5, 0, duthost.is_host_service_running, "hostcfgd"), "hostcfgd is not running.")
 
     with allure.step("Delete nameserver"):
         for nameserver in expected_nameservers:
