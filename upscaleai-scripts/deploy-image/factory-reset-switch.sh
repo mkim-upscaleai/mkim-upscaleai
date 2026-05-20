@@ -6,40 +6,72 @@
 #
 # Options:
 #   -s <ip>     Switch IP address    (required)
+#   -u <user>   SSH username         (default: from $SWITCH_USER or "admin")
+#   -p <pass>   SSH password         (default: from $SWITCH_PASS or prompt)
 #   -h          Show this help
 #
-# Steps:
-#   1. Extract MGMT_INTERFACE and MGMT_PORT from current config_db.json
-#   2. Backup config_db.json to config_db.json.bak-before-deploy
-#   3. Run `sudo config-setup factory`
-#   4. Restore saved mgmt fields into the new factory config
-#   5. Run `sudo config reload -y -f`
+# Credentials:
+#   Resolved in order: CLI flags > environment variables > ~/.env file > prompt.
 #
-# Notes:
-#   If the switch has no static MGMT_INTERFACE (i.e. uses DHCP), step 4 is skipped.
-#   Switches in 192.168.221.x–192.168.223.x are reached via the server9 jump host.
+# Steps:
+#   1. Save MGMT_INTERFACE / MGMT_PORT / MGMT_VRF_CONFIG from running CONFIG_DB
+#      (via ``sonic-cfggen -d --print-data`` — sees golden_config_db.json merged
+#      with any runtime overrides, unlike reading /etc/sonic/config_db.json)
+#   2. mv /etc/sonic/config_db.json -> /etc/sonic/config_db.json.bk
+#      (single fixed-name backup; overwritten on each run.
+#       Skipped if config_db.json does not exist on the switch.)
+#   3. Run `sudo config-setup factory`
+#   4. Merge the saved mgmt fields back into the new /etc/sonic/config_db.json
+#   5. Run `sudo config reload -y -f`
 
 set -euo pipefail
 
 # ── Credentials ───────────────────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/creds.sh"
+# Load ~/.env if it exists (won't overwrite vars already in the environment)
+_ENV_FILE="${HOME}/.env"
+if [ -f "$_ENV_FILE" ]; then
+  while IFS='=' read -r key value; do
+    key=$(echo "$key" | xargs)
+    [[ "$key" =~ ^# ]] && continue
+    [[ -z "$key" ]] && continue
+    value=$(echo "$value" | sed "s/^['\"]//;s/['\"]$//" | xargs)
+    if [ -z "${!key:-}" ]; then
+      export "$key=$value"
+    fi
+  done <"$_ENV_FILE"
+fi
 
 # ── Args ──────────────────────────────────────────────────────────────────────
 SWITCH_IP=""
+CLI_USER=""
+CLI_PASS=""
 
 usage() {
   sed -n '/^# Usage:/,/^$/p' "$0" | sed 's/^# \?//'
   exit 0
 }
 
-while getopts "s:h" opt; do
+while getopts "s:u:p:h" opt; do
   case $opt in
-    s) SWITCH_IP="$OPTARG" ;;
-    h) usage ;;
-    *) echo "Unknown option -$OPTARG" >&2; exit 1 ;;
+  s) SWITCH_IP="$OPTARG" ;;
+  u) CLI_USER="$OPTARG" ;;
+  p) CLI_PASS="$OPTARG" ;;
+  h) usage ;;
+  *)
+    echo "Unknown option -$OPTARG" >&2
+    exit 1
+    ;;
   esac
 done
+
+SWITCH_USER="${CLI_USER:-${SWITCH_USER:-admin}}"
+
+if [ -n "$CLI_PASS" ]; then
+  SWITCH_PASS="$CLI_PASS"
+elif [ -z "${SWITCH_PASS:-}" ]; then
+  read -rsp "Switch password (${SWITCH_USER}@${SWITCH_IP:-<ip>}): " SWITCH_PASS
+  echo ""
+fi
 
 # ── Validate ──────────────────────────────────────────────────────────────────
 if [ -z "$SWITCH_IP" ]; then
@@ -55,35 +87,15 @@ if ! command -v sshpass &>/dev/null; then
   exit 1
 fi
 
-# ── Jump host detection (192.168.221.x–192.168.223.x) ────────────────────────
-OCTET3=$(echo "$SWITCH_IP" | cut -d. -f3)
-PREFIX=$(echo "$SWITCH_IP" | cut -d. -f1-2)
-
-USE_JUMP=false
-if [ "$PREFIX" = "192.168" ] && [ "$OCTET3" -ge 221 ] && [ "$OCTET3" -le 223 ]; then
-  USE_JUMP=true
-fi
-
 SSH_OPTS=(
-  -o StrictHostKeyChecking=no
-  -o UserKnownHostsFile=/dev/null
   -o ConnectTimeout=15
 )
 
-ESCAPED_JUMP_PASS="$(printf '%q' "$JUMP_PASS")"
-
 run_ssh() {
   local cmd="$1"
-  if $USE_JUMP; then
-    sshpass -p "$SWITCH_PASS" ssh \
-      "${SSH_OPTS[@]}" \
-      -o "ProxyCommand sshpass -p ${ESCAPED_JUMP_PASS} ssh ${SSH_OPTS[*]} -W %h:%p ${JUMP_USER}@${JUMP_HOST}" \
-      "${SWITCH_USER}@${SWITCH_IP}" "$cmd"
-  else
-    sshpass -p "$SWITCH_PASS" ssh \
-      "${SSH_OPTS[@]}" \
-      "${SWITCH_USER}@${SWITCH_IP}" "$cmd"
-  fi
+  SSHPASS="$SWITCH_PASS" sshpass -e ssh \
+    "${SSH_OPTS[@]}" \
+    "${SWITCH_USER}@${SWITCH_IP}" "$cmd"
 }
 
 # Runs a python3 script on the switch via base64 encoding (avoids quoting issues)
@@ -102,25 +114,39 @@ run_remote_python() {
 echo "Factory-resetting switch ${SWITCH_IP}..."
 echo ""
 
-# ── Step 1: Extract MGMT_INTERFACE and MGMT_PORT ─────────────────────────────
-echo "  [1/5] Extracting management interface config..."
+BACKUP_PATH="/etc/sonic/config_db.json.bk"
+BACKUP_TS="$(date +%Y%m%d-%H%M%S)"
+
+# ── Step 1: Save mgmt config from running CONFIG_DB ──────────────────────────
+# We read from the live CONFIG_DB (sonic-cfggen -d) instead of /etc/sonic/config_db.json
+# because the on-disk file may not contain the full mgmt config — golden_config_db.json
+# entries and runtime overrides only show up in the merged running view.
+echo "  [1/5] Saving management interface config from running CONFIG_DB..."
 
 PY_EXTRACT='
-import json
-with open("/etc/sonic/config_db.json") as f:
-    cfg = json.load(f)
-mgmt = {}
-if "MGMT_INTERFACE" in cfg:
-    mgmt["MGMT_INTERFACE"] = cfg["MGMT_INTERFACE"]
-if "MGMT_PORT" in cfg:
-    mgmt["MGMT_PORT"] = cfg["MGMT_PORT"]
-with open("/tmp/mgmt_backup.json", "w") as f:
-    json.dump(mgmt, f, indent=4)
+import json, subprocess, sys
+try:
+    out = subprocess.check_output(
+        ["sonic-cfggen", "-d", "--print-data"],
+        stderr=subprocess.PIPE, text=True,
+    )
+    cfg = json.loads(out)
+except Exception as e:
+    print(f"MGMT_ERROR:{e}", file=sys.stderr)
+    sys.exit(2)
+
+# Tables we preserve across factory reset. Add more here if your setup needs them.
+MGMT_TABLES = ("MGMT_INTERFACE", "MGMT_PORT", "MGMT_VRF_CONFIG")
+mgmt = {t: cfg[t] for t in MGMT_TABLES if t in cfg and cfg[t]}
+
 if mgmt:
     print("MGMT_SAVED")
-    print(json.dumps(mgmt, indent=4))
+    print(json.dumps(mgmt))
+    with open("/tmp/mgmt_backup.json", "w") as f:
+        json.dump(mgmt, f, indent=4)
+    print("MGMT_SAVED_TO_FILE")
 else:
-    print("MGMT_DHCP")
+    print("MGMT_NONE")
 '
 
 EXTRACT_OUTPUT=$(run_remote_python "$PY_EXTRACT")
@@ -133,10 +159,17 @@ else
   echo "        No static mgmt config (DHCP) — nothing to restore."
 fi
 
-# ── Step 2: Backup current config ────────────────────────────────────────────
+# ── Step 2: Backup current config (if present) ───────────────────────────────
+# /etc/sonic/config_db.json may legitimately be absent (e.g. switch booted purely
+# from golden_config_db.json or a fresh image with no persisted config). In that
+# case there is nothing to back up — skip rather than aborting the reset.
 echo "  [2/5] Backing up config_db.json..."
-run_ssh "sudo mv /etc/sonic/config_db.json /etc/sonic/config_db.json.bak-before-deploy"
-echo "        Saved as /etc/sonic/config_db.json.bak-before-deploy"
+BACKUP_OUTPUT=$(run_ssh "if [ -f /etc/sonic/config_db.json ]; then sudo mv /etc/sonic/config_db.json ${BACKUP_PATH}-${BACKUP_TS} && echo BACKED_UP; else echo NO_CONFIG_DB; fi")
+if echo "$BACKUP_OUTPUT" | grep -q "BACKED_UP"; then
+  echo "        Saved as ${BACKUP_PATH}-${BACKUP_TS}"
+else
+  echo "        No /etc/sonic/config_db.json on switch — skipping backup."
+fi
 
 # ── Step 3: Factory reset ─────────────────────────────────────────────────────
 echo "  [3/5] Running config-setup factory..."
@@ -147,7 +180,7 @@ echo "        Factory config generated."
 if $HAS_STATIC_MGMT; then
   echo "  [4/5] Restoring management interface config..."
 
-  PY_MERGE='
+PY_MERGE='
 import json
 with open("/etc/sonic/config_db.json") as f:
     cfg = json.load(f)
@@ -170,9 +203,13 @@ else
   echo "  [4/5] Skipped — switch uses DHCP."
 fi
 
+
 # ── Step 5: Config reload ─────────────────────────────────────────────────────
-echo "  [5/5] Reloading config (sudo config reload -y -f)..."
-run_ssh "sudo config reload -y -f" || true
+echo "  [5/5] Starting config reload..."
+if ! run_ssh "nohup sudo config reload -y -f >/tmp/config-reload.log 2>&1 </dev/null &"; then
+  echo "Error: failed to start config reload." >&2
+  exit 1
+fi
 
 echo ""
-echo "Factory reset complete on ${SWITCH_IP}. Config reload in progress."
+echo "Factory reset requested on ${SWITCH_IP}. Config reload started."
