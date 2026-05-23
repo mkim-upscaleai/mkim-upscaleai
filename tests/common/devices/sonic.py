@@ -25,6 +25,7 @@ from tests.common.helpers.platform_api.chassis import is_inband_port
 from tests.common.helpers.parallel import parallel_run_threaded
 from tests.common.errors import RunAnsibleModuleFail
 from tests.common import constants
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 PROCESS_TO_CONTAINER_MAP = {
@@ -2720,7 +2721,7 @@ Totals               6450                 6449
         return re.search('up +up', output['stdout_lines'][-1])
 
     def get_port_fec(self, portname):
-        out = self.shell('redis-cli -n 4 HGET "PORT|{}" "fec"'.format(portname))
+        out = self.shell(config_db_shell_prefix(self) + 'HGET "PORT|{}" "fec"'.format(portname))
         assert_exit_non_zero(out)
         if out["stdout_lines"] and out["stdout_lines"][0] != "(nil)":
             return out["stdout_lines"][0]
@@ -2734,7 +2735,7 @@ Totals               6450                 6449
         return res['rc'] == 0
 
     def count_portlanes(self, portname):
-        out = self.shell('redis-cli -n 4 HGET "PORT|{}" "lanes"'.format(portname))
+        out = self.shell(config_db_shell_prefix(self) + 'HGET "PORT|{}" "lanes"'.format(portname))
         assert_exit_non_zero(out)
         lanes = out["stdout_lines"][0].split(',')
         return len(lanes)

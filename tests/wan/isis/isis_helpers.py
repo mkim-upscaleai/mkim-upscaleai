@@ -9,6 +9,7 @@ from tests.common.errors import RunAnsibleModuleFail
 from tests.common.helpers.assertions import pytest_assert, pytest_require
 from tests.common.helpers.dut_utils import clear_failed_flag_and_restart
 from tests.common.devices.multi_asic import MultiAsicSonicHost
+from tests.common.redis_config_db import config_db_shell_prefix
 
 
 DEFAULT_ISIS_INSTANCE = 'test'
@@ -239,7 +240,9 @@ def set_frrcfgd_mode(duthost, frrcfgd_mode):
         duthost.copy(content=frrcfgd_template.render(FRRCFGD_MODE=frrcfgd_mode), dest=SONIC_FRRCFGD_ENABLE_FILE)
         duthost.shell("sudo sonic-cfggen -j '{}' --write-to-db".format(SONIC_FRRCFGD_ENABLE_FILE))
     else:
-        duthost.shell('redis-cli -n 4 HDEL "DEVICE_METADATA|localhost" "value" "frr_mgmt_framework_config"')
+        duthost.shell(
+            '{}HDEL "DEVICE_METADATA|localhost" "value" "frr_mgmt_framework_config"'.format(
+                config_db_shell_prefix(duthost)))
 
     try:
         duthost.restart_service("bgp")

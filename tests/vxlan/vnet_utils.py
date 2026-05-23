@@ -9,6 +9,7 @@ from .vnet_constants import TEMPLATE_DIR, VXLAN_UDP_SPORT_KEY, VXLAN_UDP_SPORT_M
     DUT_VNET_NBR_JSON, DUT_VNET_ROUTE_JSON, APPLY_NEW_CONFIG_KEY, VXLAN_RANGE_ENABLE_KEY, IPV6_VXLAN_TEST_KEY
 from .vnet_constants import VXLAN_PORT, VXLAN_MAC
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.utilities import wait_until
 
 logger = logging.getLogger(__name__)
@@ -180,30 +181,31 @@ def cleanup_dut_vnets(duthost, vnet_config):
     logger.info("Removing VNET information from DUT")
 
     duthost.shell("sonic-clear fdb all")
+    cfgp = config_db_shell_prefix(duthost)
 
     for intf in vnet_config['vlan_intf_list']:
         duthost.shell(
-            "redis-cli -n 4 del \"VLAN_INTERFACE|{}|{}\"".format(intf['ifname'], intf['ip']))
+            cfgp + "del \"VLAN_INTERFACE|{}|{}\"".format(intf['ifname'], intf['ip']))
 
     for intf in vnet_config['vlan_intf_list']:
         duthost.shell(
-            "redis-cli -n 4 del \"VLAN_INTERFACE|{}\"".format(intf['ifname']))
+            cfgp + "del \"VLAN_INTERFACE|{}\"".format(intf['ifname']))
 
     for intf in vnet_config['vlan_intf_list']:
         duthost.shell(
-            "redis-cli -n 4 del \"VLAN_MEMBER|{}|{}\"".format(intf['ifname'], intf['port']))
+            cfgp + "del \"VLAN_MEMBER|{}|{}\"".format(intf['ifname'], intf['port']))
 
     for intf in vnet_config['vlan_intf_list']:
-        duthost.shell("redis-cli -n 4 del \"VLAN|{}\"".format(intf['ifname']))
+        duthost.shell(cfgp + "del \"VLAN|{}\"".format(intf['ifname']))
 
     for vnet in vnet_config['vnet_id_list']:
-        duthost.shell("redis-cli -n 4 del \"VNET|{}\"".format(vnet))
+        duthost.shell(cfgp + "del \"VNET|{}\"".format(vnet))
 
     for intf in vnet_config['intf_list']:
         duthost.shell(
-            "redis-cli -n 4 del \"INTERFACE|{}|{}\"".format(intf['ifname'], intf['ip']))
+            cfgp + "del \"INTERFACE|{}|{}\"".format(intf['ifname'], intf['ip']))
         duthost.shell(
-            "redis-cli -n 4 del \"INTERFACE|{}\"".format(intf['ifname']))
+            cfgp + "del \"INTERFACE|{}\"".format(intf['ifname']))
 
 
 def cleanup_vxlan_tunnels(duthost, vnet_test_params):
@@ -219,8 +221,9 @@ def cleanup_vxlan_tunnels(duthost, vnet_test_params):
     if vnet_test_params[IPV6_VXLAN_TEST_KEY]:
         tunnels.append("tunnel_v6")
 
+    cfgp = config_db_shell_prefix(duthost)
     for tunnel in tunnels:
-        duthost.shell("redis-cli -n 4 del \"VXLAN_TUNNEL|{}\"".format(tunnel))
+        duthost.shell(cfgp + "del \"VXLAN_TUNNEL|{}\"".format(tunnel))
 
 
 def cleanup_vnet_routes(duthost, vnet_config, num_routes):

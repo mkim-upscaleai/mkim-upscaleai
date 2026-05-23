@@ -4,6 +4,7 @@ import os
 import logging
 import re
 from tests.common.mellanox_data import is_mellanox_device
+from tests.common.redis_config_db import config_db_redis_cli_prefix
 from .args.counterpoll_cpu_usage_args import add_counterpoll_cpu_usage_args
 from tests.common.helpers.mellanox_thermal_control_test_helper import suspend_hw_tc_service, resume_hw_tc_service
 from tests.common.platform.transceiver_utils import get_ports_with_flat_memory, \
@@ -212,10 +213,11 @@ def suspend_and_resume_hw_tc_on_mellanox_device(duthosts, enum_rand_one_per_hwsk
 @pytest.fixture(scope="module")
 def dpu_npu_port_list(duthosts):
     dpu_npu_port_list = {}
-    cmd_get_config_db_port_key_list = 'redis-cli --raw -n 4 keys "PORT|Ethernet*"'
     cmd_dump_config_db = "sonic-db-dump -n CONFIG_DB -y"
     dpu_npu_role = 'Dpc'
     for dut in duthosts:
+        cmd_get_config_db_port_key_list = (
+            config_db_redis_cli_prefix(dut) + '--raw keys "PORT|Ethernet*"')
         dpu_npu_port_list[dut.hostname] = []
         port_key_list = dut.command(cmd_get_config_db_port_key_list)['stdout'].split('\n')
         config_db_res = json.loads(dut.command(cmd_dump_config_db)["stdout"])

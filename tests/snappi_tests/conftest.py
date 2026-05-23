@@ -3,6 +3,7 @@ import random
 import logging
 from tests.common.snappi_tests.common_helpers import enable_packet_aging, start_pfcwd, \
     get_bgp_redistribute_connected_hosts
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.conftest import generate_priority_lists
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 def _apply_redistribute_connected(duthost, apply=True):
     """Apply or remove 'redistribute connected' in BGP on a DUT via vtysh."""
     bgp_asn = duthost.shell(
-        "redis-cli -n 4 hget 'DEVICE_METADATA|localhost' bgp_asn"
+        config_db_shell_prefix(duthost) + "hget 'DEVICE_METADATA|localhost' bgp_asn"
     )["stdout"].strip()
     if not bgp_asn:
         logger.warning("{}: could not read bgp_asn, skipping redistribute connected".format(

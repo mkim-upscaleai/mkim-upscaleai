@@ -12,6 +12,7 @@ from tests.common.dualtor.dual_tor_utils import tor_mux_intfs       # noqa: F401
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.platform.processes_utils import wait_critical_processes
 from tests.common.utilities import wait_until
+from tests.common.redis_config_db import config_db_shell_prefix
 
 __all__ = [
     'apply_active_state_to_orchagent',
@@ -341,20 +342,21 @@ def apply_peer_switch_table_to_dut(cleanup_mocked_configs, rand_selected_dut, mo
     Also adds the 'subtype' field in the device metadata table and sets it to 'DualToR'
     '''
     def check_config_applied():
-        out = dut.shell('redis-cli -n 4 HGETALL "DEVICE_METADATA|localhost"')['stdout_lines'][-1]
+        out = dut.shell(config_db_prefix + 'HGETALL "DEVICE_METADATA|localhost"')['stdout_lines'][-1]
         device_metadata_done = 'DualToR' in out
-        out = dut.shell('redis-cli -n 4 HGETALL "PEER_SWITCH|switch_hostname"')['stdout_lines'][0]
+        out = dut.shell(config_db_prefix + 'HGETALL "PEER_SWITCH|switch_hostname"')['stdout_lines'][0]
         peerswitch_done = 'ipv4_address' in out
         return device_metadata_done and peerswitch_done
     logger.info("Applying PEER_SWITCH table")
     dut = rand_selected_dut
+    config_db_prefix = config_db_shell_prefix(dut)
     peer_switch_hostname = 'switch_hostname'
     peer_switch_key = 'PEER_SWITCH|{}'.format(peer_switch_hostname)
     device_meta_key = 'DEVICE_METADATA|localhost'
     restart_swss = False
     if dut.get_asic_name() in ['th2', 'td3', 'gb']:
         restart_swss = True
-    cmd = 'redis-cli -n 4 HSET "{}" "{}" "{}"'.format(device_meta_key, 'subtype', 'DualToR')
+    cmd = config_db_prefix + 'HSET "{}" "{}" "{}"'.format(device_meta_key, 'subtype', 'DualToR')
     dut.shell(cmd=cmd)
     if ((restart_swss) and (dut.get_asic_name() != 'gb')):
         # Restart swss on TH2 or TD3 platform to trigger syncd restart to regenerate config.bcm
@@ -364,8 +366,8 @@ def apply_peer_switch_table_to_dut(cleanup_mocked_configs, rand_selected_dut, mo
         dut.shell('systemctl reset-failed swss; systemctl restart swss')
         wait_critical_processes(dut)
 
-    cmds = ['redis-cli -n 4 HSET "{}" "address_ipv4" "{}"'.format(peer_switch_key, mock_peer_switch_loopback_ip.ip),
-            'redis-cli -n 4 HSET "{}" "{}" "{}"'.format(device_meta_key, 'peer_switch', peer_switch_hostname)]
+    cmds = [config_db_prefix + 'HSET "{}" "address_ipv4" "{}"'.format(peer_switch_key, mock_peer_switch_loopback_ip.ip),
+            config_db_prefix + 'HSET "{}" "{}" "{}"'.format(device_meta_key, 'peer_switch', peer_switch_hostname)]
     dut.shell_cmds(cmds=cmds)
     if restart_swss:
         # Restart swss on TH2 or TD3 platform to apply changes
@@ -381,7 +383,7 @@ def apply_tunnel_table_to_dut(cleanup_mocked_configs, rand_selected_dut, mock_pe
     Adds the TUNNEL table to config DB
     '''
     def check_config_applied(tunnel_params):
-        out = dut.shell('redis-cli -n 4 HGETALL "TUNNEL|MuxTunnel0" | wc -l')['stdout_lines'][0]
+        out = dut.shell(config_db_shell_prefix(dut) + 'HGETALL "TUNNEL|MuxTunnel0" | wc -l')['stdout_lines'][0]
 
         # *2 because each key value pair is represented with 2 rows in redis-cli
         return out == str(len(tunnel_params['TUNNEL']['MuxTunnel0'])*2)
@@ -420,7 +422,7 @@ def apply_mux_cable_table_to_dut(cleanup_mocked_configs, rand_selected_dut,
     Adds the MUX_CABLE table to config DB
     '''
     def check_config_applied(num_tor_mux_intfs):
-        out = dut.shell('redis-cli -n 4 keys "MUX_CABLE|*" | wc -l')
+        out = dut.shell(config_db_shell_prefix(dut) + 'keys "MUX_CABLE|*" | wc -l')
         return out['stdout_lines'][0] == str(num_tor_mux_intfs)
     logger.info("Applying MUX_CABLE table")
     dut = rand_selected_dut

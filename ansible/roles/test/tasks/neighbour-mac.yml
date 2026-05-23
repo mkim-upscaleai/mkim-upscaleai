@@ -42,7 +42,7 @@
 
 - name: Get the SONiC DB key holding neighbour MAC for {{ host_ip }}
   become: true
-  shell: docker exec database redis-cli -n 1 KEYS ASIC_STATE:SAI_OBJECT_TYPE_NEIGHBOR_ENTRY* | grep {{ host_ip }}
+  shell: sonic-db-cli ASIC_DB KEYS "ASIC_STATE:SAI_OBJECT_TYPE_NEIGHBOR_ENTRY*" | grep {{ host_ip }}
   register: neighbour_key
   failed_when: neighbour_key.rc != 0
 
@@ -52,7 +52,7 @@
 #   v1.0        - SAI_NEIGHBOR_ENTRY_ATTR_DST_MAC_ADDRESS
 - name: Check neighbour MAC1 on DUT. Should be {{ nei_mac1 }}
   become: true
-  shell: docker exec database redis-cli -n 1 HGETALL '{{ neighbour_key.stdout }}' | grep "_ATTR_DST_MAC_ADDRESS" -A 1 | tail -1
+  shell: sonic-db-cli ASIC_DB HGETALL '{{ neighbour_key.stdout }}' | grep "_ATTR_DST_MAC_ADDRESS" -A 1 | tail -1
   register: neighbour_mac
   failed_when: neighbour_mac.stdout != "{{ nei_mac1 }}"
 
@@ -72,12 +72,12 @@
 
 - name: Get the SONiC DB key holding neighbour MAC for {{ host_ip }}
   become: true
-  shell: docker exec database redis-cli -n 1 KEYS ASIC_STATE:SAI_OBJECT_TYPE_NEIGHBOR_ENTRY* | grep {{ host_ip }}
+  shell: sonic-db-cli ASIC_DB KEYS "ASIC_STATE:SAI_OBJECT_TYPE_NEIGHBOR_ENTRY*" | grep {{ host_ip }}
   register: neighbour_key
   failed_when: neighbour_key.rc != 0
 
 - name: Check neighbour MAC2 on DUT. Should be {{ nei_mac2 }}
   become: true
-  shell: docker exec database redis-cli -n 1 HGETALL '{{ neighbour_key.stdout }}' | grep "_ATTR_DST_MAC_ADDRESS" -A 1 | tail -1
+  shell: sonic-db-cli ASIC_DB HGETALL '{{ neighbour_key.stdout }}' | grep "_ATTR_DST_MAC_ADDRESS" -A 1 | tail -1
   register: neighbour_mac
   failed_when: neighbour_mac.stdout != "{{ nei_mac2 }}"

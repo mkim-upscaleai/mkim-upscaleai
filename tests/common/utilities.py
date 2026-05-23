@@ -38,6 +38,7 @@ from tests.common.helpers.constants import UPSTREAM_NEIGHBOR_MAP, UPSTREAM_ALL_N
 from tests.common.helpers.constants import DOWNSTREAM_NEIGHBOR_MAP, DOWNSTREAM_ALL_NEIGHBOR_MAP
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.portstat_utilities import parse_column_positions
+from tests.common.redis_config_db import config_db_redis_cli_prefix
 from netaddr import valid_ipv6
 
 logger = logging.getLogger(__name__)
@@ -1500,7 +1501,7 @@ def run_show_features(duthosts, enum_dut_hostname):
     features_dict, succeeded = duthost.get_feature_status()
     pytest_assert(succeeded, "failed to obtain feature status")
     for cmd_key, cmd_value in list(features_dict.items()):
-        redis_value = duthost.shell('/usr/bin/redis-cli -n 4 --raw hget "FEATURE|{}" "state"'
+        redis_value = duthost.shell(config_db_redis_cli_prefix(duthost) + '--raw hget "FEATURE|{}" "state"'
                                     .format(cmd_key), module_ignore_errors=False)['stdout']
         pytest_assert(redis_value.lower() == cmd_value.lower(),
                       "'{}' is '{}' which does not match with config_db".format(cmd_key, cmd_value))

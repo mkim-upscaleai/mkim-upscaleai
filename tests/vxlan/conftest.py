@@ -22,6 +22,7 @@ from tests.vxlan.vnet_constants import (
 )
 from tests.common.fixtures.duthost_utils import backup_and_restore_config_db_on_duts  # noqa: F401
 from tests.common.config_reload import config_reload
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -273,9 +274,10 @@ def vnet_test_params(duthost, request):
     params[VXLAN_UDP_SPORT_KEY] = 0
     params[VXLAN_UDP_SPORT_MASK_KEY] = 0
 
+    config_db_prefix = config_db_shell_prefix(duthost)
     vxlan_range_enable = duthost.shell(
-        'redis-cli -n 4 hget "DEVICE_METADATA|localhost" \
-            vxlan_port_range')['stdout'] == "enable"
+        config_db_prefix + 'hget "DEVICE_METADATA|localhost" '
+        'vxlan_port_range')['stdout'] == "enable"
 
     if request.config.option.udp_src_port is not None or \
             request.config.option.udp_src_port_mask is not None:

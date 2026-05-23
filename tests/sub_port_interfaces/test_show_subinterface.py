@@ -4,6 +4,7 @@ import pytest
 from tests.common import constants
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.utilities import wait_until
+from tests.common.redis_config_db import config_db_shell_prefix
 
 
 pytestmark = [
@@ -63,7 +64,7 @@ def test_subinterface_status(duthost, subintf_expected_config):
         for subintf in subintf_config:
             entries = json.loads(duthost.shell("redis-dump -d 4 -k \"VLAN_SUB_INTERFACE|%s*\"" % subintf)["stdout"])
             for entry in entries:
-                duthost.shell("redis-cli -n 4 del \"%s\"" % entry)
+                duthost.shell("%sdel \"%s\"" % (config_db_shell_prefix(duthost), entry))
 
     # creation verification
     success_show_sub_status = []

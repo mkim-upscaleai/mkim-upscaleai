@@ -12,6 +12,7 @@ from test_vrf import PTF_TEST_PORT_MAP
 
 from tests.ptf_runner import ptf_runner
 from tests.common.fixtures.ptfhost_utils import copy_ptftests_directory     # noqa: F401
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.storage_backend.backend_utils import skip_test_module_over_backend_topologies     # noqa: F401
 
 
@@ -55,7 +56,7 @@ class TestVrfAttrSrcMac():
         duthost = duthosts[rand_one_dut_hostname]
         # get vrf1 new router_mac from config_db
         vrf1_mac = duthost.shell(
-            "redis-cli -n 4 hget 'VRF|Vrf1' 'src_mac'")['stdout']
+            config_db_shell_prefix(duthost) + "hget 'VRF|Vrf1' 'src_mac'")['stdout']
         assert vrf1_mac == self.new_vrf1_router_mac
 
     def test_vrf1_neigh_with_default_router_mac(self, partial_ptf_runner):  # noqa: F811

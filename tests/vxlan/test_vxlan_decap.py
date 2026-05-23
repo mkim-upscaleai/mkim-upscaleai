@@ -17,6 +17,7 @@ from tests.common.fixtures.ptfhost_utils import remove_ip_addresses     # noqa: 
 from tests.ptf_runner import ptf_runner
 from tests.common.dualtor.mux_simulator_control import mux_server_url,\
     toggle_all_simulator_ports_to_rand_selected_tor_m   # noqa: F401
+from tests.common.redis_config_db import config_db_database_container_redis_prefix
 pytestmark = [
     pytest.mark.topology('t0')
 ]
@@ -111,6 +112,8 @@ def generate_vxlan_config_files(duthost, mg_facts):
 @pytest.fixture(scope="module")
 def setup(duthosts, rand_one_dut_hostname, ptfhost, tbinfo):
     duthost = duthosts[rand_one_dut_hostname]
+    database_container_redis_prefix = config_db_database_container_redis_prefix(
+        duthost, redis_cluster=True)
 
     logger.info("Gather some facts")
     mg_facts = duthost.get_extended_minigraph_facts(tbinfo)
@@ -158,9 +161,9 @@ def setup(duthosts, rand_one_dut_hostname, ptfhost, tbinfo):
         "Always try to remove any possible VxLAN tunnel and map configuration")
     for vlan in mg_facts["minigraph_vlans"]:
         duthost.shell(
-            'docker exec -i database redis-cli -n 4 -c DEL "VXLAN_TUNNEL_MAP|tlVxlan|map%s"' % vlan)
+            database_container_redis_prefix + 'DEL "VXLAN_TUNNEL_MAP|tlVxlan|map%s"' % vlan)
     duthost.shell(
-        'docker exec -i database redis-cli -n 4 -c DEL "VXLAN_TUNNEL|tlVxlan"')
+        database_container_redis_prefix + 'DEL "VXLAN_TUNNEL|tlVxlan"')
 
 
 @pytest.fixture(params=["NoVxLAN", "Enabled", "Removed"])
@@ -172,11 +175,13 @@ def vxlan_status(setup, request, duthosts, rand_one_dut_hostname):
         duthost.shell("sonic-cfggen -j /tmp/vxlan_db.maps.json --write-to-db")
         return True, request.param
     elif request.param == "Removed":
+        database_container_redis_prefix = config_db_database_container_redis_prefix(
+            duthost, redis_cluster=True)
         for vlan in setup["mg_facts"]["minigraph_vlans"]:
             duthost.shell(
-                'docker exec -i database redis-cli -n 4 -c DEL "VXLAN_TUNNEL_MAP|tlVxlan|map%s"' % vlan)
+                database_container_redis_prefix + 'DEL "VXLAN_TUNNEL_MAP|tlVxlan|map%s"' % vlan)
         duthost.shell(
-            'docker exec -i database redis-cli -n 4 -c DEL "VXLAN_TUNNEL|tlVxlan"')
+            database_container_redis_prefix + 'DEL "VXLAN_TUNNEL|tlVxlan"')
         return False, request.param
     else:
         # clear FDB and arp cache on DUT

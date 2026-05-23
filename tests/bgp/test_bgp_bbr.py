@@ -16,6 +16,7 @@ from jinja2 import Template
 from natsort import natsorted
 from tests.common.config_reload import config_reload
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.helpers.constants import DEFAULT_NAMESPACE
 from tests.common.helpers.parallel import reset_ansible_local_tmp
 from tests.common.helpers.parallel import parallel_run
@@ -163,11 +164,12 @@ def get_bbr_default_state(duthost):
     bbr_default_state = 'disabled'
 
     # Check BBR configuration from config_db first
-    bbr_config_db_exist = int(duthost.shell('redis-cli -n 4 HEXISTS "BGP_BBR|all" "status"')["stdout"])
+    config_db_prefix = config_db_shell_prefix(duthost)
+    bbr_config_db_exist = int(duthost.shell(config_db_prefix + 'HEXISTS "BGP_BBR|all" "status"')["stdout"])
     if bbr_config_db_exist:
         # key exist, BBR is supported
         bbr_supported = True
-        bbr_default_state = duthost.shell('redis-cli -n 4 HGET "BGP_BBR|all" "status"')["stdout"]
+        bbr_default_state = duthost.shell(config_db_prefix + 'HGET "BGP_BBR|all" "status"')["stdout"]
     else:
         # Check BBR configuration from constants.yml
         constants = yaml.safe_load(duthost.shell('cat {}'.format(CONSTANTS_FILE))['stdout'])
@@ -511,12 +513,13 @@ def test_bbr_status_consistent_after_reload(duthosts, rand_one_dut_hostname, set
         pytest.skip('Skip test for multi-asic environment')
 
     # Set BBR status in config_db
-    duthost.shell('redis-cli -n 4 HSET "BGP_BBR|all" "status" "{}" '.format(bbr_status))
+    config_db_prefix = config_db_shell_prefix(duthost)
+    duthost.shell(config_db_prefix + 'HSET "BGP_BBR|all" "status" "{}" '.format(bbr_status))
     duthost.shell('sudo config save -y')
     config_reload(duthost)
 
     # Verify BBR status after config reload
-    bbr_status_after_reload = duthost.shell('redis-cli -n 4 HGET "BGP_BBR|all" "status"')["stdout"]
+    bbr_status_after_reload = duthost.shell(config_db_prefix + 'HGET "BGP_BBR|all" "status"')["stdout"]
     pytest_assert(bbr_status_after_reload == bbr_status, "BGP BBR status is not consistent after config reload")
 
     # Check if BBR is enabled or disabled using the running configuration

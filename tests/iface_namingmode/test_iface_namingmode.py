@@ -10,6 +10,7 @@ from tests.common.utilities import wait, wait_until
 from netaddr import IPAddress
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.helpers.sonic_db import SonicDbCli
+from tests.common.redis_config_db import config_db_shell_prefix
 
 pytestmark = [
     pytest.mark.topology('any', "t1-multi-asic")
@@ -249,7 +250,8 @@ def select_interface_for_mellnaox_device(setup, duthost):
     ERR swss#orchagent: :- processPriorityGroup: Failed to set port:Ethernet0 pg:3 buffer profile attribute, status:-4
     """
     selected_interface = ''
-    interface_cable_length_list = duthost.shell('redis-cli -n 4 hgetall "CABLE_LENGTH|AZURE" ')['stdout_lines']
+    interface_cable_length_list = duthost.shell(
+        config_db_shell_prefix(duthost) + 'hgetall "CABLE_LENGTH|AZURE" ')['stdout_lines']
     support_cable_length_list = ["40m", "5m"]
     for intf in setup['physical_interfaces']:
         if intf in interface_cable_length_list:

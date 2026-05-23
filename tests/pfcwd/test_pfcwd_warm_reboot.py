@@ -22,6 +22,7 @@ from tests.common.helpers.pfcwd_helper import send_background_traffic
 from tests.common.helpers.pfcwd_helper import has_neighbor_device
 from tests.common.utilities import wait_until
 from tests.common import config_reload
+from tests.common.redis_config_db import config_db_shell_prefix
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "templates")
 TESTCASE_INFO = {'no_storm': {'test_sequence': ["detect", "restore", "warm-reboot", "detect", "restore"],
@@ -72,7 +73,7 @@ def setup_pfcwd(duthosts, enum_rand_one_per_hwsku_frontend_hostname):
     """
     duthost = duthosts[enum_rand_one_per_hwsku_frontend_hostname]
     logger.info("Setup the default pfcwd config for warm-reboot test")
-    duthost.command("redis-cli -n 4 hset \"DEVICE_METADATA|localhost\" "
+    duthost.command(config_db_shell_prefix(duthost) + "hset \"DEVICE_METADATA|localhost\" "
                     "default_pfcwd_status enable")
     duthost.command("pfcwd stop")
     time.sleep(5)

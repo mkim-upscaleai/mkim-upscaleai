@@ -31,6 +31,7 @@ from tests.common.system_utils import docker  # noqa: F401
 from tests.common.errors import RunAnsibleModuleFail
 from tests.common import config_reload
 from tests.common.devices.eos import EosHost
+from tests.common.redis_config_db import config_db_redis_cli_argv, config_db_shell_prefix
 from .qos_helpers import dutBufferConfig, disable_voq_watchdog
 from tests.common.snappi_tests.qos_fixtures import get_pfcwd_config, reapply_pfcwd
 from tests.common.snappi_tests.common_helpers import \
@@ -75,7 +76,7 @@ class QosBase:
         if not self.buffer_model_initialized:
             self.buffer_model = dut_asic.run_redis_cmd(
                 argv=[
-                    "redis-cli", "-n", "4", "hget",
+                    *config_db_redis_cli_argv(dut_asic.sonichost), "hget",
                     "DEVICE_METADATA|localhost", "buffer_model"
                 ]
             )
@@ -484,7 +485,7 @@ class QosSaiBase(QosBase):
         if check_qos_db_fv_reference_with_table(dut_asic):
             out = dut_asic.run_redis_cmd(
                 argv=[
-                    "redis-cli", "-n", "4", "HGET",
+                    *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                     "{0}|{1}|{2}".format(table, port, self.TARGET_QUEUE_WRED),
                     "wred_profile"
                 ]
@@ -496,14 +497,14 @@ class QosSaiBase(QosBase):
         else:
             wredProfileName = "WRED_PROFILE|" + six.text_type(dut_asic.run_redis_cmd(
                 argv=[
-                    "redis-cli", "-n", "4", "HGET",
+                    *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                     "{0}|{1}|{2}".format(table, port, self.TARGET_QUEUE_WRED),
                     "wred_profile"
                 ]
             )[0])
 
         result = dut_asic.run_redis_cmd(
-            argv=["redis-cli", "-n", "4", "HGETALL", wredProfileName]
+            argv=[*config_db_redis_cli_argv(dut_asic.sonichost), "HGETALL", wredProfileName]
         )
         it = iter(result)
         wredProfile = dict(list(zip(it, it)))
@@ -522,7 +523,7 @@ class QosSaiBase(QosBase):
         """
         watermarkStatus = six.text_type(dut_asic.run_redis_cmd(
             argv=[
-                "redis-cli", "-n", "4", "HGET",
+                *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                 "FLEX_COUNTER_TABLE|QUEUE_WATERMARK", "FLEX_COUNTER_STATUS"
             ]
         )[0])
@@ -544,7 +545,7 @@ class QosSaiBase(QosBase):
         if check_qos_db_fv_reference_with_table(dut_asic):
             out = dut_asic.run_redis_cmd(
                 argv=[
-                    "redis-cli", "-n", "4", "HGET",
+                    *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                     "QUEUE|{0}|{1}".format(port, queue), "scheduler"
                 ]
             )[0]
@@ -558,7 +559,7 @@ class QosSaiBase(QosBase):
                 if dut_asic.sonichost.is_multi_asic:
                     schedProfile = "SCHEDULER|" + six.text_type(dut_asic.run_redis_cmd(
                         argv=[
-                            "redis-cli", "-n", "4", "HGET",
+                            *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                             "QUEUE|{0}|{1}|{2}|{3}"
                             .format(dut_asic.sonichost.hostname, dut_asic.namespace, port, queue), "scheduler"
                         ]
@@ -566,7 +567,7 @@ class QosSaiBase(QosBase):
                 else:
                     schedProfile = "SCHEDULER|" + six.text_type(dut_asic.run_redis_cmd(
                         argv=[
-                            "redis-cli", "-n", "4", "HGET",
+                            *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                             "QUEUE|{0}|Asic0|{1}|{2}"
                             .format(dut_asic.sonichost.hostname, port, queue), "scheduler"
                         ]
@@ -574,12 +575,12 @@ class QosSaiBase(QosBase):
             else:
                 schedProfile = "SCHEDULER|" + six.text_type(dut_asic.run_redis_cmd(
                     argv=[
-                        "redis-cli", "-n", "4", "HGET",
+                        *config_db_redis_cli_argv(dut_asic.sonichost), "HGET",
                         "QUEUE|{0}|{1}".format(port, queue), "scheduler"
                     ]
                 )[0])
         schedWeight = six.text_type(dut_asic.run_redis_cmd(
-            argv=["redis-cli", "-n", "4", "HGET", schedProfile, "weight"]
+            argv=[*config_db_redis_cli_argv(dut_asic.sonichost), "HGET", schedProfile, "weight"]
         )[0])
 
         return {"schedProfile": schedProfile, "schedWeight": schedWeight}
@@ -2307,7 +2308,8 @@ class QosSaiBase(QosBase):
             queues = "0-1"
         else:
             if isMellanoxDevice(duthost):
-                cable_len = dut_asic.shell(f"redis-cli -n 4 hget 'CABLE_LENGTH|AZURE' {srcport}")['stdout']
+                cable_len = dut_asic.shell(
+                    f"{config_db_shell_prefix(duthost)}hget 'CABLE_LENGTH|AZURE' {srcport}")['stdout']
                 if cable_len == '0m':
                     is_lossy_queue_only = True
                     logger.info(f"{srcport} has only lossy queue")
@@ -2710,7 +2712,7 @@ class QosSaiBase(QosBase):
         """
         ptf_port_dut_port_dict = dict(zip(mgFacts["minigraph_ptf_indices"].values(),
                                           mgFacts["minigraph_ptf_indices"].keys()))
-        get_interface_cable_length_info = 'redis-cli -n 4 hgetall "CABLE_LENGTH|AZURE"'
+        get_interface_cable_length_info = config_db_shell_prefix(duthost) + 'hgetall "CABLE_LENGTH|AZURE"'
         interface_cable_length_list = duthost.shell(get_interface_cable_length_info)['stdout_lines']
         interface_status = duthost.show_interface(command="status")["ansible_facts"]['int_status']
 

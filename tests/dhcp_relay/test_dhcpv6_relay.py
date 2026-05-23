@@ -14,6 +14,7 @@ from tests.common import config_reload
 from tests.common.platform.processes_utils import wait_critical_processes
 from tests.common.utilities import wait_until
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.dualtor.mux_simulator_control import toggle_all_simulator_ports_to_rand_selected_tor_m  # noqa F401
 from tests.common.dualtor.dual_tor_utils import config_active_active_dualtor_active_standby                 # noqa F401
 from tests.common.dualtor.dual_tor_utils import validate_active_active_dualtor_setup                        # noqa F401
@@ -101,10 +102,11 @@ def testing_config(duthosts, rand_one_dut_hostname, tbinfo):
 
 def get_subtype_from_configdb(duthost):
     # HEXISTS returns 1 if the key exists, otherwise 0
-    subtype_exist = int(duthost.shell('redis-cli -n 4 HEXISTS "DEVICE_METADATA|localhost" "subtype"')["stdout"])
+    config_db_prefix = config_db_shell_prefix(duthost)
+    subtype_exist = int(duthost.shell(config_db_prefix + 'HEXISTS "DEVICE_METADATA|localhost" "subtype"')["stdout"])
     subtype_value = ""
     if subtype_exist:
-        subtype_value = duthost.shell('redis-cli -n 4 HGET "DEVICE_METADATA|localhost" "subtype"')["stdout"]
+        subtype_value = duthost.shell(config_db_prefix + 'HGET "DEVICE_METADATA|localhost" "subtype"')["stdout"]
     return subtype_exist, subtype_value
 
 

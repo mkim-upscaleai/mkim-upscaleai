@@ -9,6 +9,7 @@ import re
 from tests.common.fixtures.conn_graph_facts import enum_fanout_graph_facts      # noqa: F401
 from tests.common.helpers.assertions import pytest_assert, pytest_require
 from tests.common.helpers.pfc_storm import PFCStorm
+from tests.common.redis_config_db import config_db_redis_cli_argv
 from tests.common.plugins.loganalyzer.loganalyzer import LogAnalyzer
 from tests.common.helpers.pfcwd_helper import start_wd_on_ports
 from tests.common.helpers.pfcwd_helper import EXPECT_PFC_WD_DETECT_RE, EXPECT_PFC_WD_RESTORE_RE, \
@@ -75,7 +76,7 @@ class PfcCmd(object):
         if not PfcCmd.buffer_model_initialized:
             result = asic.run_redis_cmd(
                 argv=[
-                    "redis-cli", "-n", "4", "hget",
+                    *config_db_redis_cli_argv(asic.sonichost), "hget",
                     "DEVICE_METADATA|localhost", "buffer_model"
                 ]
             )

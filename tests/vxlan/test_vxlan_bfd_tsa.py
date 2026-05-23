@@ -15,6 +15,7 @@ from tests.common.helpers.assertions import pytest_assert
 from tests.common.utilities import wait_until
 from tests.common.fixtures.ptfhost_utils import copy_ptftests_directory     # noqa: F401
 from tests.ptf_runner import ptf_runner
+from tests.common.redis_config_db import config_db_redis_cli_prefix, config_db_shell_prefix
 from tests.common.vxlan_ecmp_utils import Ecmp_Utils
 from tests.common.config_reload import config_reload
 Logger = logging.getLogger(__name__)
@@ -232,26 +233,28 @@ def fixture_setUp(duthosts,
         payload_version,
         "DEL")
 
+    config_db_prefix = config_db_shell_prefix(data['duthost'])
+    redis_cli_prefix = config_db_redis_cli_prefix(data['duthost'])
     for intf in data[encap_type]['selected_interfaces']:
         redis_string = "INTERFACE"
         if "PortChannel" in intf:
             redis_string = "PORTCHANNEL_INTERFACE"
-        data['duthost'].shell("redis-cli -n 4 hdel \"{}|{}\""
+        data['duthost'].shell(config_db_prefix + "hdel \"{}|{}\" "
                               "vnet_name".format(redis_string, intf))
         data['duthost'].shell(
-            "for i in `redis-cli -n 4 --scan --pattern \"NEIGH|{}|*\" `; "
-            "do redis-cli -n 4 del $i ; done".format(intf))
+            "for i in $({redis_cli_prefix}--scan --pattern \"NEIGH|{intf}|*\"); "
+            "do {redis_cli_prefix}del $i ; done".format(redis_cli_prefix=redis_cli_prefix, intf=intf))
 
     # This script's setup code re-uses same vnets for v4inv4 and v6inv4.
     # There will be same vnet in multiple encap types.
     # So remove vnets *after* removing the routes first.
     for vnet in list(data[encap_type]['vnet_vni_map'].keys()):
-        data['duthost'].shell("redis-cli -n 4 del \"VNET|{}\"".format(vnet))
+        data['duthost'].shell(config_db_prefix + "del \"VNET|{}\"".format(vnet))
 
     time.sleep(5)
     for tunnel in list(tunnel_names.values()):
         data['duthost'].shell(
-            "redis-cli -n 4 del \"VXLAN_TUNNEL|{}\"".format(tunnel))
+            config_db_prefix + "del \"VXLAN_TUNNEL|{}\"".format(tunnel))
     time.sleep(1)
     ecmp_utils.stop_bfd_responder(data['ptfhost'])
 

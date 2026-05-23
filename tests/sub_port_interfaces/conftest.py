@@ -15,6 +15,7 @@ from tests.common.utilities import wait_until
 from tests.common.ptf_agent_updater import PtfAgentUpdater
 from tests.common.mellanox_data import is_mellanox_device, get_chip_type
 from tests.common import constants
+from tests.common.redis_config_db import config_db_database_container_redis_prefix
 from sub_ports_helpers import DUT_TMP_DIR
 from sub_ports_helpers import TEMPLATE_DIR
 from sub_ports_helpers import SUB_PORTS_TEMPLATE
@@ -481,7 +482,8 @@ def apply_tunnel_table_to_dut(duthost, apply_route_config):
 
     # Teardown
     for index in range(1, len(tunnel_addr_list)+1):
-        duthost.command('docker exec -i database redis-cli -n 4 -c DEL "TUNNEL|MuxTunnel{}"'.format(index))
+        duthost.command('{}DEL "TUNNEL|MuxTunnel{}"'.format(
+            config_db_database_container_redis_prefix(duthost, redis_cluster=True), index))
 
 
 @pytest.fixture()

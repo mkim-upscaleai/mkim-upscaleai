@@ -12,6 +12,7 @@ import ast
 import random
 
 from tests.common.config_reload import config_reload
+from tests.common.redis_config_db import config_db_shell_prefix
 
 DEFAULT_NN_TARGET_PORT = 3
 
@@ -358,7 +359,7 @@ def remove_feature_entry(dut, feature_name):
         dut (SonicHost): The target device
         feature_name (str): feature name (e.g bgp)
     """
-    dut.command('redis-cli -n 4 del "FEATURE|{}"'.format(feature_name))
+    dut.command('{}del "FEATURE|{}"'.format(config_db_shell_prefix(dut), feature_name))
 
 
 def disable_feature_entry(dut, feature_name):

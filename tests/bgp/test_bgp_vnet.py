@@ -10,6 +10,7 @@ from natsort import natsorted
 import pytest
 
 from tests.common.reboot import reboot
+from tests.common.redis_config_db import config_db_redis_cli_prefix, config_db_shell_prefix
 from tests.common.storage_backend.backend_utils import skip_test_module_over_backend_topologies     # noqa F401
 import ptf.testutils as testutils
 from ptf.mask import Mask
@@ -235,7 +236,7 @@ def validate_state_db_entry(duthost, peer, vnet, dynamic_peer):
         peer_config_db_key = "BGP_NEIGHBOR" + "|" + vnet + "|" + peer
     peer_state_db_key = "BGP_PEER_CONFIGURED_TABLE" + "|" + vnet + "|" + peer
     expected_state = duthost.shell(
-        'redis-cli -n 4 --json HGETALL "{}"'.format(str(peer_config_db_key)))['stdout']
+        config_db_redis_cli_prefix(duthost) + '--json HGETALL "{}"'.format(str(peer_config_db_key)))['stdout']
     expected_state = json.loads(expected_state)
     if isinstance(expected_state, dict):
         expected_state = {k.rstrip('@'): v for k, v in expected_state.items()}
@@ -518,7 +519,7 @@ def test_dynamic_peer_group_delete(duthosts, rand_one_dut_hostname):
     try:
         static_peers = g_vars["vnet2"]["static"]
         static_peer_uptime_before = get_bgp_peer_uptime(duthost, static_peers)
-        redis_cmd = 'redis-cli -n 4 DEL "BGP_PEER_RANGE|Vnet2|BGPSLBPassive"'
+        redis_cmd = config_db_shell_prefix(duthost) + 'DEL "BGP_PEER_RANGE|Vnet2|BGPSLBPassive"'
         duthost.shell(redis_cmd)
         time.sleep(10)
 
@@ -589,8 +590,9 @@ def test_dynamic_peer_delete_stress(duthosts, rand_one_dut_hostname):
         static_peer_uptime_before = get_bgp_peer_uptime(duthost, static_peers)
         core_dumps_before = get_core_dumps(duthost)
 
+        config_db_prefix = config_db_shell_prefix(duthost)
         for i in range(20):
-            redis_cmd = 'redis-cli -n 4 DEL "BGP_PEER_RANGE|Vnet2|BGPSLBPassive"'
+            redis_cmd = config_db_prefix + 'DEL "BGP_PEER_RANGE|Vnet2|BGPSLBPassive"'
             duthost.shell(redis_cmd)
             time.sleep(10)
             modify_dynamic_peer_cfg(duthost, 'vnet_dynamic_peer_add')

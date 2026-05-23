@@ -20,6 +20,7 @@ from tests.common.utilities import get_ipv4_loopback_ip, get_dscp_to_queue_value
 from tests.common.helpers.assertions import pytest_assert
 from tests.qos.qos_helpers import get_upstream_exabgp_port, announce_route
 from tests.common.fixtures.duthost_utils import dut_qos_maps_module  # noqa F401
+from tests.common.redis_config_db import config_db_redis_cli_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -95,13 +96,15 @@ def dscp_config(dscp_mode, duthost, loganalyzer):
         apply_dscp_cfg_teardown(duthost, loganalyzer)
         return
 
-    is_global_map_key_exist = duthost.shell('redis-cli -n 4 -c KEYS "PORT_QOS_MAP|global"')["stdout"]
+    redis_cli = config_db_redis_cli_prefix(duthost)
+    is_global_map_key_exist = duthost.shell(redis_cli + '-c KEYS "PORT_QOS_MAP|global"')["stdout"]
     if is_global_map_key_exist:
-        origin_dscp_to_tc_map = duthost.shell('redis-cli -n 4 -c HGET "PORT_QOS_MAP|global" "dscp_to_tc_map"')["stdout"]
+        origin_dscp_to_tc_map = duthost.shell(
+            redis_cli + '-c HGET "PORT_QOS_MAP|global" "dscp_to_tc_map"')["stdout"]
         logger.info(f"Original dscp_to_tc_map: {origin_dscp_to_tc_map}")
 
     logger.info(f"Set dscp_to_tc_map to {DEFAULT_MAPPING_TYPE}")
-    duthost.shell(f'redis-cli -n 4 -c HSET "PORT_QOS_MAP|global" "dscp_to_tc_map" "{DEFAULT_MAPPING_TYPE}"')
+    duthost.shell(f'{redis_cli}-c HSET "PORT_QOS_MAP|global" "dscp_to_tc_map" "{DEFAULT_MAPPING_TYPE}"')
     apply_dscp_cfg_setup(duthost, dscp_mode, loganalyzer)
 
     yield
@@ -109,9 +112,9 @@ def dscp_config(dscp_mode, duthost, loganalyzer):
     apply_dscp_cfg_teardown(duthost, loganalyzer)
     logger.info("Recover the original QoS map configuration")
     if is_global_map_key_exist:
-        duthost.shell(f'redis-cli -n 4 -c HSET "PORT_QOS_MAP|global" "dscp_to_tc_map" "{origin_dscp_to_tc_map}"')
+        duthost.shell(f'{redis_cli}-c HSET "PORT_QOS_MAP|global" "dscp_to_tc_map" "{origin_dscp_to_tc_map}"')
     else:
-        duthost.shell('redis-cli -n 4 -c DEL "PORT_QOS_MAP|global"')
+        duthost.shell(redis_cli + '-c DEL "PORT_QOS_MAP|global"')
 
 
 def create_ipip_packet(outer_src_mac,

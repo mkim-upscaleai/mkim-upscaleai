@@ -219,6 +219,12 @@ def test_authorization_tacacs_only(
         "sudo dmesg -D",
         "sudo sonic-cfggen --print-data",
         "sudo config list-checkpoints",
+        # TODO(config-db-migration): not migrated to redis_config_db helper because this is a
+        # remote-shell command sent via ssh_run_command to validate TACACS rw command authorization
+        # for the `redis-cli` binary specifically. Swapping to sonic-db-cli would change what is
+        # being tested (and the helper resolves CONFIG_DB id from the local DUT, not the rw user
+        # session). Leave as a literal command for now; revisit if rw users no longer get
+        # redis-cli authorization.
         "redis-cli -n 4 keys \\*"
     ]
 

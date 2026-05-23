@@ -10,6 +10,7 @@ from random import randint
 from collections import defaultdict
 from tests.common.helpers.assertions import pytest_assert, pytest_require
 from tests.common.plugins.loganalyzer.loganalyzer import LogAnalyzer, LogAnalyzerError
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.utilities import is_ipv6_only_topology, wait_until, check_msg_in_syslog
 from log_messages import LOG_EXPECT_ACL_RULE_CREATE_RE, LOG_EXPECT_ACL_RULE_REMOVE_RE, LOG_EXCEPT_MIRROR_SESSION_REMOVE
 from pkg_resources import parse_version
@@ -234,7 +235,8 @@ def mirroring(duthosts, enum_rand_one_per_hwsku_frontend_hostname, neighbor_ip,
     if is_ipv6_only_topology(tbinfo):
         SESSION_INFO['src_ip'] = IPV6_IPS['src_ip']
         SESSION_INFO['dst_ip'] = IPV6_IPS['dst_ip']
-        cmd = "redis-cli -n 4 hset \"MIRROR_SESSION|{}\" src_ip {} dst_ip {} dscp {} ttl {} type {} queue {}"
+        cmd = config_db_shell_prefix(duthost) + \
+            "hset \"MIRROR_SESSION|{}\" src_ip {} dst_ip {} dscp {} ttl {} type {} queue {}"
 
     cmd = cmd.format(
         SESSION_INFO['name'],

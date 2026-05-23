@@ -4,6 +4,7 @@ import pytest
 
 from tests.common.utilities import wait_until
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_redis_cli_argv
 
 pytestmark = [
     pytest.mark.topology('any')
@@ -45,7 +46,7 @@ def load_lossless_info_from_pg_profile_lookup(duthost, dut_asic):
     global DEFAULT_LOSSLESS_PROFILES
 
     # Check the threshold mode
-    threshold_mode = dut_asic.run_redis_cmd(argv=['redis-cli', '-n', 4, 'hget', 'BUFFER_POOL|ingress_lossless_pool',
+    threshold_mode = dut_asic.run_redis_cmd(argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'hget', 'BUFFER_POOL|ingress_lossless_pool',
                                                   'mode'])[0]
     threshold_field_name = 'dynamic_th' if threshold_mode == 'dynamic' else 'static_th'
     dut_hwsku = duthost.facts["hwsku"]
@@ -134,7 +135,7 @@ def test_buffer_pg(duthosts, enum_rand_one_per_hwsku_frontend_hostname, enum_fro
         Return:
             A tuple consisting of the OID of buffer profile and whether there is any check failed
         """
-        profile_in_pg = dut_asic.run_redis_cmd(argv=['redis-cli', '-n', 4, 'hget', 'BUFFER_PG|{}|3-4'.format(port),
+        profile_in_pg = dut_asic.run_redis_cmd(argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'hget', 'BUFFER_PG|{}|3-4'.format(port),
                                                      'profile'])
         buffer_profile_oid = None
         default_lossless_pgs = ['3', '4']
@@ -210,17 +211,17 @@ def test_buffer_pg(duthosts, enum_rand_one_per_hwsku_frontend_hostname, enum_fro
     pg_name_map = make_dict_from_output_lines(dut_asic.run_redis_cmd(
         argv=['redis-cli', '-n', 2, 'hgetall', 'COUNTERS_PG_NAME_MAP']))
     cable_length_map = make_dict_from_output_lines(dut_asic.run_redis_cmd(
-        argv=['redis-cli', '-n', 4, 'hgetall', 'CABLE_LENGTH|AZURE']))
+        argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'hgetall', 'CABLE_LENGTH|AZURE']))
 
     configdb_ports = [x.split('|')[1] for x in dut_asic.run_redis_cmd(
-        argv=['redis-cli', '-n', 4, 'keys', 'PORT|*'])]
+        argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'keys', 'PORT|*'])]
     profiles_checked = {}
     lossless_pool_oid = None
     buffer_profile_asic_info = None
     admin_up_ports = set()
     for port in configdb_ports:
         port_config = make_dict_from_output_lines(dut_asic.run_redis_cmd(
-            argv=['redis-cli', '-n', 4, 'hgetall', 'PORT|{}'.format(port)]))
+            argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'hgetall', 'PORT|{}'.format(port)]))
 
         is_port_up = port_config.get('admin_status') == 'up'
         if is_port_up or not RECLAIM_BUFFER_ON_ADMIN_DOWN:
@@ -240,7 +241,7 @@ def test_buffer_pg(duthosts, enum_rand_one_per_hwsku_frontend_hostname, enum_fro
 
             if expected_profile not in profiles_checked:
                 profile_info = make_dict_from_output_lines(dut_asic.run_redis_cmd(
-                    argv=['redis-cli', '-n', 4, 'hgetall', expected_profile[1:-1]]))
+                    argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'hgetall', expected_profile[1:-1]]))
                 pytest_assert(profile_info == DEFAULT_LOSSLESS_PROFILES[(speed, cable_length)],
                               "Buffer profile {} {} doesn't match default {}"
                               .format(expected_profile, profile_info,
@@ -293,7 +294,7 @@ def test_buffer_pg(duthosts, enum_rand_one_per_hwsku_frontend_hostname, enum_fro
 
     port_to_shutdown = admin_up_ports.pop()
     expected_profile = dut_asic.run_redis_cmd(
-        argv=['redis-cli', '-n', 4, 'hget', 'BUFFER_PG|{}|3-4'.format(port_to_shutdown), 'profile'])[0]
+        argv=[*config_db_redis_cli_argv(dut_asic.sonichost), 'hget', 'BUFFER_PG|{}|3-4'.format(port_to_shutdown), 'profile'])[0]
 
     ns = ''
     if dut_asic.namespace is not None:

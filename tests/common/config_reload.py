@@ -10,6 +10,7 @@ from tests.common.utilities import wait_until
 from tests.common.configlet.utils import chk_for_pfc_wd
 from tests.common.platform.interface_utils import check_interface_status_of_up_ports
 from tests.common.helpers.dut_utils import ignore_t2_syslog_msgs
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,7 @@ def config_reload(sonic_host, config_source='config_db', wait=120, start_bgp=Tru
 
     if config_source == 'minigraph':
         if start_dynamic_buffer and sonic_host.facts['asic_type'] == 'mellanox':
-            output = sonic_host.shell('redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model',
+            output = sonic_host.shell(config_db_shell_prefix(sonic_host) + 'hget "DEVICE_METADATA|localhost" buffer_model',
                                       module_ignore_errors=True)
             is_buffer_model_dynamic = (output and output.get('stdout') == 'dynamic')
         else:

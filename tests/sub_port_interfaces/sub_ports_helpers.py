@@ -20,6 +20,7 @@ from tests.common.helpers.assertions import pytest_assert, pytest_require
 from tests.common.utilities import wait_until
 from tests.common.pkt_filter.filter_pkt_in_buffer import FilterPktBuffer
 from tests.common import constants
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -484,7 +485,7 @@ def __check_vlan(duthost, vlan_id, removed=False):
         Bool value which confirm availability of VLAN in redis-db
     """
     vlan_name = 'Vlan{}'.format(vlan_id)
-    out = duthost.shell('redis-cli -n 4 keys "VLAN|{}"'.format(vlan_name))["stdout"]
+    out = duthost.shell('{}keys "VLAN|{}"'.format(config_db_shell_prefix(duthost), vlan_name))["stdout"]
 
     if removed:
         return vlan_name not in out
@@ -506,7 +507,8 @@ def __check_vlan_member(duthost, vlan_id, vlan_member, removed=False):
         Bool value which confirm availability of VLAN member in redis-db
     """
     vlan_name = 'Vlan{}'.format(vlan_id)
-    out = duthost.shell('redis-cli -n 4 keys "VLAN_MEMBER|{}|{}"'.format(vlan_name, vlan_member))["stdout"]
+    out = duthost.shell(
+        '{}keys "VLAN_MEMBER|{}|{}"'.format(config_db_shell_prefix(duthost), vlan_name, vlan_member))["stdout"]
 
     if removed:
         return vlan_name not in out
@@ -870,7 +872,7 @@ def remove_sub_port(duthost, sub_port, ip):
     """
     cmds = []
     cmds.append('config interface ip remove {} {}'.format(sub_port, ip))
-    cmds.append('redis-cli -n 4 del "VLAN_SUB_INTERFACE|{}"'.format(sub_port))
+    cmds.append('{}del "VLAN_SUB_INTERFACE|{}"'.format(config_db_shell_prefix(duthost), sub_port))
 
     duthost.shell_cmds(cmds=cmds)
 

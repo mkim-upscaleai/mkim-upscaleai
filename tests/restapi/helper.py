@@ -1,5 +1,10 @@
 import time
 
+from tests.common.redis_config_db import (
+    config_db_shell_prefix,
+    config_db_database_container_redis_prefix,
+)
+
 # Maximum time to wait for RESTAPI to be ready (listening on port 8081)
 RESTAPI_READY_TIMEOUT = 120
 # Interval between checks for RESTAPI readiness
@@ -49,7 +54,7 @@ def apply_cert_config(duthost):
 
 def set_trusted_client_cert_subject_name(duthost, new_subject_name):
     # Set trusted client certificate subject name in config DB
-    dut_command = f"redis-cli -n 4 hset \
+    dut_command = f"{config_db_shell_prefix(duthost)}hset \
                     'RESTAPI|certs' \
                     'client_crt_cname' \
                     '{new_subject_name}'"
@@ -80,13 +85,13 @@ def set_cert_config_in_db(duthost):
     """
     Set the certificate configuration in CONFIG_DB.
     """
-    redis_cli_prefix = "docker exec database redis-cli -n 4"
+    redis_cli_prefix = config_db_database_container_redis_prefix(duthost)
 
     commands = [
-        f"{redis_cli_prefix} hset 'RESTAPI|certs' 'client_crt_cname' 'test.client.restapi.sonic'",
-        f"{redis_cli_prefix} hset 'RESTAPI|certs' 'ca_crt' '/etc/sonic/credentials/restapiCA.pem'",
-        f"{redis_cli_prefix} hset 'RESTAPI|certs' 'server_crt' '/etc/sonic/credentials/testrestapiserver.crt'",
-        f"{redis_cli_prefix} hset 'RESTAPI|certs' 'server_key' '/etc/sonic/credentials/testrestapiserver.key'",
+        f"{redis_cli_prefix}hset 'RESTAPI|certs' 'client_crt_cname' 'test.client.restapi.sonic'",
+        f"{redis_cli_prefix}hset 'RESTAPI|certs' 'ca_crt' '/etc/sonic/credentials/restapiCA.pem'",
+        f"{redis_cli_prefix}hset 'RESTAPI|certs' 'server_crt' '/etc/sonic/credentials/testrestapiserver.crt'",
+        f"{redis_cli_prefix}hset 'RESTAPI|certs' 'server_key' '/etc/sonic/credentials/testrestapiserver.key'",
     ]
 
     for cmd in commands:
@@ -101,7 +106,7 @@ def verify_cert_config(duthost):
     """
     Verify that the CONFIG_DB has the correct certificate configuration.
     """
-    redis_cli_prefix = "docker exec database redis-cli -n 4"
+    redis_cli_prefix = config_db_database_container_redis_prefix(duthost)
 
     expected_values = {
         'ca_crt': '/etc/sonic/credentials/restapiCA.pem',
@@ -111,7 +116,7 @@ def verify_cert_config(duthost):
     }
 
     for key, expected in expected_values.items():
-        result = duthost.shell(f"{redis_cli_prefix} hget 'RESTAPI|certs' '{key}'", module_ignore_errors=True)
+        result = duthost.shell(f"{redis_cli_prefix}hget 'RESTAPI|certs' '{key}'", module_ignore_errors=True)
         actual = result['stdout'].strip()
         if actual != expected:
             return False

@@ -9,6 +9,7 @@ from tests.common.gu_utils import generate_tmpfile, delete_tmpfile
 from tests.common.gu_utils import format_json_patch_for_multiasic
 from tests.common.gu_utils import create_checkpoint, delete_checkpoint, rollback_or_reload
 from tests.common.gu_utils import is_valid_platform_and_version
+from tests.common.redis_config_db import config_db_shell_prefix, config_db_redis_cli_prefix
 
 pytestmark = [
     pytest.mark.asic('cisco-8000', 'mellanox', 'marvell-teralynx'),
@@ -46,12 +47,14 @@ def enable_default_pfcwd_configuration(duthost):
     meta_data = json.loads(res["stdout"])
     pfc_status = meta_data["DEVICE_METADATA|localhost"]["value"].get("default_pfcwd_status", "")
     if pfc_status == 'disable':
-        duthost.shell('redis-cli -n 4 hset \"DEVICE_METADATA|localhost\" default_pfcwd_status enable')
+        cfg_prefix = config_db_shell_prefix(duthost)
+        redis_prefix = config_db_redis_cli_prefix(duthost)
+        duthost.shell('{}hset \"DEVICE_METADATA|localhost\" default_pfcwd_status enable'.format(cfg_prefix))
         # apply cofig to all namespaces also for multi-asic platforms
         for asic_id in duthost.get_asic_ids():
             if asic_id:
                 duthost.asic_instance(asic_id).command(
-                    'redis-cli -n 4 hset \"DEVICE_METADATA|localhost\" default_pfcwd_status enable'
+                    '{}hset \"DEVICE_METADATA|localhost\" default_pfcwd_status enable'.format(redis_prefix)
                 )
     # Enable default pfcwd configuration
     start_pfcwd = duthost.shell('config pfcwd start_default')

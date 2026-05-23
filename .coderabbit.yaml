@@ -1,0 +1,103 @@
+language: "en"
+
+reviews:
+  profile: "chill"
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_instructions:
+    - path: "tests/**/*.py"
+      instructions: |
+        Disallow direct use of the literal "redis-cli" in test Python code.
+
+        The codebase routes all DUT-side Redis CLI invocations through helpers
+        in tests/common/redis_config_db.py:
+          * config_db_shell_prefix(duthost)
+              — CONFIG_DB shell-prefix string ending in a trailing space
+                (e.g. "redis-cli -n <id> ").
+          * config_db_redis_cli_prefix(duthost)
+              — Always returns "redis-cli -n <id> ". Use when the call needs
+                redis-cli-only flags such as --raw, --json, --scan, --pattern,
+                or the cluster -c flag, where sonic-db-cli would not work.
+          * config_db_database_container_redis_prefix(duthost,
+                                                     redis_cluster=False)
+              — Prefix for "docker exec -i database redis-cli -n <id> [-c] "
+                style commands. Pass redis_cluster=True for the -c flag.
+          * config_db_redis_cli_argv(duthost)
+              — Argv-list prefix ["redis-cli", "-n", "<id>"] for callers that
+                build redis-cli invocations as Python lists (e.g.
+                dut_asic.run_redis_cmd(argv=[...])).
+
+        Flag any new occurrence of "redis-cli" as a string literal, an argv
+        element (e.g. ["redis-cli", "-n", "4", ...]), an f-string fragment
+        (e.g. f"redis-cli -n 4 hget '{k}' f"), or inside a shell command
+        passed to subprocess / duthost.shell / duthost.command. Suggest the
+        appropriate helper above and the import:
+          from tests.common.redis_config_db import config_db_shell_prefix
+        (or sibling helpers).
+
+        Hard-coded DB indices like `-n 4` for CONFIG_DB are especially
+        problematic because they bypass dynamic-DB resolution; the helper
+        reads the CONFIG_DB index from
+        /var/run/redis/sonic-db/database_config.json at call time.
+
+        Other DB indices that are NOT CONFIG_DB (`-n 0` APPL_DB, `-n 1` ASIC_DB,
+        `-n 2` COUNTERS_DB, `-n 6` STATE_DB, etc.) are out of scope for this
+        helper and should keep using explicit DB names or numeric indices.
+
+        Exempt files (these may legitimately reference the literal):
+          - tests/common/redis_config_db.py     (the helper itself)
+          - tests/common/helpers/pfc_gen_brcm_xgs.py
+              (no duthost in scope — runs locally via subprocess; tagged with
+              a TODO comment)
+          - tests/tacacs/test_authorization.py
+              (the "redis-cli" literal IS the SUT — string sent over SSH and
+              authorized by TACACS; migrating would change what is tested)
+          - **/*.md, **/*.rst                  (documentation)
+
+        ────────────────────────────────────────────────────────────────────
+        Also flag CLI-tool semantic divergence on boolean-returning commands
+        when sonic-db-cli is used directly (the helper above intentionally
+        always emits redis-cli to avoid this class of bug).
+
+        `redis-cli` and `sonic-db-cli` differ for some Redis commands:
+
+          | Command          | redis-cli   | sonic-db-cli      |
+          |------------------|-------------|-------------------|
+          | HEXISTS          | "1" / "0"   | "True" / "False"  |
+          | SISMEMBER        | "1" / "0"   | "True" / "False"  |
+          | EXPIRE / PERSIST | "1" / "0"   | "True" / "False"  |
+          | DEL              | "1" (count) | "True"            |
+          | EXISTS           | "1" / "0"   | "1" / "0" (SAME)  |
+
+        Any callsite that parses the stdout of these commands as `int(...)`
+        or compares against `'0'` / `'1'` will silently break (or crash with
+        ValueError) when run against sonic-db-cli output. Flag patterns like:
+          duthost.shell(f"sonic-db-cli CONFIG_DB HEXISTS ...")  # plus
+          int(... ["stdout"])
+          ... ["stdout"].strip() == '1'    # or == '0', != '0', != '1'
+
+        EXISTS is unaffected (both tools return "0"/"1") and is fine to
+        compare as a string.
+
+    - path: "ansible/**/*.yml"
+      instructions: |
+        Discourage hardcoded `docker exec database redis-cli -n <id> ...`
+        style invocations in ansible tasks for CONFIG_DB / ASIC_DB /
+        COUNTERS_DB. Under multi-DB layouts the DBs are split across multiple
+        redis instances, and `redis-cli -n <id>` without -p/-s lands on
+        whichever DB index happens to exist on the default-port instance.
+
+        Use `sonic-db-cli <DB_NAME> ...` instead — it reads
+        /var/run/redis/sonic-db/database_config.json and routes to the
+        correct instance. The "docker exec database" prefix is unnecessary
+        because sonic-db-cli runs on the host and reaches each redis through
+        unix-socket bind mounts.
+
+    - path: "**/*.sh"
+      instructions: |
+        Shell scripts may use `redis-cli` directly since they cannot import
+        the Python helpers. Do not flag bare `redis-cli` usage here, but DO
+        flag hard-coded `-n 4` for CONFIG_DB — that bypasses dynamic-DB
+        resolution. Recommend `sonic-db-cli CONFIG_DB ...` instead.

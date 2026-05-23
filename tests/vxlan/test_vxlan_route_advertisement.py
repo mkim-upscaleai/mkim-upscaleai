@@ -8,6 +8,7 @@ import time
 import logging
 import pytest
 from tests.common.helpers.assertions import pytest_assert as py_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.vxlan_ecmp_utils import Ecmp_Utils
 
 Logger = logging.getLogger(__name__)
@@ -170,13 +171,14 @@ def fixture_setUp(duthosts,
     # This script's setup code re-uses same vnets for v4inv4 and v6inv4.
     # There will be same vnet in multiple encap types.
     # So remove vnets *after* removing the routes first.
+    config_db_prefix = config_db_shell_prefix(data['duthost'])
     for vnet in list(data[encap_type]['vnet_vni_map'].keys()):
-        data['duthost'].shell("redis-cli -n 4 del \"VNET|{}\"".format(vnet))
+        data['duthost'].shell(config_db_prefix + "del \"VNET|{}\"".format(vnet))
 
     time.sleep(5)
     for tunnel in list(tunnel_names.values()):
         data['duthost'].shell(
-            "redis-cli -n 4 del \"VXLAN_TUNNEL|{}\"".format(tunnel))
+            config_db_prefix + "del \"VXLAN_TUNNEL|{}\"".format(tunnel))
     time.sleep(1)
 
 

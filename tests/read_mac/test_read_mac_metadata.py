@@ -6,6 +6,7 @@ from tests.common.plugins.loganalyzer.loganalyzer import LogAnalyzer
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.reboot import reboot
 from tests.common import config_reload
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,8 @@ class ReadMACMetadata():
 
     def check_mtu_and_interfaces(self, duthost):
         logger.info("Verify that MAC address fits template XX:XX:XX:XX:XX:XX")
-        mac = duthost.shell(r"redis-cli -n 4 hget 'DEVICE_METADATA|localhost' mac| grep -io '[0-9a-fA-F:]\{17\}'",
+        mac = duthost.shell(config_db_shell_prefix(duthost) +
+                            r"hget 'DEVICE_METADATA|localhost' mac| grep -io '[0-9a-fA-F:]\{17\}'",
                             module_ignore_errors=True)['stdout']
         logger.info("DUT MAC is {}".format(mac))
 

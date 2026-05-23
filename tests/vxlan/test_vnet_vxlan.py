@@ -5,6 +5,7 @@ import pytest
 
 from datetime import datetime
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.utilities import wait_until
 from tests.ptf_runner import ptf_runner
 from .vnet_constants import CLEANUP_KEY, VXLAN_UDP_SPORT_KEY,\
@@ -134,12 +135,13 @@ def vxlan_status(setup, request, duthosts, rand_one_dut_hostname,
         vxlan_enabled = False
     elif request.param == "Enabled":
         duthost.shell("sonic-clear fdb all")
+        config_db_prefix = config_db_shell_prefix(duthost)
         result = duthost.shell(
-            "redis-cli -n 4 HGET \"VLAN_MEMBER|{}|{}\" tagging_mode ".format(attached_vlan, vlan_member))
+            config_db_prefix + "HGET \"VLAN_MEMBER|{}|{}\" tagging_mode ".format(attached_vlan, vlan_member))
         if result["stdout_lines"] is not None:
             vlan_tagging_mode = result["stdout_lines"][0]
             duthost.shell(
-                "redis-cli -n 4 del \"VLAN_MEMBER|{}|{}\"".format(attached_vlan, vlan_member))
+                config_db_prefix + "del \"VLAN_MEMBER|{}|{}\"".format(attached_vlan, vlan_member))
 
         apply_dut_config_files(duthost, vnet_test_params, num_routes)
         # Check arp table status in a loop with delay.
@@ -148,7 +150,8 @@ def vxlan_status(setup, request, duthosts, rand_one_dut_hostname,
         vxlan_enabled = True
     elif request.param == "Cleanup" and vnet_test_params[CLEANUP_KEY]:
         if vlan_tagging_mode != "":
-            duthost.shell("redis-cli -n 4 hset \"VLAN_MEMBER|{}|{}\" tagging_mode {} ".format(
+            config_db_prefix = config_db_shell_prefix(duthost)
+            duthost.shell(config_db_prefix + "hset \"VLAN_MEMBER|{}|{}\" tagging_mode {} ".format(
                 attached_vlan, vlan_member, vlan_tagging_mode))
 
         vxlan_enabled = True

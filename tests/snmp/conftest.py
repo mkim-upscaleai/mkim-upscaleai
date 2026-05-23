@@ -4,6 +4,7 @@ import shutil
 import yaml
 
 from tests.common.gu_utils import create_checkpoint, rollback
+from tests.common.redis_config_db import config_db_shell_prefix
 # Import to register mocker classes (SingleFanMocker, etc.) for thermal control tests
 from tests.common.helpers import mellanox_thermal_control_test_helper  # noqa F401
 
@@ -86,7 +87,7 @@ def extract_redis_keys(item):
 
 
 def check_redis_output(duthost, key):
-    snmp_redis_keys = duthost.shell(f"redis-cli -n 4 keys '{key}*'")
+    snmp_redis_keys = duthost.shell(f"{config_db_shell_prefix(duthost)}keys '{key}*'")
     if snmp_redis_keys["stdout"] == "":
         return []
     else:

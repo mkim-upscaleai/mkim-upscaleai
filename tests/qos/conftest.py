@@ -2,6 +2,7 @@ import logging
 import os
 import pytest
 import yaml
+from tests.common.redis_config_db import config_db_shell_prefix
 from .args.qos_sai_args import add_qos_sai_args
 from .args.buffer_args import add_dynamic_buffer_calculation_args
 
@@ -91,7 +92,7 @@ def nearbySourcePorts(duthost, mg_facts, singleMemberPort):
     single_slc = None
     for intf in all_ports:
         lanes = duthost.shell(
-            'redis-cli -n 4 hget "PORT|{}" lanes'.format(intf))['stdout'].split(',')
+            '{}hget "PORT|{}" lanes'.format(config_db_shell_prefix(duthost), intf))['stdout'].split(',')
         assert len(lanes) > 0, "Lanes not found for port {}".format(intf)
         slc = int(lanes[0]) >> 9
         if single_slc is None:
@@ -143,7 +144,7 @@ def is_buffer_model_dynamic(duthost):
         duthost: The DUT host fixture
     """
     buffer_model = duthost.shell(
-        'redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
+        config_db_shell_prefix(duthost) + 'hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
     yield (buffer_model == 'dynamic')
 
 
@@ -156,7 +157,8 @@ def is_lossy_only_pool(duthost):
     Args:
         duthost: The DUT host fixtute
     """
-    cables_len_data = duthost.shell("redis-cli -n 4 hgetall 'CABLE_LENGTH|AZURE'")['stdout'].splitlines()
+    cables_len_data = duthost.shell(
+        config_db_shell_prefix(duthost) + "hgetall 'CABLE_LENGTH|AZURE'")['stdout'].splitlines()
     all_zero_m = all(cables_len_data[i + 1] == "0m" for i in range(0, len(cables_len_data), 2))
     yield all_zero_m
 

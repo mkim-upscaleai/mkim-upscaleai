@@ -2,6 +2,7 @@ import pytest
 import logging
 
 from tests.common.utilities import skip_release
+from tests.common.redis_config_db import config_db_shell_prefix
 
 CONFIG_DB = "/etc/sonic/config_db.json"
 CONFIG_DB_BACKUP = "/etc/sonic/config_db.json.before_gcu_test"
@@ -55,7 +56,7 @@ def check_image_version(duthosts, selected_dut_hostname):
 @pytest.fixture(scope='function')
 def skip_when_buffer_is_dynamic_model(duthost):
     buffer_model = duthost.shell(
-        'redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
+        '{}hget "DEVICE_METADATA|localhost" buffer_model'.format(config_db_shell_prefix(duthost)))['stdout']
     if buffer_model == 'dynamic':
         pytest.skip("Skip the test, because dynamic buffer config cannot be updated")
 

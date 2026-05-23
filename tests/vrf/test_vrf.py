@@ -22,6 +22,7 @@ from tests.ptf_runner import ptf_runner
 from tests.common.utilities import wait_until
 from tests.common.reboot import reboot
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 
 """
     During vrf testing, a vrf basic configuration need to be setup before any tests,
@@ -883,10 +884,11 @@ class TestVrfAclRedirect:
         yield
 
         # -------- Teardown ----------
-        duthost.shell("redis-cli -n 4 del 'ACL_RULE|VRF_ACL_REDIRECT_V4|rule1'")
-        duthost.shell("redis-cli -n 4 del 'ACL_RULE|VRF_ACL_REDIRECT_V6|rule1'")
-        duthost.shell("redis-cli -n 4 del 'ACL_TABLE|VRF_ACL_REDIRECT_V4'")
-        duthost.shell("redis-cli -n 4 del 'ACL_TABLE|VRF_ACL_REDIRECT_V6'")
+        config_db_prefix = config_db_shell_prefix(duthost)
+        duthost.shell(config_db_prefix + "del 'ACL_RULE|VRF_ACL_REDIRECT_V4|rule1'")
+        duthost.shell(config_db_prefix + "del 'ACL_RULE|VRF_ACL_REDIRECT_V6|rule1'")
+        duthost.shell(config_db_prefix + "del 'ACL_TABLE|VRF_ACL_REDIRECT_V4'")
+        duthost.shell(config_db_prefix + "del 'ACL_TABLE|VRF_ACL_REDIRECT_V6'")
 
     def test_origin_ports_recv_no_pkts_v4(self, partial_ptf_runner, ptfhost):
         # verify origin dst ports should not receive packets any more

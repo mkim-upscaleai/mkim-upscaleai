@@ -4,6 +4,10 @@ import time
 
 from netaddr import IPAddress
 from tests.common.helpers.generators import generate_ips
+from tests.common.redis_config_db import (
+    config_db_database_container_redis_prefix,
+    get_config_db_redis_id,
+)
 
 
 PFC_GEN_FILE = "pfc_gen.py"
@@ -381,13 +385,16 @@ class Setup(object):
         """ Get configuration of lossless and lossy priorities """
         lossless = []
         lossy = []
+        config_db_id = get_config_db_redis_id(self.duthost)
+        db_container_prefix = config_db_database_container_redis_prefix(self.duthost)
         buf_pg_keys = self.duthost.command(
-            "docker exec -i database redis-cli --raw -n 4 KEYS *BUFFER_PG*"
+            "docker exec -i database redis-cli --raw -n {} KEYS *BUFFER_PG*".format(config_db_id)
         )["stdout"].split()
 
-        get_priority_cli = "for item in {}; do docker exec -i database redis-cli -n 4 " \
+        get_priority_cli = "for item in {}; do {}" \
                            "HGET $item \"profile\"; done".format(
-                                " ".join(["\"{}\"".format(item) for item in buf_pg_keys])
+                                " ".join(["\"{}\"".format(item) for item in buf_pg_keys]),
+                                db_container_prefix,
                             )
         out = self.duthost.command(get_priority_cli, _uses_shell=True)["stdout"].split()
         for index, pg_key in enumerate(buf_pg_keys):
@@ -404,15 +411,17 @@ class Setup(object):
 
     def generate_pfc_to_dscp_map(self):
         """ Get PFC to DSCP fields mapping """
+        config_db_id = get_config_db_redis_id(self.duthost)
+        db_container_prefix = config_db_database_container_redis_prefix(self.duthost)
         dscp_to_tc_key = self.duthost.command(
-            "docker exec -i database redis-cli --raw -n 4 KEYS *DSCP_TO_TC_MAP*"
+            "docker exec -i database redis-cli --raw -n {} KEYS *DSCP_TO_TC_MAP*".format(config_db_id)
         )["stdout"]
         dscp_to_tc_keys = self.duthost.command(
-            "docker exec -i database redis-cli --raw -n 4 HKEYS {}".format(dscp_to_tc_key)
+            "docker exec -i database redis-cli --raw -n {} HKEYS {}".format(config_db_id, dscp_to_tc_key)
         )["stdout"].split()
 
-        get_dscp_to_tc = "for item in {}; do docker exec -i database redis-cli -n 4 HGET \"{}\" $item; done".format(
-                            " ".join(dscp_to_tc_keys), dscp_to_tc_key
+        get_dscp_to_tc = "for item in {}; do {}HGET \"{}\" $item; done".format(
+                            " ".join(dscp_to_tc_keys), db_container_prefix, dscp_to_tc_key
                             )
         dscp_to_tc = self.duthost.command(get_dscp_to_tc, _uses_shell=True)["stdout"]
         self.vars["ptf_test_params"]["pfc_to_dscp"] = dict(

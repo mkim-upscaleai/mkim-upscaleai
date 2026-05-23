@@ -19,6 +19,7 @@ from tests.common.utilities import skip_release
 from tests.common.dualtor.dual_tor_utils import is_tunnel_qos_remap_enabled, dualtor_ports      # noqa: F401
 from tests.qos.buffer_helpers import DutDbInfo, update_cable_len_for_all_ports    # noqa: F401
 from tests.common.platform.interface_utils import get_dpu_npu_ports_from_hwsku
+from tests.common.redis_config_db import config_db_shell_prefix
 
 pytestmark = [
     pytest.mark.topology('any')
@@ -69,7 +70,7 @@ def detect_ingress_pool_number(duthost):
     """
     global DEFAULT_INGRESS_POOL_NUMBER
     pools = duthost.shell(
-        'redis-cli -n 4 keys "BUFFER_POOL|ingress*"')['stdout']
+        config_db_shell_prefix(duthost) + 'keys "BUFFER_POOL|ingress*"')['stdout']
     DEFAULT_INGRESS_POOL_NUMBER = len(pools.split())
 
 
@@ -83,14 +84,15 @@ def detect_shared_headroom_pool_mode(duthost):
     global DEFAULT_SHARED_HEADROOM_POOL_SIZE
     global DEFAULT_OVER_SUBSCRIBE_RATIO
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     over_subscribe_ratio = duthost.shell(
-        'redis-cli -n 4 hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
+        cfg_db_prefix + 'hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
     if over_subscribe_ratio and over_subscribe_ratio != '0':
         DEFAULT_SHARED_HEADROOM_POOL_ENABLED = True
         DEFAULT_OVER_SUBSCRIBE_RATIO = int(over_subscribe_ratio)
 
     shared_headroom_pool_size = duthost.shell(
-        'redis-cli -n 4 hget "BUFFER_POOL|ingress_lossless_pool" xoff')['stdout']
+        cfg_db_prefix + 'hget "BUFFER_POOL|ingress_lossless_pool" xoff')['stdout']
     if shared_headroom_pool_size and shared_headroom_pool_size != '0':
         DEFAULT_SHARED_HEADROOM_POOL_ENABLED = True
         DEFAULT_SHARED_HEADROOM_POOL_SIZE = int(shared_headroom_pool_size)
@@ -105,7 +107,7 @@ def detect_default_mtu(duthost, port_to_test):
     global DEFAULT_MTU
     if not DEFAULT_MTU:
         DEFAULT_MTU = duthost.shell(
-            'redis-cli -n 4 hget "PORT|{}" mtu'.format(port_to_test))['stdout']
+            '{}hget "PORT|{}" mtu'.format(config_db_shell_prefix(duthost), port_to_test))['stdout']
         logging.info("Default MTU {}".format(DEFAULT_MTU))
 
 
@@ -153,15 +155,17 @@ def get_lossless_traffic_pattern_data_from_db(duthost):
     """
     # Get LOSSLESS_MTU from config DB
     # Command: redis-cli -n 4 hget 'LOSSLESS_TRAFFIC_PATTERN|AZURE' 'mtu'
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     lossless_traffic_keys = duthost.shell(
-        'redis-cli -n 4 keys LOSSLESS_TRAFFIC_PATTERN*')['stdout']
+        cfg_db_prefix + 'keys LOSSLESS_TRAFFIC_PATTERN*')['stdout']
     lossless_mtu = float(duthost.shell(
-        'redis-cli -n 4 hget "{}" "mtu"'.format(lossless_traffic_keys))['stdout'])
+        '{}hget "{}" "mtu"'.format(cfg_db_prefix, lossless_traffic_keys))['stdout'])
 
     # Get SMALL_PACKET_PERCENTAGE from config DB
     # Command: redis-cli -n 4 hget 'LOSSLESS_TRAFFIC_PATTERN|AZURE' 'small_packet_percentage'
     small_packet_percentage = float(
-        duthost.shell('redis-cli -n 4 hget "{}" "small_packet_percentage"'.format(lossless_traffic_keys))['stdout'])
+        duthost.shell(
+            '{}hget "{}" "small_packet_percentage"'.format(cfg_db_prefix, lossless_traffic_keys))['stdout'])
 
     return lossless_mtu, small_packet_percentage
 
@@ -246,7 +250,7 @@ def load_test_parameters(duthost):
 
         # For ingress profile list, we need to check whether the ingress lossy profile exists
         ingress_lossy_pool = duthost.shell(
-            'redis-cli -n 4 keys "BUFFER_POOL|ingress_lossy_pool"')['stdout']
+            config_db_shell_prefix(duthost) + 'keys "BUFFER_POOL|ingress_lossy_pool"')['stdout']
         if ingress_lossy_pool:
             ingress_profile_list = TESTPARAM_ADMIN_DOWN.get(
                 'BUFFER_PORT_INGRESS_PROFILE_LIST_TABLE')
@@ -336,7 +340,7 @@ def setup_module(duthosts, rand_one_dut_hostname, request, is_buffer_model_dynam
     # As the buffer test has already taken ~30 minutes, we don't want to extend the wait time.
     # So disabling BGP neighbors is a reasonal way to tolerance this situation.
     bgp_neighbors = duthost.shell(
-        'redis-cli -n 4 keys BGP_NEIGHBOR*')['stdout']
+        config_db_shell_prefix(duthost) + 'keys BGP_NEIGHBOR*')['stdout']
     if bgp_neighbors:
         duthost.shell('config bgp shutdown all')
         logging.info(
@@ -435,18 +439,19 @@ def check_pool_size(duthost, ingress_lossless_pool_oid, **kwargs):
             conn_graph_facts: The connection graph facts object
         """
         global PORTS_WITH_8LANES
+        cfg_db_prefix = config_db_shell_prefix(duthost)
         hostname = list(conn_graph_facts['device_conn'].keys())[0]
         ports_info = conn_graph_facts['device_conn'][hostname]
         if not ports_info:
             ports = [port.split('|')[1] for port in duthost.shell(
-                'redis-cli -n 4 keys "PORT|*"')['stdout'].split('\n')]
+                cfg_db_prefix + 'keys "PORT|*"')['stdout'].split('\n')]
         else:
             ports = list(ports_info.keys())
         if PORTS_WITH_8LANES is None:
             PORTS_WITH_8LANES = []
             for port in ports:
                 lanes = duthost.shell(
-                    'redis-cli -n 4 hget "PORT|{}" lanes'.format(port))['stdout']
+                    '{}hget "PORT|{}" lanes'.format(cfg_db_prefix, port))['stdout']
                 if len(lanes.split(',')) == 8:
                     PORTS_WITH_8LANES.append(port)
 
@@ -661,16 +666,19 @@ def check_pfc_enable(duthost, port, expected_pfc_enable_map):
         port: The port to be checked
         expected_pfc_enable_map: The expected pfc_enable map
     """
+    cfg_db_prefix = config_db_shell_prefix(duthost)
+
     def _check_pfc_enable(duthost, port, expected_pfc_enable_map):
         pfc_enable = duthost.shell(
-            'redis-cli -n 4 hget "PORT_QOS_MAP|{}" pfc_enable'.format(port))['stdout']
+            '{}hget "PORT_QOS_MAP|{}" pfc_enable'.format(cfg_db_prefix, port))['stdout']
         return (expected_pfc_enable_map == pfc_enable)
 
     pytest_assert(wait_until(10, 2, 0, _check_pfc_enable, duthost, port, expected_pfc_enable_map),
                   "Port {} pfc enable check failed expected: {} got: {}".format(
                       port,
                       expected_pfc_enable_map,
-                      duthost.shell('redis-cli -n 4 hget "PORT_QOS_MAP|{}" pfc_enable'.format(port))['stdout']))
+                      duthost.shell(
+                          '{}hget "PORT_QOS_MAP|{}" pfc_enable'.format(cfg_db_prefix, port))['stdout']))
 
 
 def check_lossless_profile_removed(duthost, profile, sai_oid=None):
@@ -1001,10 +1009,11 @@ def test_change_speed_cable(duthosts, rand_one_dut_hostname, conn_graph_facts,  
         'redis-cli -n 6 hget "PORT_TABLE|{}" supported_speeds'.format(port_to_test))['stdout']
     if supported_speeds and speed_to_test not in supported_speeds:
         pytest.skip('Speed is not supported by the port, skip')
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     original_speed = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" speed'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" speed'.format(cfg_db_prefix, port_to_test))['stdout']
     original_cable_len = duthost.shell(
-        'redis-cli -n 4 hget "CABLE_LENGTH|AZURE" {}'.format(port_to_test))['stdout']
+        '{}hget "CABLE_LENGTH|AZURE" {}'.format(cfg_db_prefix, port_to_test))['stdout']
 
     if check_qos_db_fv_reference_with_table(duthost) is True:
         profile = duthost.shell(
@@ -1521,14 +1530,15 @@ def test_shared_headroom_pool_configure(duthosts,
     shp_size_before_shp = duthost.shell(
         'redis-cli hget BUFFER_POOL_TABLE:ingress_lossless_pool xoff')['stdout']
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     original_over_subscribe_ratio = duthost.shell(
-        'redis-cli -n 4 hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
+        cfg_db_prefix + 'hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
     original_configured_shp_size = duthost.shell(
-        'redis-cli -n 4 hget "BUFFER_POOL|ingress_lossless_pool" xoff')['stdout']
+        cfg_db_prefix + 'hget "BUFFER_POOL|ingress_lossless_pool" xoff')['stdout']
     original_speed = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" speed'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" speed'.format(cfg_db_prefix, port_to_test))['stdout']
     original_cable_len = duthost.shell(
-        'redis-cli -n 4 hget "CABLE_LENGTH|AZURE" {}'.format(port_to_test))['stdout']
+        '{}hget "CABLE_LENGTH|AZURE" {}'.format(cfg_db_prefix, port_to_test))['stdout']
 
     if not TESTPARAM_SHARED_HEADROOM_POOL:
         pytest.skip(
@@ -1690,10 +1700,11 @@ def test_lossless_pg(duthosts, rand_one_dut_hostname, conn_graph_facts, port_to_
         pg_to_test: To what PG will the profiles be applied
     """
     duthost = duthosts[rand_one_dut_hostname]
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     original_speed = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" speed'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" speed'.format(cfg_db_prefix, port_to_test))['stdout']
     original_cable_len = duthost.shell(
-        'redis-cli -n 4 hget "CABLE_LENGTH|AZURE" {}'.format(port_to_test))['stdout']
+        '{}hget "CABLE_LENGTH|AZURE" {}'.format(cfg_db_prefix, port_to_test))['stdout']
     original_pool_size = duthost.shell(
         'redis-cli hget BUFFER_POOL_TABLE:ingress_lossless_pool size')['stdout']
     original_shp_size = duthost.shell(
@@ -1903,12 +1914,13 @@ def test_port_admin_down(duthosts, rand_one_dut_hostname, conn_graph_facts, port
             key: The key in buffer tables in CONFIG_DB format, like BUFFER_PG|Ethernet0|3-4
             profile_field_name: profile for BUFFER_QUEUE table and profile_list for buffer profile list tables
         """
+        cfg_db_prefix = config_db_shell_prefix(duthost)
         objects_in_configdb = duthost.shell(
-            'redis-cli -n 4 keys "{}"'.format(key))['stdout'].split()
+            '{}keys "{}"'.format(cfg_db_prefix, key))['stdout'].split()
         if objects_in_configdb:
             for object_in_configdb in objects_in_configdb:
                 profile_in_configdb = duthost.shell(
-                    'redis-cli -n 4 hget "{}" {}'.format(object_in_configdb, profile_field_name))['stdout']
+                    '{}hget "{}" {}'.format(cfg_db_prefix, object_in_configdb, profile_field_name))['stdout']
                 # Convert config db reference to appl db reference
                 if is_qos_db_reference_with_table:
                     expected_profile_in_appldb = _convert_ref_from_configdb_to_appldb(
@@ -1981,13 +1993,14 @@ def test_port_admin_down(duthosts, rand_one_dut_hostname, conn_graph_facts, port
     duthost = duthosts[rand_one_dut_hostname]
     is_qos_db_reference_with_table = check_qos_db_fv_reference_with_table(
         duthost)
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     original_speed = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" speed'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" speed'.format(cfg_db_prefix, port_to_test))['stdout']
     raw_lanes_str = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" lanes'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" lanes'.format(cfg_db_prefix, port_to_test))['stdout']
     list_of_lanes = raw_lanes_str.split(',')
     original_cable_len = duthost.shell(
-        'redis-cli -n 4 hget "CABLE_LENGTH|AZURE" {}'.format(port_to_test))['stdout']
+        '{}hget "CABLE_LENGTH|AZURE" {}'.format(cfg_db_prefix, port_to_test))['stdout']
     if check_qos_db_fv_reference_with_table(duthost) is True:
         original_profile = duthost.shell(
             'redis-cli hget "BUFFER_PG_TABLE:{}:3-4" profile'.format(port_to_test))['stdout'][1:-1]
@@ -2257,10 +2270,11 @@ def test_port_auto_neg(duthosts, rand_one_dut_hostname, conn_graph_facts, port_t
     if not supported_speeds:
         pytest.skip('No supported_speeds found for port {}, skip the test'.format(
             port_to_test))['stdout']
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     original_speed = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" speed'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" speed'.format(cfg_db_prefix, port_to_test))['stdout']
     original_cable_length = duthost.shell(
-        'redis-cli -n 4 hget "CABLE_LENGTH|AZURE" {}'.format(port_to_test))['stdout']
+        '{}hget "CABLE_LENGTH|AZURE" {}'.format(cfg_db_prefix, port_to_test))['stdout']
     original_pool_size = duthost.shell(
         'redis-cli hget BUFFER_POOL_TABLE:ingress_lossless_pool size')['stdout']
     if DEFAULT_OVER_SUBSCRIBE_RATIO:
@@ -2409,14 +2423,15 @@ def test_exceeding_headroom(duthosts, rand_one_dut_hostname,
         pytest.skip(
             'No max headroom found on port {}, skip'.format(port_to_test))
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     original_cable_len = duthost.shell(
-        'redis-cli -n 4 hget "CABLE_LENGTH|AZURE" {}'.format(port_to_test))['stdout']
+        '{}hget "CABLE_LENGTH|AZURE" {}'.format(cfg_db_prefix, port_to_test))['stdout']
     original_speed = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" speed'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" speed'.format(cfg_db_prefix, port_to_test))['stdout']
     original_over_subscribe_ratio = duthost.shell(
-        'redis-cli -n 4 hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
+        cfg_db_prefix + 'hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" over_subscribe_ratio')['stdout']
     original_configured_shp_size = duthost.shell(
-        'redis-cli -n 4 hget "BUFFER_POOL|ingress_lossless_pool" xoff')['stdout']
+        cfg_db_prefix + 'hget "BUFFER_POOL|ingress_lossless_pool" xoff')['stdout']
     original_pool_size = duthost.shell(
         'redis-cli hget BUFFER_POOL_TABLE:ingress_lossless_pool size')['stdout']
     original_shp_size = duthost.shell(
@@ -2696,18 +2711,19 @@ def test_buffer_model_test(duthosts, rand_one_dut_hostname, conn_graph_facts, sk
      - Whether the buffer model is dynamic after recovering the buffer model to dynamic
     """
     duthost = duthosts[rand_one_dut_hostname]
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     try:
         logging.info('[Config load_minigraph]')
         config_reload(duthost, config_source='minigraph')
         buffer_model = duthost.shell(
-            'redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
+            cfg_db_prefix + 'hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
         pytest_assert(buffer_model == 'traditional',
                       'Got buffer model {} after executing config load_minigraph, traditional expected')
 
         logging.info('[Recover the DUT to default buffer model]')
         _recovery_to_dynamic_buffer_model(duthost)
         buffer_model = duthost.shell(
-            'redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
+            cfg_db_prefix + 'hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
         pytest_assert(buffer_model == 'dynamic',
                       'Got buffer model {} after executing recovering the buffer model to dynamic')
     finally:
@@ -2901,7 +2917,7 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
     queue_name_map = _compose_dict_from_cli(duthost.shell(
         'redis-cli -n 2 hgetall COUNTERS_QUEUE_NAME_MAP')['stdout'].split())
     cable_length_map = _compose_dict_from_cli(duthost.shell(
-        'redis-cli -n 4 hgetall "CABLE_LENGTH|AZURE"')['stdout'].split())
+        config_db_shell_prefix(duthost) + 'hgetall "CABLE_LENGTH|AZURE"')['stdout'].split())
 
     if not pg_name_map or not queue_name_map or not cable_length_map:
         raise Exception("COUNTERS_PG_NAME_MAP, COUNTERS_QUEUE_NAME_MAP or CABLE_LENGTH|AZURE not found in the database")
@@ -2995,14 +3011,15 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
         profile_wrapper = '{}'
         is_qos_db_reference_with_table = False
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     configdb_ports = [x.split('|')[1] for x in duthost.shell(
-        'redis-cli -n 4 keys "PORT|*"')['stdout'].split()]
+        cfg_db_prefix + 'keys "PORT|*"')['stdout'].split()]
     # no lossless traffic on DPU NPU ports, so skip them for the test
     dpu_npu_port_list = get_dpu_npu_ports_from_hwsku(duthost)
     configdb_ports = list(set(configdb_ports) - set(dpu_npu_port_list))
 
     configdb_ports = [port for port in configdb_ports if duthost.shell(
-        f'redis-cli -n 4 hget "PORT|{port}" "admin_status"')['stdout'] == 'up']
+        f'{cfg_db_prefix}hget "PORT|{port}" "admin_status"')['stdout'] == 'up']
     logging.info(f"test ports is {configdb_ports}")
     profiles_checked = {}
     lossless_pool_oid = None
@@ -3271,6 +3288,8 @@ def mellanox_calculate_headroom_data(duthost, port_to_test):
 
     head_room_data = {}
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
+
     # Init pause_quanta_per_speed_dict
     pause_quanta_per_speed_dict = {800000: 905, 400000: 905, 200000: 453, 100000: 394, 50000: 147,
                                    40000: 118, 25000: 80, 10000: 67, 1000: 2, 100: 1}
@@ -3281,7 +3300,7 @@ def mellanox_calculate_headroom_data(duthost, port_to_test):
     # effective speed is the maximum speed in the speeds list
     # else the effective speed can not be conducted and the test fail
     port_info = _compose_dict_from_cli(duthost.shell(
-        'redis-cli -n 4 hgetall "PORT|{}"'.format(port_to_test))['stdout'].split('\n'))
+        '{}hgetall "PORT|{}"'.format(cfg_db_prefix, port_to_test))['stdout'].split('\n'))
     if port_info.get('autoneg') == 'on':
         adv_speeds = port_info.get('adv_speeds')
         if adv_speeds and adv_speeds != 'all':
@@ -3314,7 +3333,7 @@ def mellanox_calculate_headroom_data(duthost, port_to_test):
     # Get port mtu from config DB
     # Command: redis-cli -n 4 hget "PORT|Ethernet0" 'mtu'
     port_mtu_raw = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" "mtu"'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" "mtu"'.format(cfg_db_prefix, port_to_test))['stdout']
     if port_mtu_raw:
         port_mtu = int(port_mtu_raw)
     else:
@@ -3334,9 +3353,9 @@ def mellanox_calculate_headroom_data(duthost, port_to_test):
     # Get cable length from config DB
     # Command: redis-cli -n 4 hget "CABLE_LENGTH|AZURE"  'Ethernet0'
     cable_length_keys = duthost.shell(
-        'redis-cli -n 4 keys *CABLE_LENGTH*')['stdout']
+        cfg_db_prefix + 'keys *CABLE_LENGTH*')['stdout']
     cable_length_raw = duthost.shell(
-        'redis-cli -n 4 hget "{}" "{}"'.format(cable_length_keys, port_to_test))['stdout']
+        '{}hget "{}" "{}"'.format(cfg_db_prefix, cable_length_keys, port_to_test))['stdout']
     if cable_length_raw and cable_length_raw.endswith('m'):
         cable_length = float(cable_length_raw[:-1])
     else:
@@ -3350,7 +3369,7 @@ def mellanox_calculate_headroom_data(duthost, port_to_test):
     # Get port lanes number from config DB
     # Command: redis-cli -n 4 hget "PORT|Ethernet0" 'lanes'
     port_lanes = duthost.shell(
-        'redis-cli -n 4 hget "PORT|{}" "lanes"'.format(port_to_test))['stdout']
+        '{}hget "PORT|{}" "lanes"'.format(cfg_db_prefix, port_to_test))['stdout']
     is_8lane = port_lanes and len(port_lanes.split(',')) == 8
 
     if not ASIC_TABLE_KEYS_LOADED:
@@ -3364,16 +3383,16 @@ def mellanox_calculate_headroom_data(duthost, port_to_test):
     # Get over_subscribe_ratio from config DB
     # Command: redis-cli -n 4 hget "DEFAULT_LOSSLESS_BUFFER_PARAMETER|AZURE" 'over_subscribe_ratio'
     default_lossless_param_keys = duthost.shell(
-        'redis-cli -n 4 keys DEFAULT_LOSSLESS_BUFFER_PARAMETER*')['stdout'][0]
+        cfg_db_prefix + 'keys DEFAULT_LOSSLESS_BUFFER_PARAMETER*')['stdout'][0]
     over_subscribe_ratio_raw = duthost.shell(
-        'redis-cli -n 4 hget "{}" "over_subscribe_ratio"'.format(default_lossless_param_keys))['stdout']
+        '{}hget "{}" "over_subscribe_ratio"'.format(cfg_db_prefix, default_lossless_param_keys))['stdout']
     if over_subscribe_ratio_raw:
         over_subscribe_ratio = float(over_subscribe_ratio_raw)
     else:
         over_subscribe_ratio = None
 
     shp_size_raw = duthost.shell(
-        'redis-cli -n 4 hget "BUFFER_POOL|ingress_lossless_pool", "xoff"')['stdout']
+        cfg_db_prefix + 'hget "BUFFER_POOL|ingress_lossless_pool", "xoff"')['stdout']
     if shp_size_raw:
         shp_size = float(shp_size_raw)
     else:

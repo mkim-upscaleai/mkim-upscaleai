@@ -27,6 +27,7 @@ from tests.packet_trimming.constants import (DEFAULT_SRC_PORT, DEFAULT_DST_PORT,
                                              SRV6_INNER_DST_IPV6, SRV6_UN, ASYM_PORT_1_DSCP, ASYM_PORT_2_DSCP,
                                              SCHEDULER_TYPE, SCHEDULER_WEIGHT, SCHEDULER_PIR, SCHEDULER_METER_TYPE)
 from tests.packet_trimming.packet_trimming_config import PacketTrimmingConfig
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -613,8 +614,9 @@ def get_buffer_profile_trimming_status(duthost, buffer_profile_name):
     """
     logger.info(f"Checking packet discard action for buffer profile: {buffer_profile_name}")
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     # Check if buffer profile exists
-    cmd_check = f"redis-cli -n 4 exists 'BUFFER_PROFILE|{buffer_profile_name}'"
+    cmd_check = f"{cfg_db_prefix}exists 'BUFFER_PROFILE|{buffer_profile_name}'"
     result = duthost.shell(cmd_check)
 
     if result["stdout"].strip() == "0":
@@ -622,7 +624,7 @@ def get_buffer_profile_trimming_status(duthost, buffer_profile_name):
         return None
 
     # Get packet discard action
-    cmd_get = f"redis-cli -n 4 hget 'BUFFER_PROFILE|{buffer_profile_name}' packet_discard_action"
+    cmd_get = f"{cfg_db_prefix}hget 'BUFFER_PROFILE|{buffer_profile_name}' packet_discard_action"
     result = duthost.shell(cmd_get)
     action = result["stdout"].strip()
 
@@ -1005,7 +1007,8 @@ def get_buffer_profile_name_for_queue(duthost, interface: str, queue_id: int):
     preferring range keys; among overlapping ranges choose the largest span first.
     Falls back to exact key if no matching range exists. Looks in CONFIG_DB (db 4).
     """
-    list_cmd = f"redis-cli -n 4 KEYS 'BUFFER_QUEUE|{interface}|*'"
+    cfg_db_prefix = config_db_shell_prefix(duthost)
+    list_cmd = f"{cfg_db_prefix}KEYS 'BUFFER_QUEUE|{interface}|*'"
     res = duthost.shell(list_cmd)
     raw = (res.get("stdout") or "").strip()
     if not raw:
@@ -1049,7 +1052,7 @@ def get_buffer_profile_name_for_queue(duthost, interface: str, queue_id: int):
     else:
         return (None, None)
 
-    hget_cmd = f"redis-cli -n 4 HGET '{chosen}' profile"
+    hget_cmd = f"{cfg_db_prefix}HGET '{chosen}' profile"
     res = duthost.shell(hget_cmd)
     profile_name = (res.get("stdout") or "").strip() or None
     return (profile_name, chosen)
@@ -1078,7 +1081,7 @@ def get_buffer_profile_for_queue(duthost, interface, queue_id):
         logger.info(f"Queue {queue_id} on {interface} uses buffer profile: {profile_name}")
 
         # Get buffer profile details
-        cmd = f"redis-cli -n 4 HGETALL 'BUFFER_PROFILE|{profile_name}'"
+        cmd = f"{config_db_shell_prefix(duthost)}HGETALL 'BUFFER_PROFILE|{profile_name}'"
         result = duthost.shell(cmd)
 
         # Parse the profile details
@@ -1112,7 +1115,7 @@ def get_buffer_pool_size(duthost, pool_name):
         int: Buffer pool size in bytes, or 0 if not found
     """
     try:
-        cmd = f"redis-cli -n 4 HGET 'BUFFER_POOL|{pool_name}' size"
+        cmd = f"{config_db_shell_prefix(duthost)}HGET 'BUFFER_POOL|{pool_name}' size"
         result = duthost.shell(cmd)
         pool_size = int(result["stdout"].strip())
         logger.info(f"Buffer pool '{pool_name}' size: {pool_size}")
@@ -1534,10 +1537,11 @@ def set_buffer_profiles_for_block_and_trim_queues(duthost, interfaces, block_que
     if isinstance(interfaces, str):
         interfaces = [interfaces]
 
+    cfg_db_prefix = config_db_shell_prefix(duthost)
     for interface in interfaces:
         try:
             # Set buffer profile for the blocking queue
-            block_cmd = f"redis-cli -n 4 hset 'BUFFER_QUEUE|{interface}|{block_queue_id}' profile {block_queue_profile}"
+            block_cmd = f"{cfg_db_prefix}hset 'BUFFER_QUEUE|{interface}|{block_queue_id}' profile {block_queue_profile}"
             duthost.shell(block_cmd)
 
             logger.info(
@@ -1545,7 +1549,7 @@ def set_buffer_profiles_for_block_and_trim_queues(duthost, interfaces, block_que
                 f"profile to {block_queue_profile}")
 
             # Set buffer profile for the trimming queue
-            trim_cmd = f"redis-cli -n 4 hset 'BUFFER_QUEUE|{interface}|{trim_queue_id}' profile {trim_queue_profile}"
+            trim_cmd = f"{cfg_db_prefix}hset 'BUFFER_QUEUE|{interface}|{trim_queue_id}' profile {trim_queue_profile}"
             duthost.shell(trim_cmd)
 
             logger.info(
@@ -1654,10 +1658,11 @@ def update_service_port_buffer_profile(duthost, service_port):
 
     # Verify buffer configuration
     logger.info("Verifying buffer configuration")
-    result = duthost.shell(f"redis-cli -n 4 HGETALL 'BUFFER_PG|{service_port}|0'")
+    cfg_db_prefix = config_db_shell_prefix(duthost)
+    result = duthost.shell(f"{cfg_db_prefix}HGETALL 'BUFFER_PG|{service_port}|0'")
     logger.info(f"BUFFER_PG|{service_port}|0 configuration:\n{result['stdout']}")
 
-    result = duthost.shell(f"redis-cli -n 4 HGETALL 'BUFFER_PORT_INGRESS_PROFILE_LIST|{service_port}'")
+    result = duthost.shell(f"{cfg_db_prefix}HGETALL 'BUFFER_PORT_INGRESS_PROFILE_LIST|{service_port}'")
     logger.info(f"BUFFER_PORT_INGRESS_PROFILE_LIST|{service_port} configuration:\n{result['stdout']}")
 
     if "ingress_lossy_profile" not in result["stdout"]:
@@ -1712,7 +1717,7 @@ def update_service_port_qos_map(duthost, service_port):
 
     # Verify QoS map configuration
     logger.info("Verifying QoS map configuration")
-    result = duthost.shell(f"redis-cli -n 4 HGETALL 'PORT_QOS_MAP|{service_port}'")
+    result = duthost.shell(f"{config_db_shell_prefix(duthost)}HGETALL 'PORT_QOS_MAP|{service_port}'")
     logger.info(f"PORT_QOS_MAP|{service_port} configuration:\n{result['stdout']}")
 
     if "AZURE" not in result["stdout"]:

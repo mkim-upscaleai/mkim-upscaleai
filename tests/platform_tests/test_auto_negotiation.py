@@ -18,6 +18,7 @@ from tests.common.utilities import skip_release
 from tests.common.helpers.port_utils import is_sfp_speed_supported
 from tests.conftest import get_autoneg_tests_data
 from tests.common.mellanox_data import is_mellanox_device
+from tests.common.redis_config_db import config_db_shell_prefix
 
 pytestmark = [
     pytest.mark.topology('any'),
@@ -419,7 +420,8 @@ def change_cable_length(duthost):
         there will be some log errors like: refreshPgsForPort: Update speed (400000) and cable length (300m) for port
         Ethernet0 failed, accumulative headroom size exceeds the limit.
         """
-        buffer_model = duthost.shell('redis-cli -n 4 hget "DEVICE_METADATA|localhost" buffer_model')['stdout']
+        buffer_model = duthost.shell(
+            '{}hget "DEVICE_METADATA|localhost" buffer_model'.format(config_db_shell_prefix(duthost)))['stdout']
         if buffer_model == "dynamic":
             autoneg_test_data = get_autoneg_tests_data()
             new_cable_length = '50m'

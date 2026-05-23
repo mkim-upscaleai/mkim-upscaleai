@@ -20,6 +20,7 @@ from tests.common.snappi_tests.common_helpers import \
         stop_pfcwd, disable_packet_aging, enable_packet_aging, \
         get_bgp_redistribute_connected_hosts
 from tests.snappi_tests.cisco.helper import modify_voq_watchdog_cisco_8000
+from tests.common.redis_config_db import config_db_shell_prefix
 
 logger = logging.getLogger(__name__)
 
@@ -470,7 +471,7 @@ def reboot_duts_and_disable_wd(tgen_port_info, localhost, request):
     for duthost in list(args):
         if duthost.hostname in redistribute_hosts:
             bgp_asn = duthost.shell(
-                "redis-cli -n 4 hget 'DEVICE_METADATA|localhost' bgp_asn"
+                config_db_shell_prefix(duthost) + "hget 'DEVICE_METADATA|localhost' bgp_asn"
             )["stdout"].strip()
             if bgp_asn:
                 duthost.shell(

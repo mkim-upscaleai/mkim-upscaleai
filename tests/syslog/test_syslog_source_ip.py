@@ -12,6 +12,7 @@ from tests.common.utilities import wait_until
 from tests.common.helpers.syslog_helpers import is_mgmt_vrf_enabled
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.reboot import reboot, SONIC_SSH_PORT, SONIC_SSH_REGEX
+from tests.common.redis_config_db import config_db_shell_prefix
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network, IPv6Network
 from tests.common.fixtures.duthost_utils import backup_and_restore_config_db_on_duts  # noqa F401
 from tests.common.config_reload import config_reload
@@ -150,7 +151,7 @@ def skip_ssip_reboot_test_when_dut_mgmt_network_is_sub_network_forced_mgmt(dutho
     assert dut_mgmt_network, "Not find mgmt interface eth0"
 
     cmd_get_forced_mgmt_network_info = \
-        f'redis-cli -n 4 hget \"MGMT_INTERFACE|eth0|{dut_mgmt_network}\" forced_mgmt_routes@'
+        f'{config_db_shell_prefix(duthost)}hget \"MGMT_INTERFACE|eth0|{dut_mgmt_network}\" forced_mgmt_routes@'
     forced_mgmt_routes_info = duthost.shell(cmd_get_forced_mgmt_network_info)["stdout"]
     forced_mgmt_routes_info_list = forced_mgmt_routes_info.split(",") if forced_mgmt_routes_info else []
 

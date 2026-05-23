@@ -14,6 +14,7 @@ from tests.common.utilities import is_ipv4_address, is_ipv6_address
 from tests.common.utilities import wait_until, delete_running_config
 from tests.common.utilities import skip_release
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.redis_config_db import config_db_shell_prefix
 
 pytestmark = [
     pytest.mark.topology("t0", "m0", "mx", 't0-2vlans')
@@ -107,14 +108,15 @@ def setup_host_vlan_intf_mac(duthosts, rand_one_dut_hostname, testbed_params, ve
     global DUT_VLAN_INTF_MAC
     if duthost.get_facts()['asic_type'] == 'mellanox':
         DUT_VLAN_INTF_MAC = get_new_vlan_intf_mac_mellanox(dut_vlan_mac)
-    duthost.shell('redis-cli -n 4 hmset "VLAN|%s" mac %s' % (vlan_intf["attachto"], DUT_VLAN_INTF_MAC))
+    cfg_prefix = config_db_shell_prefix(duthost)
+    duthost.shell('%shmset "VLAN|%s" mac %s' % (cfg_prefix, vlan_intf["attachto"], DUT_VLAN_INTF_MAC))
     pytest_assert(wait_until(10, 2, 2, lambda: duthost.get_dut_iface_mac(vlan_intf["attachto"]) == DUT_VLAN_INTF_MAC),
                   "Failed to set mac address for vlan interface %s" % vlan_intf["attachto"])
 
     yield
 
     # Restore the original mac address of the vlan interface
-    duthost.shell('redis-cli -n 4 hmset "VLAN|%s" mac %s' % (vlan_intf["attachto"], dut_vlan_mac))
+    duthost.shell('%shmset "VLAN|%s" mac %s' % (cfg_prefix, vlan_intf["attachto"], dut_vlan_mac))
     pytest_assert(wait_until(10, 2, 2, lambda: duthost.get_dut_iface_mac(vlan_intf["attachto"]) == dut_vlan_mac),
                   "Failed to restore mac address for vlan interface %s" % vlan_intf["attachto"])
 

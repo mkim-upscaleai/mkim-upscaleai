@@ -65,6 +65,7 @@ from tests.common.helpers.dut_utils import is_supervisor_node, is_frontend_node,
     is_enabled_nat_for_dpu, get_dpu_names_and_ssh_ports, enable_nat_for_dpus, is_macsec_capable_node
 from tests.common.cache import FactsCache
 from tests.common.config_reload import config_reload
+from tests.common.redis_config_db import config_db_shell_prefix
 from tests.common.helpers.assertions import pytest_assert as pt_assert
 from tests.common.helpers.inventory_utils import trim_inventory
 from tests.common.utilities import InterruptableThread
@@ -3512,7 +3513,7 @@ def setup_pfc_test(
 
     # set bulk counter chunk size
     logger.info("--- Setting bulk counter polling chunk size ---")
-    duthost.command('redis-cli -n 4 hset "FLEX_COUNTER_TABLE|PORT" BULK_CHUNK_SIZE 64'
+    duthost.command(config_db_shell_prefix(duthost) + 'hset "FLEX_COUNTER_TABLE|PORT" BULK_CHUNK_SIZE 64'
                     ' BULK_CHUNK_SIZE_PER_PREFIX "SAI_PORT_STAT_IF_OUT_QLEN:0;SAI_PORT_STAT_IF_IN_FEC:32"')
 
     logger.info("setup_info : {}".format(setup_info))
