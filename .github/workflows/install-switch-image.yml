@@ -37,7 +37,7 @@ on:
         required: true
       buildimage_branch_name:
         type: string
-        description: S3 path branch under caspian/ (default upscaleai-<sonic_version> when unset)
+        description: S3 path branch under <platform>/ (default upscaleai-<sonic_version> when unset)
         required: false
       sonic_version:
         type: string
@@ -86,7 +86,7 @@ jobs:
           echo "Reserving testbed ${TESTBED_ID} (host=${{ inputs.host }}) on testbed reservation system"
           curl -sS --fail --connect-timeout 5 --max-time 30 -X POST "http://192.168.218.28:8001/api/reserve/testbed/${TESTBED_ID}/force" \
             -H "Content-Type: application/json" \
-            -d '{"user":"sonic-mgmt","duration_hours":24,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
+            -d '{"user":"sonic-mgmt","duration_hours":35,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
             || { echo "ERROR: reserve API call failed for testbed ${TESTBED_ID}"; exit 1; }
 
       - name: Fix permissions before checkout
@@ -134,18 +134,24 @@ jobs:
         env:
           SWITCH_PASS: ${{ secrets.SWITCH_PASSWORD }}
         run: |
-            echo "Install latest image for caspian from branch ${{ env.BRANCH_NAME }} (platform: ${{ env.PLATFORM }})"
-            # List timestamp directories under caspian/${BRANCH_NAME}/
-            # Path structure: caspian/${BRANCH_NAME}/YYYY-MM-DD-HH_MM_SS/build_artifacts/
-            # Both 'vs' and 'mellanox' builds share the prod tag and live in sibling
-            # timestamp dirs, so we iterate newest-first and pick the first dir that
-            # contains a sonic-${PLATFORM}-<timestamp>.bin artifact.
+            echo "Install latest image for ${{ env.PLATFORM }} from branch ${{ env.BRANCH_NAME }}"
+            # List timestamp directories under ${PLATFORM}/${BRANCH_NAME}/.
+            # Path structure: ${PLATFORM}/${BRANCH_NAME}/YYYY-MM-DD-HH_MM_SS/build_artifacts/sonic-${PLATFORM}-<timestamp>.bin
+            # 'vs' and 'mellanox' builds live under sibling top-level prefixes
+            # (e.g. mellanox/, vs/), so we scope the search to the requested
+            # PLATFORM directly.
+            S3_PREFIX="${{ env.PLATFORM }}/${{ env.BRANCH_NAME }}/"
             DIRECTORIES=$(aws s3api list-objects-v2 \
               --bucket "${{ env.AWS_BUCKET }}" \
-              --prefix "caspian/${{ env.BRANCH_NAME }}/" \
+              --prefix "$S3_PREFIX" \
               --delimiter "/" \
               --query "reverse(sort_by(CommonPrefixes, &Prefix))[*].Prefix" \
               --output text | tr '\t' '\n')
+
+            if [ -z "$DIRECTORIES" ]; then
+              echo "ERROR: No timestamp directories found under s3://${{ env.AWS_BUCKET }}/${S3_PREFIX}"
+              exit 1
+            fi
 
             for dir in $DIRECTORIES; do
                 # Pattern: sonic-${PLATFORM}-YYYY-MM-DD-HH_MM_SS.bin
@@ -162,7 +168,7 @@ jobs:
             done
 
             if [ -z "$S3_PATH" ]; then
-              echo "Unable to find sonic-${{ env.PLATFORM }}-<timestamp>.bin in ${{ env.AWS_BUCKET }}/caspian/${{ env.BRANCH_NAME }}/"
+              echo "ERROR: Unable to find sonic-${{ env.PLATFORM }}-<timestamp>.bin in s3://${{ env.AWS_BUCKET }}/${S3_PREFIX}"
               exit 1
             fi
 

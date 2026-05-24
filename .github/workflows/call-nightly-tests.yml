@@ -59,7 +59,7 @@ on:
         required: true
       buildimage_branch_name:
         type: string
-        description: "Optional S3 branch under caspian/ for install image (default upscaleai-<sonic_version>)"
+        description: "Optional S3 branch under <platform>/ for install image (default upscaleai-<sonic_version>)"
         required: false
       port_count:
         type: string
@@ -453,7 +453,7 @@ jobs:
           # Non-fatal: do not block the workflow if the reservation API is unavailable.
           curl -sS -X POST "http://192.168.218.28:8001/api/reserve/testbed/${TESTBED_ID}/force" \
             -H "Content-Type: application/json" \
-            -d '{"user":"sonic-mgmt","duration_hours":24,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
+            -d '{"user":"sonic-mgmt","duration_hours":35,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
             || echo "WARNING: reserve API call failed for testbed ${TESTBED_ID}; continuing"
 
   install-switch-image:
@@ -558,7 +558,7 @@ jobs:
             exit 0
           fi
           echo "Releasing testbed ${TESTBED_ID} (host=${{ matrix.host }}) on testbed reservation system"
-          # Non-fatal: reservation will expire (duration_hours=24) if release fails.
+          # Non-fatal: reservation will expire (duration_hours=35) if release fails.
           curl -sS -X POST "http://192.168.218.28:8001/api/release/testbed/${TESTBED_ID}" \
             -H "Content-Type: application/json" \
             -d '{"user":"sonic-mgmt","scope":"all"}' \
