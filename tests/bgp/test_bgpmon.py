@@ -17,6 +17,7 @@ from bgp_helpers import BGPMON_TEMPLATE_FILE, BGPMON_CONFIG_FILE, BGP_MONITOR_NA
 
 pytestmark = [
     pytest.mark.topology('any'),
+    pytest.mark.usefixtures("skip_if_frrcfgd"),
 ]
 
 BGP_PORT = 179

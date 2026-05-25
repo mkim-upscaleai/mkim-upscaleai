@@ -17,7 +17,8 @@ from tests.bgp.traffic_checker import get_traffic_shift_state, check_tsa_persist
 from tests.bgp.constants import TS_NORMAL, TS_MAINTENANCE, TS_NO_NEIGHBORS
 
 pytestmark = [
-    pytest.mark.topology('t1')
+    pytest.mark.topology('t1'),
+    pytest.mark.usefixtures("skip_if_frrcfgd"),
 ]
 
 logger = logging.getLogger(__name__)

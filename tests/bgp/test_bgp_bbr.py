@@ -29,7 +29,8 @@ from tests.common.devices.eos import EosHost
 
 pytestmark = [
     pytest.mark.topology('t1', 't1-multi-asic'),
-    pytest.mark.device_type('vs')
+    pytest.mark.device_type('vs'),
+    pytest.mark.usefixtures("skip_if_frrcfgd"),
 ]
 
 logger = logging.getLogger(__name__)

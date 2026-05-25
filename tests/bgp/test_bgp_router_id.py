@@ -8,7 +8,7 @@ from tests.common.helpers.bgp import run_bgp_facts
 from tests.common.utilities import wait_until
 from tests.common.utilities import is_ipv6_only_topology
 from ipaddress import ip_interface
-
+from tests.common.helpers.bgp import get_bgp_neighbors_from_config_facts
 
 pytestmark = [
     pytest.mark.topology('any')
@@ -19,28 +19,32 @@ logger = logging.getLogger(__name__)
 CUSTOMIZED_BGP_ROUTER_ID = "8.8.8.8"
 
 
-def verify_bgp_peer(neighbor_type, nbrhost, localip, expected_bgp_router_id, is_v6_topo, vrf="default"):
-    if neighbor_type == "sonic":
-        if is_v6_topo:
-            cmd = "show ipv6 bgp neighbors {}".format(localip)
-        else:
-            cmd = "show ip bgp neighbors {}".format(localip)
-    elif neighbor_type == "eos":
-        if is_v6_topo:
-            cmd = "/usr/bin/Cli -c \"show ipv6 bgp peers {} vrf {}\"".format(localip, vrf)
-        else:
-            cmd = "/usr/bin/Cli -c \"show ip bgp neighbors {} vrf {}\"".format(localip, vrf)
-    output = nbrhost["host"].shell(cmd, module_ignore_errors=True)["stdout"]
-    pattern = r"BGP version 4, remote router ID (\d+\.\d+\.\d+\.\d+)"
-    match = re.search(pattern, output)
-    pytest_assert(match, "Cannot get remote BGP router id from [{}]".format(output))
-    pytest_assert(match.group(1) == expected_bgp_router_id,
-                  "BGP router id is unexpected, local: {}, fetch from remote:{}".format(
-                      expected_bgp_router_id, match.group(1)))
+def set_router_id_config(duthost, router_id=None, tbinfo=None):
+    if router_id is None:
+        raise ValueError("router_id must be provided for configuration")
+    if duthost.get_frr_mgmt_framework_config():
+        cmd = f'sonic-db-cli CONFIG_DB hset "BGP_GLOBALS|default" "router_id" "{router_id}"'
+        duthost.shell(cmd, module_ignore_errors=True)
+        time.sleep(5)
+    else:
+        cmd = f'sonic-db-cli CONFIG_DB hset "DEVICE_METADATA|localhost" "bgp_router_id" "{router_id}"'
+        duthost.shell(cmd, module_ignore_errors=True)
+        restart_bgp(duthost, tbinfo)
 
 
-def verify_bgp(enum_asic_index, duthost, expected_bgp_router_id, neighbor_type, nbrhosts, tbinfo):
-    is_v6_topo = is_ipv6_only_topology(tbinfo)
+def unset_router_id_config(duthost, tbinfo=None):
+    if duthost.get_frr_mgmt_framework_config():
+        cmd = 'sonic-db-cli CONFIG_DB hdel "BGP_GLOBALS|default" "router_id"'
+        duthost.shell(cmd, module_ignore_errors=True)
+        time.sleep(5)
+    else:
+        cmd = 'sonic-db-cli CONFIG_DB hdel "DEVICE_METADATA|localhost" "bgp_router_id"'
+        duthost.shell(cmd, module_ignore_errors=True)
+        restart_bgp(duthost, tbinfo)
+
+
+def verify_bgp(enum_asic_index, duthost, expected_bgp_router_id, neighbor_type, nbrhosts, tbinfo=None):
+    is_v6_topo = is_ipv6_only_topology(tbinfo) if tbinfo else False
     cmd = "show ipv6 bgp summary" if is_v6_topo else "show ip bgp summary"
     output = duthost.shell(cmd, module_ignore_errors=True)["stdout"]
 
@@ -63,19 +67,28 @@ def verify_bgp(enum_asic_index, duthost, expected_bgp_router_id, neighbor_type, 
         logger.warning("Unsupport neighbor type for neighbor bgp check: {}".format(neighbor_type))
     local_ip_map = {}
     cfg_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
-    for _, item in cfg_facts.get("BGP_NEIGHBOR", {}).items():
+    bgp_neighbors = get_bgp_neighbors_from_config_facts(duthost, cfg_facts, vrf_name=None)
+    for _, item in bgp_neighbors.items():
         addr_char = ":" if is_v6_topo else "."
-        if addr_char in item["local_addr"]:
+        if addr_char in item.get("local_addr", ""):
             local_ip_map[item["name"]] = item["local_addr"]
 
     for neighbor_name, nbrhost in nbrhosts.items():
-        pytest_assert(neighbor_name in local_ip_map, (
-            "Cannot find local ip for {}. "
-            "Local IP map: {}"
-        ).format(neighbor_name, local_ip_map))
+        pytest_assert(neighbor_name in local_ip_map, "Cannot find local ip for {}".format(neighbor_name))
         localip = local_ip_map[neighbor_name]
-        vrf = neighbor_name if nbrhost["is_multi_vrf_peer"] else "default"
-        verify_bgp_peer(neighbor_type, nbrhost, localip, expected_bgp_router_id, is_v6_topo, vrf=vrf)
+        ip_ver = "ipv6" if is_v6_topo else "ip"
+        if neighbor_type == "sonic":
+            cmd = "show {} bgp neighbors {}".format(ip_ver, localip)
+        elif neighbor_type == "eos":
+            vrf = neighbor_name if nbrhost.get("is_multi_vrf_peer", False) else "default"
+            cmd = "/usr/bin/Cli -c \"show {} bgp neighbors {} vrf {}\"".format(ip_ver, localip, vrf)
+        output = nbrhost["host"].shell(cmd, module_ignore_errors=True)['stdout']
+        pattern = r"BGP version 4, remote router ID (\d+\.\d+\.\d+\.\d+)"
+        match = re.search(pattern, output)
+        pytest_assert(match, "Cannot get remote BGP router id from [{}]".format(output))
+        pytest_assert(match.group(1) == expected_bgp_router_id,
+                      "BGP router id is unexpected, local: {}, fetch from remote: {}"
+                      .format(expected_bgp_router_id, match.group(1)))
 
 
 @pytest.fixture()
@@ -112,45 +125,38 @@ def loopback_ipv6(duthosts, enum_frontend_dut_hostname):
     yield loopback_ip
 
 
-def restart_bgp(duthost, tbinfo):
+def restart_bgp(duthost, tbinfo=None):
     duthost.reset_service("bgp")
     duthost.restart_service("bgp")
     pytest_assert(wait_until(100, 10, 10, duthost.is_service_fully_started_per_asic_or_host, "bgp"), "BGP not started.")
+    check_ipv4 = not is_ipv6_only_topology(tbinfo) if tbinfo else True
     pytest_assert(wait_until(100, 10, 10, duthost.check_default_route,
-                             ipv4=not is_ipv6_only_topology(tbinfo)), "Default route not ready")
-    # After restarting bgp, add time wait for bgp_facts to fetch latest status
+                             ipv4=check_ipv4), "Default route not ready")
     time.sleep(20)
 
 
 @pytest.fixture()
 def router_id_setup_and_teardown(duthosts, enum_frontend_dut_hostname, tbinfo):
     duthost = duthosts[enum_frontend_dut_hostname]
-    duthost.shell("sonic-db-cli CONFIG_DB hset \"DEVICE_METADATA|localhost\" \"bgp_router_id\" \"{}\""
-                  .format(CUSTOMIZED_BGP_ROUTER_ID), module_ignore_errors=True)
-    restart_bgp(duthost, tbinfo)
-
+    set_router_id_config(duthost, CUSTOMIZED_BGP_ROUTER_ID, tbinfo)
     yield
 
-    duthost.shell("sonic-db-cli CONFIG_DB hdel \"DEVICE_METADATA|localhost\" \"bgp_router_id\"",
-                  module_ignore_errors=True)
-    restart_bgp(duthost, tbinfo)
+    unset_router_id_config(duthost, tbinfo)
 
 
 @pytest.fixture(scope="function")
 def router_id_loopback_setup_and_teardown(duthosts, enum_frontend_dut_hostname, loopback_ip, tbinfo):
     duthost = duthosts[enum_frontend_dut_hostname]
-    duthost.shell("sonic-db-cli CONFIG_DB hset \"DEVICE_METADATA|localhost\" \"bgp_router_id\" \"{}\""
-                  .format(CUSTOMIZED_BGP_ROUTER_ID), module_ignore_errors=True)
     duthost.shell("sonic-db-cli CONFIG_DB del \"LOOPBACK_INTERFACE|Loopback0|{}/32\"".format(loopback_ip))
-    restart_bgp(duthost, tbinfo)
+    set_router_id_config(duthost, CUSTOMIZED_BGP_ROUTER_ID, tbinfo)
 
     yield
 
-    duthost.shell("sonic-db-cli CONFIG_DB hdel \"DEVICE_METADATA|localhost\" \"bgp_router_id\"",
-                  module_ignore_errors=True)
+    unset_router_id_config(duthost, tbinfo)
     duthost.shell("sonic-db-cli CONFIG_DB hset \"LOOPBACK_INTERFACE|Loopback0|{}/32\" \"NULL\" \"NULL\""
                   .format(loopback_ip), module_ignore_errors=True)
-    restart_bgp(duthost, tbinfo)
+    if not duthost.get_frr_mgmt_framework_config():
+        restart_bgp(duthost, tbinfo)
 
 
 def test_bgp_router_id_default(duthosts, enum_frontend_dut_hostname, enum_asic_index, nbrhosts, request, loopback_ip,
@@ -171,10 +177,11 @@ def test_bgp_router_id_set(duthosts, enum_frontend_dut_hostname, enum_asic_index
     verify_bgp(enum_asic_index, duthost, CUSTOMIZED_BGP_ROUTER_ID, neighbor_type, nbrhosts, tbinfo)
     # Verify Loopback ip has been advertised to neighbor
     cfg_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
-    for remote_ip in cfg_facts.get("BGP_NEIGHBOR", {}).keys():
-        if "." not in remote_ip or "FT2" in cfg_facts["BGP_NEIGHBOR"][remote_ip]["name"]:
+    bgp_neighbors = get_bgp_neighbors_from_config_facts(duthost, cfg_facts)
+    for remote_ip, neighbor_info in bgp_neighbors.items():
+        if "." not in remote_ip or "FT2" in neighbor_info.get("name", ""):
             continue
-        output = duthost.shell("show ip bgp neighbor {} advertised-routes| grep {}".format(remote_ip, loopback_ip),
+        output = duthost.shell("show ip bgp neighbor {} advertised-routes | grep {}".format(remote_ip, loopback_ip),
                                module_ignore_errors=True)
         pytest_assert(output["rc"] == 0, (
             "Failed to check whether Loopback ipv4 address has been advertised. "
@@ -199,10 +206,11 @@ def test_bgp_router_id_set_ipv6(duthosts, enum_frontend_dut_hostname, enum_asic_
     verify_bgp(enum_asic_index, duthost, CUSTOMIZED_BGP_ROUTER_ID, neighbor_type, nbrhosts, tbinfo)
     # Verify Loopback ip has been advertised to neighbor
     cfg_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
-    for remote_ip in cfg_facts.get("BGP_NEIGHBOR", {}).keys():
-        if ":" not in remote_ip or "FT2" in cfg_facts["BGP_NEIGHBOR"][remote_ip]["name"]:
+    bgp_neighbors = get_bgp_neighbors_from_config_facts(duthost, cfg_facts)
+    for remote_ip, neighbor_info in bgp_neighbors.items():
+        if ":" not in remote_ip or "FT2" in neighbor_info.get("name", ""):
             continue
-        output = duthost.shell("show ipv6 bgp neighbor {} advertised-routes| grep {}".format(remote_ip, loopback_ipv6),
+        output = duthost.shell("show ipv6 bgp neighbor {} advertised-routes | grep {}".format(remote_ip, loopback_ipv6),
                                module_ignore_errors=True)
         pytest_assert(output["rc"] == 0, (
             "Failed to check whether Loopback ipv6 address has been advertised. "

@@ -7,6 +7,7 @@ from tests.common.utilities import wait_until
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.helpers.assertions import pytest_require
 from tests.common.reboot import reboot
+from tests.common.helpers.bgp import get_bgp_neighbors_from_config_facts
 
 logger = logging.getLogger(__name__)
 vrfname = 'default'
@@ -40,12 +41,7 @@ def setup(duthosts, rand_one_dut_hostname, nbrhosts, fanouthosts):
     duthost = duthosts[rand_one_dut_hostname]
 
     config_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
-    # If frr_mgmt_framework_config is set to true, expect vrf name in the config facts
-    if check_frr_mgmt_framework_config(duthost):
-        bgp_neighbors = config_facts.get('BGP_NEIGHBOR', {})
-        bgp_neighbors = bgp_neighbors[vrfname]
-    else:
-        bgp_neighbors = config_facts.get('BGP_NEIGHBOR', {})
+    bgp_neighbors = get_bgp_neighbors_from_config_facts(duthost, config_facts, vrf_name=vrfname)
     portchannels = config_facts.get('PORTCHANNEL_MEMBER', {})
     dev_nbrs = config_facts.get('DEVICE_NEIGHBOR', {})
     bgp_neighbor = list(bgp_neighbors.keys())[0]
@@ -101,17 +97,11 @@ def setup(duthosts, rand_one_dut_hostname, nbrhosts, fanouthosts):
             neighbor_ip_to_interfaces[neighbor_ip][interface_name] = dev_nbrs[interface_name]
 
     # Update bgp_neighbors with the new 'interface' key
-    # If frr_mgmt_framework_config is set to true, expect vrf name in the config facts
     for ip, details in bgp_neighbors.items():
         logger.debug(ip)
-        if check_frr_mgmt_framework_config(duthost):
-            get_ip = f"({vrfname}, '{ip}')"
-        else:
-            get_ip = ip
-        logger.debug(neighbor_ip_to_interfaces)
-        logger.debug(neighbor_ip_to_interfaces[get_ip])
-        if get_ip in neighbor_ip_to_interfaces:
-            details['interface'] = neighbor_ip_to_interfaces[get_ip]
+        if ip in neighbor_ip_to_interfaces:
+            logger.debug(neighbor_ip_to_interfaces[ip])
+            details['interface'] = neighbor_ip_to_interfaces[ip]
 
     setup_info = {
         'neighhosts': bgp_neighbors,
@@ -138,20 +128,6 @@ def setup(duthosts, rand_one_dut_hostname, nbrhosts, fanouthosts):
 
         pytest_assert(wait_until(120, 10, 0, duthost.check_bgp_session_state, list(bgp_neighbors.keys())),
                       "Not all BGP sessions are established on DUT")
-
-
-def check_frr_mgmt_framework_config(duthost):
-    """
-    Check if frr_mgmt_framework_config is set to "true" in DEVICE_METADATA
-
-    Args:
-        duthost: DUT host object
-
-    Returns:
-        bool: True if frr_mgmt_framework_config is "true", False otherwise
-    """
-    frr_config = duthost.shell('sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" "frr_mgmt_framework_config"')
-    return frr_config == "true"
 
 
 def verify_bgp_session_down(duthost, bgp_neighbor):

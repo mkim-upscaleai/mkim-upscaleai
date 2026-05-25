@@ -27,8 +27,26 @@ from tests.common.dualtor.dual_tor_utils import mux_cable_server_ip
 from tests.common import constants
 from tests.common.devices.eos import EosHost
 from tests.common.devices.sonic import SonicHost
+from tests.common.helpers.bgp import get_bgp_neighbors_from_config_facts
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module")
+def skip_if_frrcfgd(duthosts, rand_one_dut_hostname):
+    """Skip test module when frrcfgd is active (frr_mgmt_framework_config=true).
+
+    Tests using BGP_MONITORS or BGP_BBR depend on bgpcfgd-only tables that
+    frrcfgd does not support by upstream design. TSA/TSB via BGP_DEVICE_GLOBAL
+    is now supported in frrcfgd (Phase 3a) — use skip_if_frrcfgd_no_tsa for
+    tests that specifically need bgpcfgd's template-based TSA.
+    """
+    duthost = duthosts[rand_one_dut_hostname]
+    if duthost.get_frr_mgmt_framework_config():
+        pytest.skip(
+            "Test requires bgpcfgd-only CONFIG_DB tables (BGP_MONITORS/BGP_BBR) "
+            "not supported by frrcfgd -- see sonic-net/sonic-buildimage#22726"
+        )
 
 
 def check_results(results):
@@ -52,7 +70,7 @@ def setup_bgp_graceful_restart(duthosts, rand_one_dut_hostname, nbrhosts, tbinfo
     duthost = duthosts[rand_one_dut_hostname]
 
     config_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
-    bgp_neighbors = config_facts.get('BGP_NEIGHBOR', {})
+    bgp_neighbors = get_bgp_neighbors_from_config_facts(duthost, config_facts)
 
     @reset_ansible_local_tmp
     def configure_nbr_gr(node=None, results=None):
@@ -235,7 +253,6 @@ def setup_bgp_graceful_restart(duthosts, rand_one_dut_hostname, nbrhosts, tbinfo
         # Disable graceful restart in case of failure
         parallel_run(restore_nbr_gr, (), {}, list(nbrhosts.values()), timeout=120, concurrent_tasks=cct)
         pytest.fail(err_msg)
-
     yield
 
     results = parallel_run(restore_nbr_gr, (), {}, list(nbrhosts.values()), timeout=120, concurrent_tasks=cct)

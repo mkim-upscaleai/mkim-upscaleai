@@ -207,7 +207,8 @@ def setup_ceos(tbinfo, nbrhosts, duthosts, enum_frontend_dut_hostname, enum_rand
     # verify sessions are established and gather neighbor information
     for k, v in bgp_facts['bgp_neighbors'].items():
         # skip iBGP neighbors
-        if "INTERNAL" not in v["peer group"] and "VOQ_CHASSIS" not in v["peer group"]:
+        peer_group = v.get("peer group", "")
+        if "INTERNAL" not in peer_group and "VOQ_CHASSIS" not in peer_group:
             if v['description'] == neigh:
                 if v['ip_version'] == 4:
                     neigh_ip_v4 = k

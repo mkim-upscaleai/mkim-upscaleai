@@ -19,7 +19,8 @@ from tests.bgp.constants import TS_NORMAL, TS_MAINTENANCE
 from tests.conftest import get_hosts_per_hwsku
 
 pytestmark = [
-    pytest.mark.topology('t2')
+    pytest.mark.topology('t2'),
+    pytest.mark.usefixtures("skip_if_frrcfgd"),
 ]
 
 logger = logging.getLogger(__name__)

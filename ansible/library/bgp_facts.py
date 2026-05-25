@@ -137,7 +137,7 @@ class BgpModule(object):
         regex_conn_dropped = re.compile(
             r'.*Connections established \d+; dropped (\d+)')
         regex_peer_group = re.compile(
-            r'.*Member of peer-group (.*) for session parameters')
+            r'.*Member of peer-group (.*?)(?: for session parameters)?$')
         regex_subnet = re.compile(
             r'.*subnet range group: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2})')
         regex_cap_gr = re.compile(r'.*Graceful Restart Capabilty: (\w+)')

@@ -68,7 +68,8 @@ def setup(tbinfo, nbrhosts, duthosts, enum_frontend_dut_hostname, enum_rand_one_
     neigh_asn = dict()
     for k, v in bgp_facts['bgp_neighbors'].items():
         # Skip iBGP neighbors
-        if "INTERNAL" not in v["peer group"] and "VOQ_CHASSIS" not in v["peer group"]:
+        peer_group = v.get("peer group", "")
+        if "INTERNAL" not in peer_group and "VOQ_CHASSIS" not in peer_group:
             neigh_keys.append(v['description'])
             neigh_asn[v['description']] = v['remote AS']
             tor_neighbors[v['description']] = nbrhosts[v['description']]["host"]
