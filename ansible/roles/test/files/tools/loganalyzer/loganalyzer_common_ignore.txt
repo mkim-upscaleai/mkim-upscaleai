@@ -446,3 +446,9 @@ r, ".*ERR swss#orchagent:.*SAI_API_QUEUE, status: SAI_STATUS_INVALID_PARAMETER.*
 
 # Transient Redis read error from ucli-dns-watcher; no functional impact
 r, ".* ERR ucli-dns-watcher\[.*\]: .*readData error: Unable to read redis reply.*"
+
+# Benign boot-time AR probe from ars-classifier-daemon when ARS is not configured.
+# ars-classifier-daemon calls sx_api_ar_default_classification_get() before SAI
+# initializes the AR module; SDK logs ERR but there is no functional impact.
+r, ".* ERR syncd\d*#SDK: \[ADAPTIVE_ROUTING.ERR\] client_pid=\d+, AR module is not initialized\."
+r, ".* ERR syncd\d*#SDK: \[CORE_API.ERR\] client_pid=\d+, Adaptive routing default classification get failed, error: Module is uninitialized.*"
