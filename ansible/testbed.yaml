@@ -88,6 +88,51 @@
   auto_recover: 'False'
   comment: Test ptf Mellanox
 
+- conf-name: caspian_testbed_t0-64_spine6-400
+  group-name: sp6-t0
+  topo: t0-64
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp6-t0
+  ptf_ip: 192.168.221.23/24
+  ptf_ipv6: 2001:db8:121::23/64
+  server: server_1
+  vm_base: VM0101
+  dut:
+    - upscalelab2-spine6-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
+- conf-name: caspian_testbed_t1-64_spine6-400
+  group-name: sp6-t1
+  topo: t1-64
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp6-t1
+  ptf_ip: 192.168.221.24/24
+  ptf_ipv6: 2001:db8:121::24/64
+  server: server_1
+  vm_base: VM0101
+  dut:
+    - upscalelab2-spine6-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
+- conf-name: caspian_testbed_t1-64-lag_spine6-400
+  group-name: sp6t1lag
+  topo: t1-64-lag
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp6t1lag
+  ptf_ip: 192.168.221.25/24
+  ptf_ipv6: 2001:db8:121::25/64
+  server: server_1
+  vm_base: VM0101
+  dut:
+    - upscalelab2-spine6-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
 - conf-name: caspian_testbed_t0_spine7
   group-name: sp7-t0
   topo: t0
@@ -177,6 +222,51 @@
   inv_name: veos
   auto_recover: 'False'
   comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t0-64_spine7-400
+  group-name: sp7-t0
+  topo: t0-64
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp7-t0
+  ptf_ip: 192.168.222.23/24
+  ptf_ipv6: 2001:db8:122::23/64
+  server: server_2
+  vm_base: VM0201
+  dut:
+    - upscalelab2-spine7-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
+- conf-name: caspian_testbed_t1-64_spine7-400
+  group-name: sp7-t1
+  topo: t1-64
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp7-t1
+  ptf_ip: 192.168.222.24/24
+  ptf_ipv6: 2001:db8:122::24/64
+  server: server_2
+  vm_base: VM0201
+  dut:
+    - upscalelab2-spine7-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
+- conf-name: caspian_testbed_t1-64-lag_spine7-400
+  group-name: sp7t1lag
+  topo: t1-64-lag
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp7t1lag
+  ptf_ip: 192.168.222.25/24
+  ptf_ipv6: 2001:db8:122::25/64
+  server: server_2
+  vm_base: VM0201
+  dut:
+    - upscalelab2-spine7-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
 
 - conf-name: caspian_testbed_t0_spine8
   group-name: sp8-t0
@@ -388,6 +478,51 @@
   inv_name: veos
   auto_recover: 'False'
   comment: Test ptf Mellanox
+
+- conf-name: caspian_testbed_t0-64_spine9-400
+  group-name: sp9-t0
+  topo: t0-64
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp9-t0
+  ptf_ip: 192.168.211.23/24
+  ptf_ipv6: 2001:db8:124::23/64
+  server: server_4
+  vm_base: VM0401
+  dut:
+    - upscalelab2-spine9-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
+- conf-name: caspian_testbed_t1-64_spine9-400
+  group-name: sp9-t1
+  topo: t1-64
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp9-t1
+  ptf_ip: 192.168.211.24/24
+  ptf_ipv6: 2001:db8:124::24/64
+  server: server_4
+  vm_base: VM0401
+  dut:
+    - upscalelab2-spine9-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
+
+- conf-name: caspian_testbed_t1-64-lag_spine9-400
+  group-name: sp9t1lag
+  topo: t1-64-lag
+  ptf_image_name: docker-ptf
+  ptf: ptf_sp9t1lag
+  ptf_ip: 192.168.211.25/24
+  ptf_ipv6: 2001:db8:124::25/64
+  server: server_4
+  vm_base: VM0401
+  dut:
+    - upscalelab2-spine9-400
+  inv_name: veos
+  auto_recover: 'False'
+  comment: Test ptf Mellanox 2x400G 64-port
 
 - conf-name: caspian_testbed_t0_spine10
   group-name: sp10-t0

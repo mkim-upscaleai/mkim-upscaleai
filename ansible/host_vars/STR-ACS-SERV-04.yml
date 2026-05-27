@@ -86,6 +86,72 @@ device_vlan_map_list:
     vlan130: 130
     vlan131: 131
 
+  upscalelab2-spine9-400:
+    vlan100: 100
+    vlan101: 101
+    vlan102: 102
+    vlan103: 103
+    vlan104: 104
+    vlan105: 105
+    vlan106: 106
+    vlan107: 107
+    vlan108: 108
+    vlan109: 109
+    vlan110: 110
+    vlan111: 111
+    vlan112: 112
+    vlan113: 113
+    vlan114: 114
+    vlan115: 115
+    vlan116: 116
+    vlan117: 117
+    vlan118: 118
+    vlan119: 119
+    vlan120: 120
+    vlan121: 121
+    vlan122: 122
+    vlan123: 123
+    vlan124: 124
+    vlan125: 125
+    vlan126: 126
+    vlan127: 127
+    vlan128: 128
+    vlan129: 129
+    vlan130: 130
+    vlan131: 131
+    vlan132: 132
+    vlan133: 133
+    vlan134: 134
+    vlan135: 135
+    vlan136: 136
+    vlan137: 137
+    vlan138: 138
+    vlan139: 139
+    vlan140: 140
+    vlan141: 141
+    vlan142: 142
+    vlan143: 143
+    vlan144: 144
+    vlan145: 145
+    vlan146: 146
+    vlan147: 147
+    vlan148: 148
+    vlan149: 149
+    vlan150: 150
+    vlan151: 151
+    vlan152: 152
+    vlan153: 153
+    vlan154: 154
+    vlan155: 155
+    vlan156: 156
+    vlan157: 157
+    vlan158: 158
+    vlan159: 159
+    vlan160: 160
+    vlan161: 161
+    vlan162: 162
+    vlan163: 163
+
 # Map from host interface id to the vlan interface name on the fanout switch.
 duts_fp_ports:
   upscalelab2-spine9:
@@ -155,3 +221,69 @@ duts_fp_ports:
     29: vlan129
     30: vlan130
     31: vlan131
+
+  upscalelab2-spine9-400:
+    0: vlan100
+    1: vlan101
+    2: vlan102
+    3: vlan103
+    4: vlan104
+    5: vlan105
+    6: vlan106
+    7: vlan107
+    8: vlan108
+    9: vlan109
+    10: vlan110
+    11: vlan111
+    12: vlan112
+    13: vlan113
+    14: vlan114
+    15: vlan115
+    16: vlan116
+    17: vlan117
+    18: vlan118
+    19: vlan119
+    20: vlan120
+    21: vlan121
+    22: vlan122
+    23: vlan123
+    24: vlan124
+    25: vlan125
+    26: vlan126
+    27: vlan127
+    28: vlan128
+    29: vlan129
+    30: vlan130
+    31: vlan131
+    32: vlan132
+    33: vlan133
+    34: vlan134
+    35: vlan135
+    36: vlan136
+    37: vlan137
+    38: vlan138
+    39: vlan139
+    40: vlan140
+    41: vlan141
+    42: vlan142
+    43: vlan143
+    44: vlan144
+    45: vlan145
+    46: vlan146
+    47: vlan147
+    48: vlan148
+    49: vlan149
+    50: vlan150
+    51: vlan151
+    52: vlan152
+    53: vlan153
+    54: vlan154
+    55: vlan155
+    56: vlan156
+    57: vlan157
+    58: vlan158
+    59: vlan159
+    60: vlan160
+    61: vlan161
+    62: vlan162
+    63: vlan163

@@ -411,6 +411,120 @@ all:
           ansible_become_user: root
           ansible_become_password: "YourPaSsWoRd"
           console_baudrate: 115200
+        upscalelab2-spine6-400:
+          ansible_host: 192.168.221.10
+          ansible_hostv6: 2001:db8:121::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O128
+          model: SN5610
+          serial: MT2535601GJN
+          base_mac: E8:9E:49:74:C4:04
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601GJN"
+            "0x24": "E8:9E:49:74:C4:04"
+            "0x25":  "08/30/2025 17:38:48"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x0730628D"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine7-400:
+          ansible_host: 192.168.222.10
+          ansible_hostv6: 2001:db8:122::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O128
+          model: SN5610
+          serial: MT2535601Q10
+          base_mac: E8:9E:49:78:8D:38
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601Q10"
+            "0x24": "E8:9E:49:78:8D:38"
+            "0x25":  "09/04/2025 17:41:10"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0xE14F02CE"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine9-400:
+          ansible_host: 192.168.211.10
+          ansible_hostv6: 2001:db8:124::10
+          mgmt_subnet_mask_length: 24
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: Mellanox-SN5610-O128
+          model: SN5610
+          serial: MT2535601Q8V
+          base_mac: E8:9E:49:78:D3:2E
+          syseeprom_info:
+            "0x21": "SN5610"
+            "0x22": "920-9N42F-00RI-3C1"
+            "0x23": "MT2535601Q8V"
+            "0x24": "E8:9E:49:78:D3:2E"
+            "0x25":  "09/04/2025 14:19:24"
+            "0x26":  "1"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x29":  "2024.08-5.3.0013-115200"
+            "0x2A":  "290"
+            "0x2B":  "Nvidia"
+            "0x2D":  "Nvidia"
+            "0xFE":  "0x5EC1B700"
+          skip_modules:
+            psus:
+              - PSU 1
+              - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
 
     ptf:
       hosts:
@@ -630,6 +744,54 @@ all:
           os: sonic
           Type: FanoutLeaf
           HwSku: Mellanox-SN5610-O64S2
+          Platform: x86_64-nvidia_sn5610-r0
+        fanout_leaf06-400:
+          ansible_host: 192.168.221.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O128
+          Platform: x86_64-nvidia_sn5610-r0
+        fanout_leaf07-400:
+          ansible_host: 192.168.222.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O128
+          Platform: x86_64-nvidia_sn5610-r0
+        fanout_leaf09-400:
+          ansible_host: 192.168.211.11
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O128
           Platform: x86_64-nvidia_sn5610-r0
     pdu:
       hosts:

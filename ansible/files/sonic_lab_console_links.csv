@@ -2,11 +2,15 @@ StartDevice,StartPort,EndDevice,Console_type,Console_menu_type,Proxy,BaudRate
 console-upscalelab2,7025,upscalelab2-spine6,telnet,sonic_config,admin,115200
 console-upscalelab2,7026,fanout_leaf06,telnet,sonic_config,admin,115200
 console-upscalelab2,7025,upscalelab2-spine6-800,telnet,sonic_config,admin,115200
+console-upscalelab2,7025,upscalelab2-spine6-400,telnet,sonic_config,admin,115200
 console-upscalelab2,7026,fanout_leaf06-800,telnet,sonic_config,admin,115200
+console-upscalelab2,7026,fanout_leaf06-400,telnet,sonic_config,admin,115200
 console-upscalelab2,7027,upscalelab2-spine7,telnet,sonic_config,admin,115200
 console-upscalelab2,7028,fanout_leaf07,telnet,sonic_config,admin,115200
 console-upscalelab2,7027,upscalelab2-spine7-800,telnet,sonic_config,admin,115200
+console-upscalelab2,7027,upscalelab2-spine7-400,telnet,sonic_config,admin,115200
 console-upscalelab2,7028,fanout_leaf07-800,telnet,sonic_config,admin,115200
+console-upscalelab2,7028,fanout_leaf07-400,telnet,sonic_config,admin,115200
 console-upscalelab2,7029,upscalelab2-spine8,telnet,sonic_config,admin,115200
 console-upscalelab2,7030,fanout_leaf08,telnet,sonic_config,admin,115200
 console-upscalelab2,7029,upscalelab2-spine8-800,telnet,sonic_config,admin,115200
@@ -14,7 +18,9 @@ console-upscalelab2,7030,fanout_leaf08-800,telnet,sonic_config,admin,115200
 console-upscalelab2,7031,upscalelab2-spine9,telnet,sonic_config,admin,115200
 console-upscalelab2,7032,fanout_leaf09,telnet,sonic_config,admin,115200
 console-upscalelab2,7031,upscalelab2-spine9-800,telnet,sonic_config,admin,115200
+console-upscalelab2,7031,upscalelab2-spine9-400,telnet,sonic_config,admin,115200
 console-upscalelab2,7032,fanout_leaf09-800,telnet,sonic_config,admin,115200
+console-upscalelab2,7032,fanout_leaf09-400,telnet,sonic_config,admin,115200
 console-swlab,7002,spine10,telnet,sonic_config,admin,115200
 console-swlab,7001,fanout10,telnet,sonic_config,admin,115200
 console-swlab,7002,spine10-800,telnet,sonic_config,admin,115200
