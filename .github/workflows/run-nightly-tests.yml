@@ -441,12 +441,10 @@ jobs:
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
 
           echo "Run pretest"
-          # TEMP: re-adding --skip_sanity until caspian-sonic-buildimage PR #338
-          # lands (frrcfgd missing 'no bgp ebgp-requires-policy' causes BGP
-          # default-route sanity to fail post-PR #277). Revert once #338 ships.
+          # removing --skip_sanity and adding --allow_recover to prevent incomplete metadata generation
           TOPOLOGY_FILTER="${TOPO_FOR_TESTS},any"
           echo "Pretest topology filter: TOPO=${TOPO} TOPO_FOR_TESTS=${TOPO_FOR_TESTS} -> -t ${TOPOLOGY_FILTER}"
-          PRET_INNER="cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${HOST} -n ${TESTBED} -f ../ansible/${TESTBEDFILE} -i ../ansible/${ANSIBLE_INVENTORY} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--allow_recover --skip_sanity' -t ${TOPOLOGY_FILTER}"
+          PRET_INNER="cd /var/AzDevOps/tests && sudo ./run_tests.sh -d ${HOST} -n ${TESTBED} -f ../ansible/${TESTBEDFILE} -i ../ansible/${ANSIBLE_INVENTORY} -k debug -l debug -p test_logs/logs-pretest -c 'test_pretest.py' -e '--allow_recover' -t ${TOPOLOGY_FILTER}"
           echo "Pretest command (inside container): ${PRET_INNER}"
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "${PRET_INNER}"
 
