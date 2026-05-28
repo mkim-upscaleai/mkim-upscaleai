@@ -71,6 +71,14 @@ bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-none]
 bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-soft]
 bgp/test_bgp_sentinel.py::test_bgp_sentinel[IPv4-BGPMonV6-no-export-hard]
 
+# Skipped: requires only bgpcfgd, no frrcfgd
+bgp/test_bgp_allow_list.py
+bgp/test_bgp_bbr.py
+bgp/test_bgp_bbr_default_state.py
+bgp/test_bgpmon.py
+bgp/test_bgp_sentinel.py
+bgp/test_traffic_shift.py
+
 ###################################################################
 ### decap deselect tests
 
