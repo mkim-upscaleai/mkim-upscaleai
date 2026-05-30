@@ -75,11 +75,19 @@ def ignore_expected_loganalyzer_exceptions(duthosts, enum_rand_one_per_hwsku_fro
     KVMIgnoreRegex = [
         ".*flushFdbEntries: failed to find fdb entry in info set.*"
     ]
+    # PORT_PHY_ATTR flex counter polls FEC_ALIGNMENT_LOCK on all ports; mlnx SAI ERRs when link is down
+    mellanoxIgnoreRegex = [
+        ".* ERR syncd#SDK: \\[SAI_PORT\\.ERR\\].*mlnx_port_state_get: Port is down, cannot get FEC alignment lock status",
+        ".* ERR syncd#SDK: \\[SAI_UTILS\\.ERR\\].*get_dispatch_attribs_handler: Failed Get #\\d+, FEC_ALIGNMENT_LOCK, key:PORT.*",  # noqa: E501
+        ".* ERR syncd#SDK: :- collectData: Failed to get port attr for VID 0x.* RID:0x.*: -2",
+    ]
     if loganalyzer:  # Skip if loganalyzer is disabled
         loganalyzer[enum_rand_one_per_hwsku_frontend_hostname].ignore_regex.extend(ignoreRegex)
         duthost = duthosts[enum_rand_one_per_hwsku_frontend_hostname]
         if duthost.facts["asic_type"] == "vs":
             loganalyzer[enum_rand_one_per_hwsku_frontend_hostname].ignore_regex.extend(KVMIgnoreRegex)
+        if is_mellanox_device(duthost):
+            loganalyzer[enum_rand_one_per_hwsku_frontend_hostname].ignore_regex.extend(mellanoxIgnoreRegex)
 
 
 @pytest.fixture(scope="function")
