@@ -32,9 +32,9 @@ class EverflowIPv6Tests(BaseEverflowTest):
         - Figure out some way to automate the acl.json file
     """
 
-    DEFAULT_SRC_IP = "2002:0225:7c6b:a982:d48b:230e:f271:0000"
-    DEFAULT_DST_IP = "2002:0225:7c6b:a982:d48b:230e:f271:0001"
-    RULE_DST_IP = "2002:0225:7c6b::"
+    DEFAULT_SRC_IP = "2002:225:7c6b:a982:d48b:230e:f271:0"
+    DEFAULT_DST_IP = "2002:225:7c6b:a982:d48b:230e:f271:1"
+    RULE_DST_IP = "2002:225:7c6b::"
     rx_port_ptf_id = None
     tx_port_ids = []
 
@@ -254,7 +254,7 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0002"
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:2"
         )
 
         self.send_and_check_mirror_packets(setup_info,
@@ -274,7 +274,7 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0003"
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:3"
         )
 
         self.send_and_check_mirror_packets(setup_info,
@@ -401,8 +401,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0004",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0005",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:4",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:5",
             sport=11200,
             dport=11700
         )
@@ -419,8 +419,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0005",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0004",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:5",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:4",
             sport=11700,
             dport=11200
         )
@@ -442,8 +442,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0006",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0007",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:6",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:7",
             flags=0x2
         )
 
@@ -459,8 +459,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0007",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0006",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:7",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:6",
             flags=0x12
         )
 
@@ -482,8 +482,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0008",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0009",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:8",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:9",
             sport=12000,
             dport=443,
             flags=0x2
@@ -501,8 +501,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0009",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0008",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:9",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:8",
             sport=443,
             dport=12000,
             flags=0x12
@@ -526,8 +526,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:000a",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:000b",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:a",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:b",
             dscp=8,
             sport=12001,
             dport=514
@@ -544,8 +544,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:000b",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:000a",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:b",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:a",
             dscp=8,
             sport=514,
             dport=12001
@@ -568,8 +568,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:000c",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:000d"
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:c",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:d"
         )
 
         self.send_and_check_mirror_packets(setup_info,
@@ -584,8 +584,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:000c",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:000d"
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:c",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:d"
         )
 
         self.send_and_check_mirror_packets(setup_info,
@@ -600,8 +600,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:000c",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:000d",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:c",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:d",
             next_header=0xAB
         )
 
@@ -623,8 +623,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:001c",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:001d",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:1c",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:1d",
             sport=12002,
             dport=12003
         )
@@ -641,8 +641,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:001c",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:001d",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:1c",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:1d",
             sport=12002,
             dport=12003
         )
@@ -675,8 +675,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:b000:0000:0000:0000:0010",
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0010",
+            src_ip="2002:225:7c6b:b000::10",
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:10",
             sport=12006,
             dport=12007
         )
@@ -698,8 +698,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:a982:d48b:230e:f271:0010",
-            dst_ip="2002:0225:7c6b:b000:0000:0000:0000:0010",
+            src_ip="2002:225:7c6b:a982:d48b:230e:f271:10",
+            dst_ip="2002:225:7c6b:b000::10",
             sport=12008,
             dport=12009
         )
@@ -721,8 +721,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:c000:0000:0000:0000:0010",
-            dst_ip="2002:0225:7c6b:d000:0000:0000:0000:0010",
+            src_ip="2002:225:7c6b:c000::10",
+            dst_ip="2002:225:7c6b:d000::10",
             sport=12010,
             dport=12011
         )
@@ -744,8 +744,8 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            src_ip="2002:0225:7c6b:e000:0000:0000:0000:0010",
-            dst_ip="2002:0225:7c6b:f000:0000:0000:0000:0010",
+            src_ip="2002:225:7c6b:e000::10",
+            dst_ip="2002:225:7c6b:f000::10",
             sport=12012,
             dport=12013
         )
@@ -807,7 +807,7 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0011"
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:11"
         )
 
         self.send_and_check_mirror_packets(setup_info,
@@ -826,7 +826,7 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0012"
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:12"
         )
 
         self.send_and_check_mirror_packets(setup_info,
@@ -845,7 +845,7 @@ class EverflowIPv6Tests(BaseEverflowTest):
             everflow_direction,
             ptfadapter,
             setup_info,
-            dst_ip="2002:0225:7c6b:a982:d48b:230e:f271:0013"
+            dst_ip="2002:225:7c6b:a982:d48b:230e:f271:13"
         )
 
         self.send_and_check_mirror_packets(setup_info,
