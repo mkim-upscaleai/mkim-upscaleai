@@ -19,7 +19,7 @@ from tests.common.dualtor.mux_simulator_control import toggle_all_simulator_port
 from tests.common.dualtor.dual_tor_utils import config_active_active_dualtor_active_standby                 # noqa: F401
 from tests.common.dualtor.dual_tor_utils import validate_active_active_dualtor_setup                        # noqa: F401
 from tests.common.dualtor.dual_tor_common import active_active_ports                                        # noqa: F401
-from tests.common.utilities import is_ipv4_address
+from tests.common.utilities import is_ipv4_address, is_ipv6_only_topology
 
 from tests.common.fixtures.fib_utils import (  # noqa: F401
     single_fib_for_duts,
@@ -374,7 +374,7 @@ def get_vlan_untag_ports(duthosts, duts_running_config_facts):
 
 
 @pytest.fixture(scope="module")
-def hash_keys(duthost):
+def hash_keys(duthost, tbinfo):
     # Copy from global var to avoid side effects of multiple iterations
     hash_keys = HASH_KEYS[:]
     if 'dst-mac' in hash_keys:
@@ -407,6 +407,11 @@ def hash_keys(duthost):
         if 'ingress-port' in hash_keys:
             hash_keys.remove('ingress-port')
     if duthost.facts['asic_type'] in ["marvell-teralynx", "cisco-8000"]:
+        if 'ip-proto' in hash_keys:
+            hash_keys.remove('ip-proto')
+    if 'ft2' in tbinfo['topo']['name']:
+        #  Remove ip-proto from hash_keys for FT2 as there is not enough entropy in ip-proto
+        #  to ensure packets are evenly distributed to all 64 egress ports
         if 'ip-proto' in hash_keys:
             hash_keys.remove('ip-proto')
     # remove the ingress port from multi asic platform
@@ -577,7 +582,8 @@ def test_hash(add_default_route_to_dut, duthosts, tbinfo, setup_vlan,      # noq
             "switch_type": switch_type,
             "is_active_active_dualtor": is_active_active_dualtor,
             "topo_name": updated_tbinfo['topo']['name'],
-            "topo_type": updated_tbinfo['topo']['type']
+            "topo_type": updated_tbinfo['topo']['type'],
+            "is_v6_topo": is_ipv6_only_topology(updated_tbinfo),
         },
         log_file=log_file,
         qlen=PTF_QLEN,
@@ -628,7 +634,8 @@ def test_ipinip_hash(add_default_route_to_dut, duthost, duthosts,               
                        "ignore_ttl": ignore_ttl,
                        "single_fib_for_duts": single_fib_for_duts,
                        "ipver": ipver,
-                       "topo_name": tbinfo['topo']['name']
+                       "topo_name": tbinfo['topo']['name'],
+                       "is_v6_topo": is_ipv6_only_topology(tbinfo),
                        },
                log_file=log_file,
                qlen=PTF_QLEN,
@@ -674,7 +681,8 @@ def test_ipinip_hash_negative(add_default_route_to_dut, duthosts,           # no
                    "single_fib_for_duts": single_fib_for_duts,
                    "ipver": ipver,
                    "topo_name": tbinfo['topo']['name'],
-                   "topo_type": tbinfo['topo']['type']
+                   "topo_type": tbinfo['topo']['type'],
+                   "is_v6_topo": is_ipv6_only_topology(tbinfo),
                },
                log_file=log_file,
                qlen=PTF_QLEN,
@@ -714,6 +722,7 @@ def test_vxlan_hash(add_default_route_to_dut, duthost, duthosts,                
     else:
         src_ip_range = SRC_IPV6_RANGE
         dst_ip_range = DST_IPV6_RANGE
+    switch_type = duthosts[0].facts.get('switch_type')
     ptf_runner(ptfhost,
                "ptftests",
                "hash_test.VxlanHashTest",
@@ -730,9 +739,11 @@ def test_vxlan_hash(add_default_route_to_dut, duthost, duthosts,                
                        "vlan_ids": VLANIDS,
                        "ignore_ttl": ignore_ttl,
                        "single_fib_for_duts": single_fib_for_duts,
+                       "switch_type": switch_type,
                        "ipver": vxlan_ipver,
                        "topo_name": tbinfo['topo']['name'],
-                       "topo_type": tbinfo['topo']['type']
+                       "topo_type": tbinfo['topo']['type'],
+                       "is_v6_topo": is_ipv6_only_topology(tbinfo),
                        },
                log_file=log_file,
                qlen=PTF_QLEN,
@@ -778,6 +789,7 @@ def test_nvgre_hash(add_default_route_to_dut, duthost, duthosts,                
     else:
         src_ip_range = SRC_IPV6_RANGE
         dst_ip_range = DST_IPV6_RANGE
+    switch_type = duthosts[0].facts.get('switch_type')
     ptf_runner(ptfhost,
                "ptftests",
                "hash_test.NvgreHashTest",
@@ -793,9 +805,11 @@ def test_nvgre_hash(add_default_route_to_dut, duthost, duthosts,                
                        "vlan_ids": VLANIDS,
                        "ignore_ttl": ignore_ttl,
                        "single_fib_for_duts": single_fib_for_duts,
+                       "switch_type": switch_type,
                        "ipver": nvgre_ipver,
                        "topo_name": tbinfo['topo']['name'],
-                       "topo_type": tbinfo['topo']['type']
+                       "topo_type": tbinfo['topo']['type'],
+                       "is_v6_topo": is_ipv6_only_topology(tbinfo),
                        },
                log_file=log_file,
                qlen=PTF_QLEN,
@@ -878,7 +892,9 @@ def test_ecmp_group_member_flap(
             "single_fib_for_duts": single_fib_for_duts,
             "switch_type": switch_type,
             "asic_type": asic_type,
-            "skip_src_ports": filtered_ports
+            "skip_src_ports": filtered_ports,
+            "topo_name": updated_tbinfo['topo']['name'],
+            "topo_type": updated_tbinfo['topo']['type'],
         },
         log_file=log_file,
         qlen=PTF_QLEN,
@@ -934,7 +950,9 @@ def test_ecmp_group_member_flap(
             "single_fib_for_duts": single_fib_for_duts,
             "switch_type": switch_type,
             "asic_type": asic_type,
-            "skip_src_ports": filtered_ports
+            "skip_src_ports": filtered_ports,
+            "topo_name": updated_tbinfo['topo']['name'],
+            "topo_type": updated_tbinfo['topo']['type'],
         },
         log_file=member_down_log_file,
         qlen=PTF_QLEN,
@@ -984,7 +1002,9 @@ def test_ecmp_group_member_flap(
             "single_fib_for_duts": single_fib_for_duts,
             "switch_type": switch_type,
             "asic_type": asic_type,
-            "skip_src_ports": filtered_ports
+            "skip_src_ports": filtered_ports,
+            "topo_name": updated_tbinfo['topo']['name'],
+            "topo_type": updated_tbinfo['topo']['type'],
         },
         log_file=member_up_log_file,
         qlen=PTF_QLEN,

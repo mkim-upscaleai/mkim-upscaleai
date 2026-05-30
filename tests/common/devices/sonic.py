@@ -88,8 +88,15 @@ class SonicHost(AnsibleHostBase):
         self._os_version = self._get_os_version()
 
         device_metadata = self.get_running_config_facts().get('DEVICE_METADATA', {}).get('localhost', {})
+        switch_type = device_metadata.get('switch_type', '')
         device_type = device_metadata.get('type')
         device_subtype = device_metadata.get('subtype')
+
+        if switch_type == "dpu":
+            logger.info("Removing teamd and lldp from default services for switch_type DPU")
+            self.DEFAULT_ASIC_SERVICES.remove("lldp")
+            self.DEFAULT_ASIC_SERVICES.remove("teamd")
+
         if (device_type == 'UpperSpineRouter') or (device_subtype in ['UpstreamLC', 'DownstreamLC']):
             self.DEFAULT_ASIC_SERVICES.append("macsec")
 
@@ -1364,22 +1371,47 @@ default nhid 224 proto bgp src fc00:1::32 metric 20 pref medium
 
     def check_default_route(self, ipv4=True, ipv6=True):
         """
-        @summary: return default route status
+        @summary: return default route status with namespace awareness for multi-ASIC
+
+        For multi-ASIC devices, checks default routes in all ASIC namespaces.
+        For single-ASIC devices, checks default routes in the global namespace.
 
         @param ipv4: check ipv4 default
         @param ipv6: check ipv6 default
+        @return: True if default route(s) exist in all required namespaces, False otherwise
         """
-        if ipv4:
-            rtinfo_v4 = self.get_ip_route_info(ipaddress.ip_network('0.0.0.0/0'))
-            if len(rtinfo_v4['nexthops']) == 0:
-                return False
+        if self.is_multi_asic:
+            # For multi-ASIC, check default routes in each ASIC namespace
+            for asic_index in range(self.facts['num_asic']):
+                # Construct namespace option like "-n asic0", "-n asic1", etc.
+                ns_option = "-n asic{}".format(asic_index)
 
-        if ipv6:
-            rtinfo_v6 = self.get_ip_route_info(ipaddress.ip_network('::/0'))
-            if len(rtinfo_v6['nexthops']) == 0:
-                return False
+                if ipv4:
+                    rtinfo_v4 = self.get_ip_route_info(ipaddress.ip_network('0.0.0.0/0'), ns=ns_option)
+                    if len(rtinfo_v4['nexthops']) == 0:
+                        logger.info("ASIC{}: No IPv4 default route".format(asic_index))
+                        return False
 
-        return True
+                if ipv6:
+                    rtinfo_v6 = self.get_ip_route_info(ipaddress.ip_network('::/0'), ns=ns_option)
+                    if len(rtinfo_v6['nexthops']) == 0:
+                        logger.info("ASIC{}: No IPv6 default route".format(asic_index))
+                        return False
+
+            return True
+        else:
+            # For single ASIC, check default routes in global namespace
+            if ipv4:
+                rtinfo_v4 = self.get_ip_route_info(ipaddress.ip_network('0.0.0.0/0'))
+                if len(rtinfo_v4['nexthops']) == 0:
+                    return False
+
+            if ipv6:
+                rtinfo_v6 = self.get_ip_route_info(ipaddress.ip_network('::/0'))
+                if len(rtinfo_v6['nexthops']) == 0:
+                    return False
+
+            return True
 
     def check_intf_link_state(self, interface_name):
         intf_status = self.show_interface(command="status", interfaces=[interface_name])["ansible_facts"]['int_status']
@@ -2194,7 +2226,9 @@ Totals               6450                 6449
         Returns:
             True or False
         """
-        bgp_summary = self.command("show ip bgp summary")["stdout_lines"]
+        bgp_summary_v4 = self.command("show ip bgp summary")["stdout_lines"]
+        bgp_summary_v6 = self.command("show ipv6 bgp summary")["stdout_lines"]
+        bgp_summary = bgp_summary_v4 + bgp_summary_v6
 
         idle_count = 0
         expected_idle_count = 0
@@ -2205,7 +2239,7 @@ Totals               6450                 6449
 
             if "Total number of neighbors" in line:
                 tokens = line.split()
-                expected_idle_count = int(tokens[-1])
+                expected_idle_count += int(tokens[-1])
 
             if "BGPMonitor" in line:
                 bgp_monitor_count += 1
@@ -2412,7 +2446,7 @@ Totals               6450                 6449
         # Build set of Ethernet ports with 18.x.202.0/31 IPs to exclude
         excluded_ports = set()
         for port, val in config_db_ports.items():
-            if "role" in val:
+            if "role" in val and val["role"] != "Ext":
                 excluded_ports.add(port)
         return excluded_ports
 

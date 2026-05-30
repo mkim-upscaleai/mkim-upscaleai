@@ -2,6 +2,18 @@
 
 set -e
 
+function restore_topo_if_needed
+ {
+     if [[ -n "$backup_file" && -f "$backup_file" ]]; then
+         echo "Backup exists, restore backup file"
+         rm -f "$topo_file"
+         mv "$backup_file" "$topo_file"
+         echo "Original topo file restored"
+     fi
+ }
+
+ trap restore_topo_if_needed EXIT
+
 function usage
 {
   echo "testbed-cli. Interface to testbeds"
@@ -197,6 +209,7 @@ function converge_topo_if_needed
         fi
 
         python -m ceos_topo_converger "$backup_file" "$topo_file"
+
     fi
 }
 
@@ -729,7 +742,7 @@ function deploy_l1
   echo "Devices to generate config for: $devices"
   echo ""
 
-  ansible-playbook -i "$inventory" deploy_config_on_testbed.yml --vault-password-file="$passfile" -l "$devices" -e testbed_name="$testbed_name" -e testbed_file=$tbfile -e deploy=true -e save=true -e config_duts=false$@
+  ansible-playbook -i "$inventory" deploy_config_on_testbed.yml --vault-password-file="$passfile" -l "$devices" -e testbed_name="$testbed_name" -e testbed_file=$tbfile -e deploy=true -e save=true -e config_duts=false -e reset_previous_connection=false$@
 
   echo Done
 }
@@ -1110,9 +1123,3 @@ case "${subcmd}" in
   *)           usage
                ;;
 esac
-
-if [[ -f "$backup_file" ]];then
-    echo "Backup exists, restore backup file"
-    rm -f "$topo_file"
-    mv "$backup_file" "$topo_file"
-fi

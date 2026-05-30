@@ -25,6 +25,56 @@ all:
           - t0
           - t1-64
           - t0-64
+          - t0-64-32
+          - t0-80
+          - t0-116
+          - t0-118
+          - t0-backend
+          - t0-f2-d40u8
+          - t0-standalone-32
+          - t0-standalone-64
+          - t0-standalone-128
+          - t0-standalone-256
+          - t0-isolated-d16u16s1
+          - t0-isolated-d16u16s2
+          - t0-isolated-d128u128s1
+          - t0-isolated-d128u128s2
+          - t0-isolated-d2u254s1
+          - t0-isolated-d2u254s2
+          - t0-isolated-v6-d128u128s1
+          - t0-isolated-v6-d128u128s2
+          - t0-isolated-v6-d16u16s1
+          - t0-isolated-v6-d16u16s2
+          - t0-isolated-v6-d96u32s2
+          - t0-isolated-d256u256s2
+          - t0-isolated-d32u32s2
+          - t0-isolated-v6-d256u256s2
+          - t0-isolated-v6-d32u32s2
+          - t0-isolated-d96u32s2
+          - dualtor
+          - dualtor-56
+          - cable-test
+          - dualtor-120
+          - tgen-t0-3
+          - tgen-t1-3-lag
+          - mgmttor
+          - t2
+          - t2-isolated-d128s2
+          - dualtor-mixed
+          - dualtor-mixed-56
+          - dualtor-mixed-120
+          - m0
+          - m0-2vlan
+          - mc0
+          - mx
+          - m1-48
+          - m1-44
+          - m1-108
+          - m1-128
+          - dpu-1
+          - ft2-64
+          - lt2-p32o64
+          - lt2-o128
       children:
         server_1:
         server_2:
