@@ -50,10 +50,10 @@ def test_event(duthost, tbinfo, gnxi_path, ptfhost, ptfadapter, data_dir, valida
 
     # Skip the pfc_storm event test for Casoian platform now
     # Will add it back after we got proper qos/pfc file from Nvidia
-    #
-    # if duthost.facts["hwsku"] not in skip_pfc_hwskus:
-    #    run_test(duthost, gnxi_path, ptfhost, data_dir, validate_yang, generate_pfc_storm,
-    #             "pfc_storm.json", "sonic-events-swss:pfc-storm", tag)
+    
+    if duthost.facts["hwsku"] not in skip_pfc_hwskus:
+       run_test(duthost, gnxi_path, ptfhost, data_dir, validate_yang, generate_pfc_storm,
+                "pfc_storm.json", "sonic-events-swss:pfc-storm", tag)
 
     run_test(duthost, tbinfo, gnxi_path, ptfhost, data_dir, validate_yang, trigger_crm_threshold_exceeded,
              "chk_crm_threshold.json", "sonic-events-swss:chk_crm_threshold", tag)
