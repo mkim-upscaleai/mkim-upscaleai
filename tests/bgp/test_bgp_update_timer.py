@@ -456,7 +456,7 @@ def test_bgp_update_timer_session_down(
 
         def _shutdown_bgp_session():
             """Shutdown bgp session on dut."""
-            if use_vtysh:
+            if use_vtysh or duthost.get_frr_mgmt_framework_config():
                 dut_asn = n0.peer_asn
                 neigh_ip = n0.ip
                 cmd = (

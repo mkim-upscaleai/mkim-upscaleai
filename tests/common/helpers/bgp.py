@@ -104,21 +104,31 @@ def run_bgp_facts(duthost, enum_asic_index):
             bgp_facts['bgp_neighbors'][k]['remote AS']
         )
 
+def _is_bgp_neighbor_entry(entry):
+    return isinstance(entry, dict) and ("name" in entry or "asn" in entry)
+
+
+def _flatten_bgp_neighbors(nbrs_in_cfg_facts, vrf_name=None):
+    """Normalize BGP_NEIGHBOR to {neighbor_ip: neighbor_info}."""
+    neighbors = {}
+    for key, value in nbrs_in_cfg_facts.items():
+        if not isinstance(value, dict):
+            continue
+        if _is_bgp_neighbor_entry(value):
+            if vrf_name is None or vrf_name == "default":
+                neighbors[key] = value
+        elif vrf_name is None or key == vrf_name:
+            for neighbor_ip, neighbor_info in value.items():
+                if _is_bgp_neighbor_entry(neighbor_info):
+                    neighbors[neighbor_ip] = neighbor_info
+    return neighbors
+
 
 def get_bgp_neighbors_from_config_facts(duthost, config_facts, vrf_name="default"):
     nbrs_in_cfg_facts = config_facts.get('BGP_NEIGHBOR', {})
-    bgp_neighbors = {}
     if duthost.get_frr_mgmt_framework_config():
-        if vrf_name is None:
-            for vrf_key, vrf_nbrs in nbrs_in_cfg_facts.items():
-                if isinstance(vrf_nbrs, dict):
-                    bgp_neighbors.update(vrf_nbrs)
-        elif vrf_name in nbrs_in_cfg_facts:
-            bgp_neighbors = nbrs_in_cfg_facts[vrf_name]
-    else:
-        bgp_neighbors = nbrs_in_cfg_facts
-
-    return bgp_neighbors
+        return _flatten_bgp_neighbors(nbrs_in_cfg_facts, vrf_name=vrf_name)
+    return nbrs_in_cfg_facts
 
 
 class BGPNeighbor(object):
@@ -149,7 +159,7 @@ class BGPNeighbor(object):
         """Start the BGP session."""
         logging.debug("start bgp session %s", self.name)
 
-        if self.use_vtysh:
+        if self.use_vtysh or self.duthost.get_frr_mgmt_framework_config():
             _config_bgp_neighbor_with_vtysh(
                 self.duthost,
                 peer_addr=self.ip,

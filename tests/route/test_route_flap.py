@@ -115,16 +115,19 @@ def get_neighbor_info(duthost, dev_port, tbinfo):
         tbinfo: A fixture to gather information about the testbed.
     """
     neighbor_type = ''
+    neighbor_name = ''
     config_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
-    neighs = config_facts['BGP_NEIGHBOR']
+    neighs = get_bgp_neighbors_from_config_facts(duthost, config_facts)
     dev_neigh_mdata = config_facts['DEVICE_NEIGHBOR_METADATA'] if 'DEVICE_NEIGHBOR_METADATA' in config_facts else {}
     mg_facts = duthost.get_extended_minigraph_facts(tbinfo)
-    for neighbor in neighs:
-        local_ip = neighs[neighbor]['local_addr']
+    for neighbor, neighbor_info in neighs.items():
+        local_ip = neighbor_info.get('local_addr')
+        if not local_ip:
+            continue
         nbr_port_alias = get_port_by_ip(config_facts, local_ip)
         nbr_port_name = mg_facts['minigraph_port_alias_to_name_map'].get(nbr_port_alias, nbr_port_alias)
         if dev_port == nbr_port_name:
-            neighbor_name = neighs[neighbor]['name']
+            neighbor_name = neighbor_info.get('name', '')
     for k, v in dev_neigh_mdata.items():
         if k == neighbor_name:
             neighbor_type = v['type']
