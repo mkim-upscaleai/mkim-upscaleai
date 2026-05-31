@@ -23,6 +23,7 @@ from tests.common.utilities import wait_until
 from tests.common.reboot import reboot
 from tests.common.helpers.assertions import pytest_assert
 from tests.common.redis_config_db import config_db_shell_prefix
+from tests.common.storage_backend.backend_utils import skip_test_module_over_backend_topologies  # noqa: F401
 
 """
     During vrf testing, a vrf basic configuration need to be setup before any tests,
@@ -498,8 +499,9 @@ def restore_config_db(localhost, duthost, ptfhost):
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_vrf(
-    tbinfo, duthosts, rand_one_dut_hostname, ptfhost, localhost, skip_test_module_over_backend_topologies
-):  # noqa: F811
+    tbinfo, duthosts, rand_one_dut_hostname, ptfhost, localhost,
+    skip_test_module_over_backend_topologies  # noqa: F811
+):
     duthost = duthosts[rand_one_dut_hostname]
 
     # backup config_db.json

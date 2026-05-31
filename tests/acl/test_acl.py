@@ -23,7 +23,7 @@ from tests.common.fixtures.ptfhost_utils import \
     copy_arp_responder_py, run_garp_service, change_mac_addresses   # noqa: F401
 from tests.common.dualtor.dual_tor_mock import mock_server_base_ip_addr     # noqa: F401
 from tests.common.helpers.constants import DEFAULT_NAMESPACE
-from tests.common.utilities import wait_until, check_msg_in_syslog
+from tests.common.utilities import get_plt_wait_time, wait_until, check_msg_in_syslog
 from tests.common.utilities import get_all_upstream_neigh_type, get_downstream_neigh_type
 from tests.common.fixtures.conn_graph_facts import conn_graph_facts         # noqa: F401
 from tests.common.platform.processes_utils import wait_critical_processes
@@ -31,6 +31,7 @@ from tests.common.platform.interface_utils import check_all_interface_informatio
 from tests.common.utilities import get_iface_ip
 from tests.common.utilities import is_ipv4_address
 from tests.common.mellanox_data import is_mellanox_device
+from tests.common.utilities import is_ipv6_only_topology
 from tests.common.dualtor.dual_tor_utils import show_muxcable_status
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,21 @@ DOWNSTREAM_IP_TO_ALLOW = {
 DOWNSTREAM_IP_TO_BLOCK = {
     "ipv4": "192.168.0.251",
     "ipv6": "20c0:a800::11ac:d765:2523:e5e4"
+}
+
+# Below T1 V6 topo IPs are announced to DUT by annouce_route.py
+# IPv4 addrs are placeholders only
+DOWNSTREAM_DST_IP_V6_TOPO = {
+    "ipv4": "192.168.0.253",
+    "ipv6": "2064:100:0::C0A8:0000:14"
+}
+DOWNSTREAM_IP_TO_ALLOW_V6_TOPO = {
+    "ipv4": "192.168.0.252",
+    "ipv6": "2064:100:0::C0A8:0000:1"
+}
+DOWNSTREAM_IP_TO_BLOCK_V6_TOPO = {
+    "ipv4": "192.168.0.251",
+    "ipv6": "2064:100:0::C0A8:0000:9"
 }
 
 # Below M0_L3 IPs are announced to DUT by annouce_route.py, it point to neighbor mx
@@ -339,6 +355,15 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
         DOWNSTREAM_DST_IP = DOWNSTREAM_DST_IP_M0_L3
         DOWNSTREAM_IP_TO_ALLOW = DOWNSTREAM_IP_TO_ALLOW_M0_L3
         DOWNSTREAM_IP_TO_BLOCK = DOWNSTREAM_IP_TO_BLOCK_M0_L3
+    elif is_ipv6_only_topology(tbinfo):
+        if tbinfo['topo']['type'] in ['t0']:
+            DOWNSTREAM_DST_IP = DOWNSTREAM_DST_IP_VLAN
+            DOWNSTREAM_IP_TO_ALLOW = DOWNSTREAM_IP_TO_ALLOW_VLAN
+            DOWNSTREAM_IP_TO_BLOCK = DOWNSTREAM_IP_TO_BLOCK_VLAN
+        else:
+            DOWNSTREAM_DST_IP = DOWNSTREAM_DST_IP_V6_TOPO
+            DOWNSTREAM_IP_TO_ALLOW = DOWNSTREAM_IP_TO_ALLOW_V6_TOPO
+            DOWNSTREAM_IP_TO_BLOCK = DOWNSTREAM_IP_TO_BLOCK_V6_TOPO
     elif tbinfo['topo']['type'] in ['t0']:
         try:
             vlan_config = tbinfo['topo']['properties']['topology']['DUT']['vlan_configs']['default_vlan_config']
@@ -462,7 +487,8 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
             topo in ["t0", "m0_vlan", "m0_l3"]
             or tbinfo["topo"]["name"] in (
                 "t1-lag", "t1-64-lag", "t1-64-lag-clet",
-                "t1-56-lag", "t1-28-lag", "t1-32-lag", "t1-48-lag"
+                "t1-56-lag", "t1-28-lag", "t1-32-lag", "t1-48-lag",
+                "t1-f2-d10u8"
             )
             or 't1-isolated' in tbinfo["topo"]["name"]
         )
@@ -532,9 +558,15 @@ def setup(duthosts, ptfhost, rand_selected_dut, rand_selected_front_end_dut, ran
 
 @pytest.fixture(scope="module", params=["ipv4", "ipv6"])
 def ip_version(request, tbinfo, duthosts, rand_one_dut_hostname):
-    #Enabling ipv6 tests as it seems to work for most cases with matching Vlan subnet
-    #if tbinfo["topo"]["type"] in ["t0"] and request.param == "ipv6":
-    #    pytest.skip("IPV6 ACL test not currently supported on t0 testbeds")
+    v6topo = "isolated-v6" in tbinfo["topo"]["name"]
+    if request.param == "ipv4":
+        if v6topo:
+            pytest.skip("IPV4 ACL test not supported on isolated-v6 testbeds")
+    else:       # ipv6
+        # Fork customization: IPv6 ACL tests are intentionally enabled on t0 testbeds
+        # (works for most cases with matching Vlan subnet), so the upstream t0 skip
+        # is deliberately not applied here.
+        pass
 
     return request.param
 
@@ -1077,8 +1109,10 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
             logger.info('Skip checking rule counters for vs platform')
             return True
 
-        logger.info('Wait all rule counters are ready')
-        return wait_until(60, 2, 0, self.check_rule_counters_internal, duthost)
+        plt_wait_dict = get_plt_wait_time(duthost, "acl/test_acl.py")
+        wait = plt_wait_dict.get("wait", 300)
+        logger.info('Wait for {} to ensure all rule counters are ready'.format(wait))
+        return wait_until(wait, 2, 0, self.check_rule_counters_internal, duthost)
 
     def check_rule_counters_internal(self, duthost):
         for asic_id in duthost.get_frontend_asic_ids():
@@ -1280,6 +1314,11 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
                     rule_id = 33 if vlan_name == "Vlan1000" else 2
                 logging.info("topo: {} vlan_config: {} vlan_name: {} rule_id: {} ".format(
                     setup["topo"], setup["vlan_config"], vlan_name, rule_id))
+            elif "-v6-" in setup["topo_name"]:
+                if setup["topo"] in ['t0']:
+                    rule_id = 34
+                else:
+                    rule_id = 38
             else:
                 rule_id = 2
         else:
@@ -1308,6 +1347,11 @@ class BaseAclTest(six.with_metaclass(ABCMeta, object)):
                     rule_id = 32 if vlan_name == "Vlan1000" else 15
                 logging.info("topo: {} vlan_config: {} vlan_name: {} rule_id: {} ".format(
                     setup["topo"], setup["vlan_config"], vlan_name, rule_id))
+            elif "-v6-" in setup["topo_name"]:
+                if setup["topo"] in ['t0']:
+                    rule_id = 35
+                else:
+                    rule_id = 39
             else:
                 rule_id = 15
         else:
