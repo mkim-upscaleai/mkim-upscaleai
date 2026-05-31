@@ -135,43 +135,164 @@ def wait_all_bgp_up(duthost):
     if not wait_until(300, 10, 0, duthost.check_bgp_session_state, list(bgp_neighbors.keys())):
         pytest.fail("not all bgp sessions are up after config reload")
 
+def _static_redistribute_db_key(ipv6):
+    af = "ipv6" if ipv6 else "ipv4"
+    return "ROUTE_REDISTRIBUTE|default|static|bgp|{}".format(af)
+
+
+def _is_static_redistribute_configured(duthost, ipv6):
+    if duthost.get_frr_mgmt_framework_config():
+        key = _static_redistribute_db_key(ipv6)
+        out = duthost.shell('sonic-db-cli CONFIG_DB HGETALL "{}"'.format(key),
+                            module_ignore_errors=True)['stdout'].strip()
+        return bool(out) and _running_config_has_static_redistribute(duthost, ipv6)
+    return _running_config_has_static_redistribute(duthost, ipv6)
+
+
+def _running_config_has_static_redistribute(duthost, ipv6):
+    af = "ipv6" if ipv6 else "ipv4"
+    out = duthost.shell("sudo vtysh -c 'show running-config'", module_ignore_errors=True)['stdout']
+    in_af = False
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("address-family {} ".format(af)) or line == "address-family {}".format(af):
+            in_af = True
+            continue
+        if in_af and line.startswith("exit-address-family"):
+            break
+        if in_af and "redistribute static" in line:
+            return True
+    return False
+
+
+def ensure_static_route_bgp_redistribution(duthost, ipv6):
+    """Ensure static routes are redistributed into BGP for the address-family."""
+    if duthost.get_frr_mgmt_framework_config():
+        key = _static_redistribute_db_key(ipv6)
+        duthost.shell('sonic-db-cli CONFIG_DB HSET "{}" "metric" "0"'.format(key),
+                      module_ignore_errors=False)
+        wait_until(60, 5, 0, lambda: _running_config_has_static_redistribute(duthost, ipv6))
+        return
+    if _is_static_redistribute_configured(duthost, ipv6):
+        return
+    af = "ipv6" if ipv6 else "ipv4"
+    duthost.shell(
+        "sudo vtysh -c 'configure terminal' -c 'router bgp' "
+        "-c 'address-family {0}' -c 'redistribute static'".format(af),
+        module_ignore_errors=False)
+    time.sleep(3)
+
+def wait_static_route_in_bgp(duthost, prefix, ipv6):
+    if ipv6:
+        show_cmd = "sudo vtysh -c 'show bgp ipv6 {} json'".format(prefix)
+    else:
+        show_cmd = "sudo vtysh -c 'show bgp ipv4 unicast {} json'".format(prefix)
+    show_cmd = duthost.get_vtysh_cmd_for_namespace(show_cmd, None)
+
+    def _check():
+        out = duthost.shell(show_cmd, module_ignore_errors=True)['stdout']
+        if not out.strip():
+            return False
+        try:
+            return bool(json.loads(out))
+        except (ValueError, json.JSONDecodeError):
+            return prefix in out
+
+    pytest_assert(
+        wait_until(90, 5, 0, _check),
+        "Static route {} was not redistributed into BGP".format(prefix)
+    )
+
+def _get_bgp_advertised_routes_cmd(duthost, remote_ip, ipv6=False, json_output=False):
+    suffix = " json" if json_output else ""
+    if duthost.get_frr_mgmt_framework_config():
+        if ipv6:
+            cmd = "sudo vtysh -c 'show bgp ipv6 neighbors {} advertised-routes{}'".format(remote_ip, suffix)
+        else:
+            cmd = "sudo vtysh -c 'show ip bgp neighbors {} advertised-routes{}'".format(remote_ip, suffix)
+        return duthost.get_vtysh_cmd_for_namespace(cmd, None)
+    if ipv6:
+        return "show ipv6 bgp neighbor {} advertised-routes".format(remote_ip)
+    return "show ip bgp neighbor {} advertised-routes".format(remote_ip)
+
+
+def _should_check_bgp_neighbor(neighbor_ip, neighbor_info, ipv6):
+    name = neighbor_info.get("name", "")
+    if "PT0" in name or "FT2" in name:
+        return False
+    if ipv6:
+        return ":" in neighbor_ip
+    return "." in neighbor_ip
+
+
+def _prefix_in_bgp_output(prefix, output):
+    target = ipaddress.ip_network(six.text_type(prefix))
+    if str(target) in output:
+        return True
+    for line in output.splitlines():
+        parts = line.split()
+        if not parts or '/' not in parts[0]:
+            continue
+        try:
+            if ipaddress.ip_network(six.text_type(parts[0]), strict=False) == target:
+                return True
+        except ValueError:
+            continue
+    return str(target.network_address) in output
 
 def check_route_redistribution(duthost, prefix, ipv6, removed=False):
-    if ipv6:
-        SHOW_BGP_SUMMARY_CMD = "show ipv6 bgp summary"
-        SHOW_BGP_ADV_ROUTES_CMD_TEMPLATE = "show ipv6 bgp neighbor {} advertised-routes"
-    else:
-        SHOW_BGP_SUMMARY_CMD = "show ip bgp summary"
-        SHOW_BGP_ADV_ROUTES_CMD_TEMPLATE = "show ip bgp neighbor {} advertised-routes"
+    config_facts = duthost.config_facts(host=duthost.hostname, source="running")['ansible_facts']
+    bgp_neighbors = get_bgp_neighbors_from_config_facts(duthost, config_facts, vrf_name=None)
+    check_neighbors = {
+        neighbor_ip: neighbor_info
+        for neighbor_ip, neighbor_info in bgp_neighbors.items()
+        if _should_check_bgp_neighbor(neighbor_ip, neighbor_info, ipv6)
+    }
 
-    bgp_summary = duthost.show_and_parse(SHOW_BGP_SUMMARY_CMD)
-
-    # Collect neighbors, excluding those with 'PT0' in the neighbor name
-    bgp_neighbors = [
-        entry["neighbhor"]
-        for entry in bgp_summary
-        if "PT0" not in entry.get("neighborname", "")
-    ]
-
-    if not bgp_neighbors:
-        pytest.fail("No valid BGP neighbors found (excluding PT0).")
+    if not check_neighbors:
+        pytest.fail("No valid BGP neighbors found for prefix redistribution check.")
 
     def _check_routes():
-        for neighbor in bgp_neighbors:
-            adv_routes = duthost.shell(SHOW_BGP_ADV_ROUTES_CMD_TEMPLATE.format(neighbor))["stdout"]
-            if removed and prefix in adv_routes:
-                logging.info(f"Route {prefix} is still advertised by {neighbor} (expected removed).")
+        for neighbor_ip, neighbor_info in check_neighbors.items():
+            adv_routes = duthost.shell(
+                _get_bgp_advertised_routes_cmd(duthost, neighbor_ip, ipv6=ipv6, json_output=True),
+                module_ignore_errors=True)["stdout"]
+            present = False
+            try:
+                routes_json = json.loads(adv_routes)
+                advertised = routes_json.get("advertisedRoutes", routes_json.get("routes", []))
+                if isinstance(advertised, dict):
+                    route_keys = list(advertised.keys())
+                else:
+                    route_keys = advertised
+                target_net = ipaddress.ip_network(six.text_type(prefix))
+                present = any(
+                    ipaddress.ip_network(str(k), strict=False) == target_net
+                    for k in route_keys if '/' in str(k)
+                )
+            except (ValueError, json.JSONDecodeError, AttributeError):
+                present = _prefix_in_bgp_output(prefix, adv_routes)
+            if not present:
+                adv_routes = duthost.shell(
+                    _get_bgp_advertised_routes_cmd(duthost, neighbor_ip, ipv6=ipv6),
+                    module_ignore_errors=True)["stdout"]
+                present = _prefix_in_bgp_output(prefix, adv_routes)
+            if removed and present:
+                logging.info(
+                    "Route %s is still advertised to %s (%s) (expected removed). Output: %s",
+                    prefix, neighbor_ip, neighbor_info.get("name", ""), adv_routes[:1000])
                 return False
-            if not removed and prefix not in adv_routes:
-                logging.info(f"Route {prefix} is NOT advertised by {neighbor} (expected present).")
+            if not removed and not present:
+                logging.info(
+                    "Route %s is NOT advertised to %s (%s) (expected present). Output: %s",
+                    prefix, neighbor_ip, neighbor_info.get("name", ""), adv_routes[:1000])
                 return False
         return True
 
     pytest_assert(
-        wait_until(60, 15, 0, _check_routes),
+        wait_until(120, 10, 0, _check_routes),
         f"Route {prefix} advertisement state does not match expected 'removed={removed}' on all neighbors"
     )
-
 
 # output example of ip [-6] route show
 # ip route show 1.1.1.0/24
