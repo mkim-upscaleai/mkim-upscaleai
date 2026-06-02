@@ -436,7 +436,16 @@ def get_sai_sdk_dump_file(duthost, dump_file_name):
     full_path_dump_file = f"{dump_folder}/{dump_file_name}"
     logger.info(f"Generating SDK dump file: {full_path_dump_file}")
     cmd_gen_sdk_dump = f"docker exec syncd bash -c 'saisdkdump -f {full_path_dump_file}' "
-    duthost.shell(cmd_gen_sdk_dump)
+    # saisdkdump requires the SAI RPC server (syncd-rpc). With regular syncd the tool
+    # fails to create a switch handle (rc=-1). Treat failures as non-fatal: this is a
+    # diagnostic helper and must never block or fail a test.
+    result = duthost.shell(cmd_gen_sdk_dump, module_ignore_errors=True)
+    if result["rc"] != 0:
+        logger.warning(
+            f"saisdkdump failed (rc={result['rc']}), skipping SDK dump collection. "
+            f"stderr: {result.get('stderr', '').strip()}"
+        )
+        return
 
     compressed_dump_file = f"/tmp/{dump_file_name}.tar.gz"
     duthost.archive(path=full_path_dump_file, dest=compressed_dump_file, format='gz')
