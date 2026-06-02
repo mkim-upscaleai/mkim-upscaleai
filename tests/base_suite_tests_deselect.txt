@@ -378,13 +378,3 @@ telemetry/test_telemetry_show_cli.py::test_telemetry_show_non_get
 # No PTF mapping for DUT port Ethernet64 in this testbed topology
 counter/test_xon_xoff.py::test_xon_xoff_does_not_increase_rx_drop
 
-# Deselecting due to Cisco ASIC mismatch on this testbed
-vxlan/test_scale_ecmp.py
-vxlan/test_vxlan_tunnel_route_scale.py
-
-# Deselecting these four tests since tests_mark_conditions.yaml skips them,
-# due to a known issue (https://github.com/sonic-net/sonic-buildimage/issues/23777)
-bmp/test_bmp_configdb.py
-bmp/test_bmp_redis_instance.py
-bmp/test_bmp_statedb.py
-bmp/test_docker_restart.py
