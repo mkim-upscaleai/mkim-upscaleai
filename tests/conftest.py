@@ -713,6 +713,38 @@ def fixture_duthosts(enhance_inventory, ansible_adhoc, tbinfo, request):
                   "Exception: {}".format(repr(e)))
 
 
+@pytest.fixture(scope="session", autouse=True)
+def check_syslog_sanity(duthosts):
+    """
+    Gate the entire test session by verifying /var/log/syslog is a regular
+    file on every DUT.  If it is a directory (which indicates a broken image
+    or misconfigured DUT), abort immediately rather than letting every test
+    fail with obscure errors.
+    """
+    for duthost in duthosts:
+        result = duthost.shell(
+            "stat -c %F /var/log/syslog 2>/dev/null || echo MISSING",
+            module_ignore_errors=True
+        )
+        file_type = result["stdout"].strip()
+        if file_type == "MISSING":
+            pt_assert(
+                False,
+                "SANITY FAIL on {}: /var/log/syslog does not exist".format(
+                    duthost.hostname
+                )
+            )
+        if file_type != "regular file":
+            pt_assert(
+                False,
+                "SANITY FAIL on {}: /var/log/syslog is a '{}', expected a regular file".format(
+                    duthost.hostname, file_type
+                )
+            )
+        logger.info("{}: /var/log/syslog sanity passed ({})".format(
+            duthost.hostname, file_type))
+
+
 @pytest.fixture(scope="session")
 def duthost(duthosts, request):
     '''
