@@ -1,1 +1,2 @@
 docker_registry_host: 192.168.218.28:5000
+debian_image_registry_host: 192.168.218.28:5000
