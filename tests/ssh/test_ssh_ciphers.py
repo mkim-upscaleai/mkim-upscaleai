@@ -1,3 +1,4 @@
+import re
 import pexpect
 import logging
 import pytest
@@ -39,9 +40,14 @@ def connect_with_specified_ciphers(duthosts, rand_one_dut_hostname, specified_ci
             connect.expect('.*[Pp]assword:')
             connect.sendline(dutpass)
 
-            i = connect.expect(
-                '{}@{}:'.format(dutuser, duthost.hostname), timeout=10)
-            pytest_assert(i == 0, "Failed to connect")
+            # Accept either the classic bash prompt (user@hostname:) or the
+            # ucli shell prompt (hostname#) which is the default on newer builds.
+            prompt_patterns = [
+                r'{}@{}:'.format(re.escape(dutuser), re.escape(duthost.hostname)),
+                r'{}#'.format(re.escape(duthost.hostname)),
+            ]
+            i = connect.expect(prompt_patterns, timeout=10)
+            pytest_assert(i in (0, 1), "Failed to connect")
             return
         except Exception as e:
             output = connect.before.decode() if connect.before else ""
