@@ -74,6 +74,19 @@ on:
           - snappi
         default: nightly
         required: true
+      skip_topo:
+        type: boolean
+        description: "Skip remove-topo and add-topo steps (topology assumed already deployed)"
+        default: false
+        required: false
+      ALLURE_LAUNCH_TAG:
+        type: string
+        description: "Override ALLURE_LAUNCH_TAGS (if set, used verbatim instead of computed tags)"
+        required: false
+      ALLURE_LAUNCH_NAME:
+        type: string
+        description: "Override ALLURE_LAUNCH_NAME (if set, used verbatim instead of computed name)"
+        required: false
 
 env:
   ALLURE_ENDPOINT: https://upscaleai.testops.cloud
@@ -136,28 +149,36 @@ jobs:
 
           # Launch tags for this nightly run
           # Note: this workflow creates the shared launch; child workflows only upload into it.
-          IFS=',' read -ra TESTBED_ARRAY <<< "${{ inputs.testbed }}"
-          declare -A topo_seen
-          topo_tags=()
-          for tb in "${TESTBED_ARRAY[@]}"; do
-            tb=$(echo "$tb" | xargs)
-            [[ -z "$tb" ]] && continue
-            topo=$(cut -d "_" -f 3 <<< "$tb")
-            topo_tag=$(echo "$topo" | sed 's/^t/T/')
-            if [[ -n "$topo_tag" && -z "${topo_seen[$topo_tag]+x}" ]]; then
-              topo_seen[$topo_tag]=1
-              topo_tags+=("topo:${topo_tag}")
-            fi
-          done
-          topo_tags_csv=$(IFS=','; echo "${topo_tags[*]}")
-          base_tags="sonic_version:${{ inputs.sonic_version }},port_count:${{ inputs.port_count }}"
-          if [ -n "$topo_tags_csv" ]; then
-            export ALLURE_LAUNCH_TAGS="${topo_tags_csv},${base_tags}"
+          if [ -n "${{ inputs.ALLURE_LAUNCH_TAG }}" ]; then
+            export ALLURE_LAUNCH_TAGS="${{ inputs.ALLURE_LAUNCH_TAG }}"
           else
-            export ALLURE_LAUNCH_TAGS="${base_tags}"
+            IFS=',' read -ra TESTBED_ARRAY <<< "${{ inputs.testbed }}"
+            declare -A topo_seen
+            topo_tags=()
+            for tb in "${TESTBED_ARRAY[@]}"; do
+              tb=$(echo "$tb" | xargs)
+              [[ -z "$tb" ]] && continue
+              topo=$(cut -d "_" -f 3 <<< "$tb")
+              topo_tag=$(echo "$topo" | sed 's/^t/T/')
+              if [[ -n "$topo_tag" && -z "${topo_seen[$topo_tag]+x}" ]]; then
+                topo_seen[$topo_tag]=1
+                topo_tags+=("topo:${topo_tag}")
+              fi
+            done
+            topo_tags_csv=$(IFS=','; echo "${topo_tags[*]}")
+            base_tags="sonic_version:${{ inputs.sonic_version }},port_count:${{ inputs.port_count }}"
+            if [ -n "$topo_tags_csv" ]; then
+              export ALLURE_LAUNCH_TAGS="${topo_tags_csv},${base_tags}"
+            else
+              export ALLURE_LAUNCH_TAGS="${base_tags}"
+            fi
           fi
 
-          export ALLURE_LAUNCH_NAME="Nightly : ${TOPO_LABEL} : ${suites_label} : ${LAUNCH_DATE}"
+          if [ -n "${{ inputs.ALLURE_LAUNCH_NAME }}" ]; then
+            export ALLURE_LAUNCH_NAME="${{ inputs.ALLURE_LAUNCH_NAME }}"
+          else
+            export ALLURE_LAUNCH_NAME="Nightly : ${TOPO_LABEL} : ${suites_label} : ${LAUNCH_DATE}"
+          fi
           echo "Allure launch name: $ALLURE_LAUNCH_NAME"
           allurectl job-run start
           export $(allurectl job-run env)
@@ -499,6 +520,7 @@ jobs:
       test_files: ${{ matrix.test_files }}
       runner_label: ${{ matrix.runner_label }}
       port_count: ${{ inputs.port_count }}
+      skip_topo: ${{ inputs.skip_topo }}
       ALLURE_ENV: ${{ needs.setup-shared-allure.outputs.allure-env }}
       sonic_version: ${{ inputs.sonic_version }}
     secrets:

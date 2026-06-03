@@ -1,0 +1,2 @@
+usermgmt/ucli/test_ucli_usermgmt.py
+usermgmt/ucli/test_ucli_aaa.py

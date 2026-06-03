@@ -52,6 +52,19 @@ on:
         type: string
         description: "Port count descriptor for Allure launch title (e.g. 32-Port, 64-Port)"
         required: false
+      skip_topo:
+        type: boolean
+        description: "Skip remove-topo and add-topo steps (topology assumed already deployed)"
+        required: false
+        default: false
+      ALLURE_LAUNCH_TAG:
+        type: string
+        description: "Override ALLURE_LAUNCH_TAGS (if set, used verbatim instead of computed tags)"
+        required: false
+      ALLURE_LAUNCH_NAME:
+        type: string
+        description: "Override ALLURE_LAUNCH_NAME (if set, used verbatim instead of computed name)"
+        required: false
     secrets:
       ALLURE_TOKEN:
         required: true
@@ -137,6 +150,17 @@ on:
         description: "Port count descriptor for Allure launch title (e.g. 32-Port, 64-Port)"
         default: "32-Port"
         required: false
+      skip_topo:
+        type: boolean
+        description: "Skip remove-topo and add-topo steps (topology assumed already deployed)"
+        default: false
+        required: false
+      ALLURE_LAUNCH_TAG:
+        description: "Override ALLURE_LAUNCH_TAGS (if set, used verbatim instead of computed tags)"
+        required: false
+      ALLURE_LAUNCH_NAME:
+        description: "Override ALLURE_LAUNCH_NAME (if set, used verbatim instead of computed name)"
+        required: false
 env:
   SSH_OPTS: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   ALLURE_PROJECT_ID: 78
@@ -155,6 +179,7 @@ jobs:
       test_files: ${{ inputs.test_files || github.event.inputs.test_files || github.event.client_payload.test_files || 'base_suite_tests.txt,mgmt_suite_tests.txt,l2_suite_tests.txt,l3_suite_tests.txt' }}
       runner_label: ${{ inputs.runner_label || github.event.inputs.runner_label }}
       port_count: ${{ inputs.port_count || github.event.inputs.port_count || '32-Port' }}
+      skip_topo: ${{ inputs.skip_topo == true || github.event.inputs.skip_topo == 'true' }}
     steps:
       - name: Set outputs
         run: echo "Normalizing inputs"
@@ -231,9 +256,17 @@ jobs:
             [ -z "$suites_label" ] && suites_label="Tests"
 
             # Allure launch tags (applied when the launch/job-run is created)
-            export ALLURE_LAUNCH_TAGS="topo:${TOPO_LABEL},sonic_version:${{ inputs.sonic_version }},port_count:${{ needs.normalize-inputs.outputs.port_count }}"
+            if [ -n "${{ inputs.ALLURE_LAUNCH_TAG }}" ]; then
+              export ALLURE_LAUNCH_TAGS="${{ inputs.ALLURE_LAUNCH_TAG }}"
+            else
+              export ALLURE_LAUNCH_TAGS="topo:${TOPO_LABEL},sonic_version:${{ inputs.sonic_version }},port_count:${{ needs.normalize-inputs.outputs.port_count }}"
+            fi
 
-            export ALLURE_LAUNCH_NAME="Nightly : ${TOPO_LABEL} : ${suites_label} : ${LAUNCH_DATE}"
+            if [ -n "${{ inputs.ALLURE_LAUNCH_NAME }}" ]; then
+              export ALLURE_LAUNCH_NAME="${{ inputs.ALLURE_LAUNCH_NAME }}"
+            else
+              export ALLURE_LAUNCH_NAME="Nightly : ${TOPO_LABEL} : ${suites_label} : ${LAUNCH_DATE}"
+            fi
             echo "Allure launch name: $ALLURE_LAUNCH_NAME"
             allurectl job-run start
             export $(allurectl job-run env)
@@ -256,6 +289,7 @@ jobs:
       SWITCH_USER: ${{ needs.normalize-inputs.outputs.switch_user }}
       ANSIBLE_INVENTORY: ${{ needs.normalize-inputs.outputs.ansible_inventory }}
       TEST_FILES: ${{ needs.normalize-inputs.outputs.test_files }}
+      SKIP_TOPO: ${{ needs.normalize-inputs.outputs.skip_topo }}
     steps:
       # Re-reserve the testbed at the start of setup. The standalone reserve-testbed
       # job in the parent workflow can race with a prior workflow's release-testbed
@@ -416,27 +450,31 @@ jobs:
           echo "Install public key on remote server"
           cat ./id_rsa.pub | /usr/bin/sshpass -p ${{ secrets.TESTSERVER_PWD }} ssh ${{ env.SSH_OPTS }} ${USER}@${DEFAULT_IP} "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
 
-          echo "Remove T0 and T1 topo"
-          testbed=${{ env.TESTBED }}
-          if [ "${TOPO}" == "t1" ]; then
-              testbed="${testbed},${testbed/t1/t0}"
-          elif [ "${TOPO}" == "t0" ]; then
-              testbed="${testbed},${testbed/t0/t1}"
-          elif [ "${TOPO}" == "t1-lag" ]; then
-              testbed="${testbed},${testbed/t1-lag/t0},${testbed/t1-lag/t1}"
-          elif [ "${TOPO}" == "t1-64" ]; then
-              testbed="${testbed},${testbed/t1-64/t0},${testbed/t1-64/t1},${testbed/t1-64/t0-64}"
-          elif [ "${TOPO}" == "t0-64" ]; then
-              testbed="${testbed},${testbed/t0-64/t0},${testbed/t0-64/t1},${testbed/t0-64/t1-64}"
-          fi
-          remove_topo_filelist=($(echo "${testbed}" | tr "," "\n"))
-          for tb_name in ${remove_topo_filelist[@]}; do
-            echo "Running remove-topo for ${tb_name}"
-            docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${tb_name} ./password.txt -vvvv"
-          done
+          if [ "${SKIP_TOPO}" != "true" ]; then
+            echo "Remove T0 and T1 topo"
+            testbed=${{ env.TESTBED }}
+            if [ "${TOPO}" == "t1" ]; then
+                testbed="${testbed},${testbed/t1/t0}"
+            elif [ "${TOPO}" == "t0" ]; then
+                testbed="${testbed},${testbed/t0/t1}"
+            elif [ "${TOPO}" == "t1-lag" ]; then
+                testbed="${testbed},${testbed/t1-lag/t0},${testbed/t1-lag/t1}"
+            elif [ "${TOPO}" == "t1-64" ]; then
+                testbed="${testbed},${testbed/t1-64/t0},${testbed/t1-64/t1},${testbed/t1-64/t0-64}"
+            elif [ "${TOPO}" == "t0-64" ]; then
+                testbed="${testbed},${testbed/t0-64/t0},${testbed/t0-64/t1},${testbed/t0-64/t1-64}"
+            fi
+            remove_topo_filelist=($(echo "${testbed}" | tr "," "\n"))
+            for tb_name in ${remove_topo_filelist[@]}; do
+              echo "Running remove-topo for ${tb_name}"
+              docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${tb_name} ./password.txt -vvvv"
+            done
 
-          echo "Add topo"
-          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
+            echo "Add topo"
+            docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
+          else
+            echo "Skipping remove-topo and add-topo (skip_topo=true)"
+          fi
           echo "Deploy minigraph"
           docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
 
@@ -525,6 +563,7 @@ jobs:
       SWITCH_USER: ${{ needs.normalize-inputs.outputs.switch_user }}
       ANSIBLE_INVENTORY: ${{ needs.normalize-inputs.outputs.ansible_inventory }}
       TEST_FILES: ${{ needs.normalize-inputs.outputs.test_files }}
+      SKIP_TOPO: ${{ needs.normalize-inputs.outputs.skip_topo }}
     steps:
       - name: Export env vars
         run: |
@@ -646,12 +685,16 @@ jobs:
                 fi
 
                 if [[ "$should_skip_cleanup" == "false" ]]; then
-                    echo "Run cleanup between suites"
-                    echo "Remove topo"
-                    docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${{ env.TESTBED }} ./password.txt -vvvv"
+                    if [ "${SKIP_TOPO}" != "true" ]; then
+                      echo "Run cleanup between suites"
+                      echo "Remove topo"
+                      docker exec -u ${USER} ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos remove-topo ${{ env.TESTBED }} ./password.txt -vvvv"
 
-                    echo "Add topo"
-                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
+                      echo "Add topo"
+                      docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
+                    else
+                      echo "Skipping remove-topo and add-topo between suites (skip_topo=true)"
+                    fi
                     echo "Deploy minigraph"
                     docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
                 fi
