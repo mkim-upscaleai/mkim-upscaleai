@@ -327,6 +327,7 @@ jobs:
           echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-${TOPO}" >> $GITHUB_ENV
 
       - name: Stop ${{ env.SONIC_MGMT_CONTAINER }} docker container
+        if: ${{ env.SKIP_TOPO != 'true' }}
         run: docker stop ${{ env.SONIC_MGMT_CONTAINER }} && docker rm ${{ env.SONIC_MGMT_CONTAINER }} || true
 
       - name: Checkout sonic-mgmt repo
@@ -366,6 +367,7 @@ jobs:
           echo "Resolved DUT ansible_host(s): $IPS_CSV"
 
       - name: Setup test environment
+        if: ${{ env.SKIP_TOPO != 'true' }}
         run: |
           echo "HOST=${HOST}"
           echo "SWITCH_IPS=${SWITCH_IPS:-<unset>}"
@@ -540,6 +542,7 @@ jobs:
 
       - name: Set RPC pull status output
         id: rpc-pull-status
+        if: ${{ env.SKIP_TOPO != 'true' }}
         run: |
           RPC_STATUS=$(cat /tmp/rpc_pull_status.txt)
           echo "rpc_pull_success=$RPC_STATUS" >> $GITHUB_OUTPUT
@@ -553,7 +556,7 @@ jobs:
           ${{ secrets.SLACK_WEBHOOK_URL }}
 
   run-test-and-generate-report:
-    needs: [normalize-inputs, setup]
+    needs: [normalize-inputs, setup-allure, setup]
     timeout-minutes: 7200
     runs-on: ${{ needs.normalize-inputs.outputs.runner_label }}
     env:
@@ -604,6 +607,17 @@ jobs:
           done <<< "$(echo "$HOST_STR" | tr ',' '\n')"
           echo "SWITCH_IPS=$IPS_CSV" >> "$GITHUB_ENV"
           echo "SWITCH_IP=$(echo "$IPS_CSV" | cut -d',' -f1)" >> "$GITHUB_ENV"
+
+      - name: Configure Allure environment
+        run: |
+          # Decode the shared Allure job-run env (ALLURE_JOB_RUN_ID, ALLURE_LAUNCH_ID,
+          # ALLURE_USERNAME, ...) created by the setup-allure job. Written to /tmp/allure-env
+          # so the docker exec calls below can refresh a (possibly reused) container's Allure
+          # context via --env-file, and exported to $GITHUB_ENV for any host-side steps.
+          echo "${{ needs.setup-allure.outputs.allure-env }}" | base64 -d > /tmp/allure-env
+          echo "Echoing /tmp/allure-env"
+          cat /tmp/allure-env
+          cat /tmp/allure-env >> "$GITHUB_ENV"
 
       - name: Run tests
         run: |
@@ -668,7 +682,13 @@ jobs:
             fi
 
             docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && find allure-results/${suite_name} -type f -name '*-attachment.txt' -size +2M -delete" || true
-            docker exec ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/tests && /usr/local/bin/allurectl upload allure-results/${suite_name}" || true
+            docker exec \
+              --env-file /tmp/allure-env \
+              -e ALLURE_ENDPOINT=${{ env.ALLURE_ENDPOINT }} \
+              -e ALLURE_PROJECT_ID=${{ env.ALLURE_PROJECT_ID }} \
+              -e ALLURE_TOKEN=${{ secrets.ALLURE_TOKEN }} \
+              ${{ env.SONIC_MGMT_CONTAINER }} \
+              bash -c "cd /var/AzDevOps/tests && /usr/local/bin/allurectl upload allure-results/${suite_name}" || true
             echo "[$(date +'%Y-%m-%d %H:%M:%S')] Uploaded results for ${file}" >> test_status.json
 
             if [[ $i -lt $((num_files - 1)) ]]; then
@@ -697,11 +717,12 @@ jobs:
 
                       echo "Add topo"
                       docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{ env.TESTBEDFILE }} -m ${{ env.ANSIBLE_INVENTORY }} -k ceos add-topo ${{ env.TESTBED }} ./password.txt -vvvv -e ptf_imagetag=${{ inputs.sonic_version }}"
+
+                      echo "Deploy minigraph"
+                      docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
                     else
-                      echo "Skipping remove-topo and add-topo between suites (skip_topo=true)"
+                      echo "Skipping remove-topo, add-topo, and deploy-mg between suites (skip_topo=true)"
                     fi
-                    echo "Deploy minigraph"
-                    docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "cd /var/AzDevOps/ansible && ./testbed-cli.sh -t ${{env.TESTBEDFILE}} deploy-mg ${{ env.TESTBED }} ${{ env.ANSIBLE_INVENTORY }} ./password.txt -e use_ptf_tacacs_server=false -vvv"
                 fi
             fi
           done
