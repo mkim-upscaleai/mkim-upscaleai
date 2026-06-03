@@ -607,7 +607,10 @@ jobs:
 
       - name: Run tests
         run: |
-          filelist=($(echo ${{ env.TEST_FILES }} | tr "," "\n"))
+          # Strip CR (\r) before splitting: a stray carriage return from a CRLF-pasted
+          # test_files input survives word-splitting (IFS has no \r) and would otherwise
+          # glue onto the filename (e.g. "certmgmt_tests.txt\r"), making run_tests.sh fail.
+          filelist=($(echo "${{ env.TEST_FILES }}" | tr -d '\r' | tr "," "\n"))
 
           rpc_pull_success="${{ needs.setup.outputs.rpc_pull_success }}"
           if [ "$rpc_pull_success" == "false" ]; then
@@ -630,6 +633,8 @@ jobs:
 
           for i in "${!filelist[@]}"; do
             file="${filelist[$i]}"
+            # Defensive: drop any stray CR/newline/tab/space from the file name.
+            file="${file//[$'\r\n\t ']/}"
             parseout=($(echo ${file} | tr "." "\n"))
             suite_name="${parseout[0]}"
             # Strip trailing _<digits> so that all numbered splits of a suite

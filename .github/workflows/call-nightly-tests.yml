@@ -256,7 +256,9 @@ jobs:
           IFS=',' read -ra TESTBEDS <<< "${{ needs.check-testbed-availability.outputs.available_testbeds }}"
           IFS=',' read -ra FANOUTIPS <<< "${{ needs.check-testbed-availability.outputs.available_fanoutips }}"
           IFS=',' read -ra RUNNER_LABELS <<< "${{ needs.check-testbed-availability.outputs.available_runner_labels }}"
-          IFS=',' read -ra TEST_FILES <<< "${{ inputs.test_files }}"
+          # Strip CR (\r) up front so a CRLF-pasted test_files input can't leave a
+          # carriage return glued to a file name downstream (xargs/word-splitting do not remove \r).
+          IFS=',' read -ra TEST_FILES <<< "$(echo "${{ inputs.test_files }}" | tr -d '\r')"
           INV_RAW="${{ inputs.ansible_inventory }}"
           INV_RAW=$(echo "$INV_RAW" | xargs)
           IFS=',' read -ra INV_ARR <<< "$INV_RAW"
@@ -337,7 +339,9 @@ jobs:
           IFS=',' read -ra TESTBEDS <<< "${{ needs.check-testbed-availability.outputs.available_testbeds }}"
           IFS=',' read -ra FANOUTIPS <<< "${{ needs.check-testbed-availability.outputs.available_fanoutips }}"
           IFS=',' read -ra RUNNER_LABELS <<< "${{ needs.check-testbed-availability.outputs.available_runner_labels }}"
-          IFS=',' read -ra TEST_FILES <<< "${{ inputs.test_files }}"
+          # Strip CR (\r) up front so a CRLF-pasted test_files input can't leave a
+          # carriage return glued to a file name downstream (xargs/word-splitting do not remove \r).
+          IFS=',' read -ra TEST_FILES <<< "$(echo "${{ inputs.test_files }}" | tr -d '\r')"
           INV_RAW="${{ inputs.ansible_inventory }}"
           INV_RAW=$(echo "$INV_RAW" | xargs)
           IFS=',' read -ra INV_ARR <<< "$INV_RAW"
