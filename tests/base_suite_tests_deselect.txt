@@ -335,6 +335,9 @@ snmp/test_snmp_phy_entity.py::test_turn_off_psu_and_check_psu_info
 # Will revisit, skipped because of https://github.com/sonic-net/sonic-mgmt/issues/16997
 syslog/test_syslog_source_ip.py
 
+# REVISIT skipping because it is turning syslog into directory
+syslog/test_logrotate.py
+
 # only for supervisor node
 snmp/test_snmp_phy_entity.py::test_psu_info
 telemetry/test_telemetry_poll.py::test_poll_mode_default_route_supervisor
