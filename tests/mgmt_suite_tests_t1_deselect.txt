@@ -118,3 +118,6 @@ restapi/test_restapi.py
 # Only supported on cisco 8102, 8101 and mlnx 4600C T1 https://github.com/sonic-net/sonic-mgmt/pull/14282
 # Will try for T1 topo if this platform supports it
 restapi/test_restapi_vxlan_ecmp.py
+
+# Skipped: ACL inner src MAC rewrite requires t0 topology and cisco-8000 ASIC
+acl/test_src_mac_rewrite.py

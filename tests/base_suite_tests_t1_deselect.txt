@@ -61,6 +61,15 @@ dash/test_relaxed_match_negative.py
 dash/test_config_churn.py
 dash/test_fnic.py
 dash/test_plnsg.py
+dash/test_dash_privatelink_redirect.py
+dash/test_eni_based_forwarding.py
+dash/test_fnic_basic.py
+
+# usystest running separately
+dns/ucli/test_ucli_dns.py
+ntp/ucli/test_ucli_ntp.py
+usermgmt/ucli/test_ucli_aaa.py
+usermgmt/ucli/test_ucli_usermgmt.py
 
 # Static ip configured, will not use dynamic ip
 dns/static_dns/test_static_dns.py::TestDynamicMgmtPortIP

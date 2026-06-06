@@ -11,6 +11,5 @@ test_procdockerstatsd.py
 testbed_setup
 transceiver
 upgrade_path
-usermgmt
 wol
 zmq

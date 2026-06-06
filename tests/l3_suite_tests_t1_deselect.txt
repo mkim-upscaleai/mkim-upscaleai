@@ -214,3 +214,13 @@ ip/test_mgmt_ipv6_only.py::test_syslog_ipv6_only[fd82:b34f:cc99::100-None]
 
 ### TEMPORARY Skip - Causes race condition
 route/test_default_route.py
+
+# Skipped: Cisco ASIC mismatch on this testbed
+vxlan/test_scale_ecmp.py
+vxlan/test_vxlan_tunnel_route_scale.py
+
+# Skipped: tests_mark_conditions.yaml skips them, due to a known issue (https://github.com/sonic-net/sonic-buildimage/issues/23777)
+bmp/test_bmp_configdb.py
+bmp/test_bmp_redis_instance.py
+bmp/test_bmp_statedb.py
+bmp/test_docker_restart.py
