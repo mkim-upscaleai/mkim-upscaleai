@@ -453,18 +453,20 @@ jobs:
           cat ./id_rsa.pub | /usr/bin/sshpass -p ${{ secrets.TESTSERVER_PWD }} ssh ${{ env.SSH_OPTS }} ${USER}@${DEFAULT_IP} "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
 
           if [ "${SKIP_TOPO}" != "true" ]; then
-            echo "Remove T0 and T1 topo"
+            echo "Remove T0, T1, and T1-lag topo"
             testbed=${{ env.TESTBED }}
             if [ "${TOPO}" == "t1" ]; then
-                testbed="${testbed},${testbed/t1/t0}"
+                testbed="${testbed},${testbed/t1/t0},${testbed/t1/t1-lag}"
             elif [ "${TOPO}" == "t0" ]; then
-                testbed="${testbed},${testbed/t0/t1}"
+                testbed="${testbed},${testbed/t0/t1},${testbed/t0/t1-lag}"
             elif [ "${TOPO}" == "t1-lag" ]; then
                 testbed="${testbed},${testbed/t1-lag/t0},${testbed/t1-lag/t1}"
             elif [ "${TOPO}" == "t1-64" ]; then
-                testbed="${testbed},${testbed/t1-64/t0},${testbed/t1-64/t1},${testbed/t1-64/t0-64}"
+                testbed="${testbed},${testbed/t1-64/t0},${testbed/t1-64/t1},${testbed/t1-64/t0-64},${testbed/t1-64/t1-64-lag}"
             elif [ "${TOPO}" == "t0-64" ]; then
-                testbed="${testbed},${testbed/t0-64/t0},${testbed/t0-64/t1},${testbed/t0-64/t1-64}"
+                testbed="${testbed},${testbed/t0-64/t0},${testbed/t0-64/t1},${testbed/t0-64/t1-64},${testbed/t0-64/t1-64-lag}"
+            elif [ "${TOPO}" == "t1-64-lag" ]; then
+                testbed="${testbed},${testbed/t1-64-lag/t0},${testbed/t1-64-lag/t1},${testbed/t1-64-lag/t0-64},${testbed/t1-64-lag/t1-64}"
             fi
             remove_topo_filelist=($(echo "${testbed}" | tr "," "\n"))
             for tb_name in ${remove_topo_filelist[@]}; do
