@@ -38,6 +38,12 @@ container_hardening/test_container_hardening.py::test_container_privileged[*-Non
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-syncd]
 container_hardening/test_container_hardening.py::test_container_privileged[*-None-telemetry]
 
+container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-gnmi]
+container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-pmon]
+container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-sflow]
+container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-syncd]
+container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-telemetry]
+
 # Will need to revisit to support
 container_upgrade
 
