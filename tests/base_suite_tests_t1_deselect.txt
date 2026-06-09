@@ -122,10 +122,6 @@ generic_config_updater/test_multiasic_addcluster.py
 generic_config_updater/test_multiasic_idf.py
 generic_config_updater/test_multiasic_linkcrc.py
 
-# Packet trimming not supported in 202505 image
-generic_config_updater/test_packet_trimming_config_symmetric.py
-generic_config_updater/test_packet_trimming_config_asymmetric.py
-
 # For ('t0', 'm0', 'm1')
 generic_config_updater/test_portchannel_interface.py
 
@@ -174,17 +170,11 @@ kubesonic
 # For PTP topology
 layer1/test_port_error.py
 
-# Temporary: Skipping for 100G mode, calculations for fec error are not working (issue in counters db)
-layer1/test_fec_error.py
-
 # Test is not supported for 202012 and newer image versions!
 monit/test_monit_status.py::test_monit_reporting_message
 
 # Not multi asic
 override_config_table/test_override_config_table_masic.py::test_load_minigraph_with_golden_config
-
-# Packet-trimming tests are only supported on certain Mellanox SN5640 and Arista 7060X6 SKUs, may not be available on spectrum 4
-packet_trimming
 
 # Need to test if this applies to our topology
 performance_meter
