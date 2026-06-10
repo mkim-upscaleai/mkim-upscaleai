@@ -43,6 +43,7 @@ container_hardening/test_container_hardening.py::test_container_block_device_mou
 container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-sflow]
 container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-syncd]
 container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-telemetry]
+container_hardening/test_container_hardening.py::test_container_block_device_mounted[*-None-telemetry-hf]
 
 # Will need to revisit to support
 container_upgrade
@@ -118,8 +119,14 @@ generic_config_updater/test_pg_headroom_update.py
 # From test_mark_conditions.yaml: The test refers to a stale implementation of GNOI.System.Reboot.
 gnmi/test_gnmi_configdb.py::test_gnmi_configdb_full_01
 
+# From test_mark_conditions.yaml: gnmic binary is being removed from docker-ptf to reduce attack surface
+gnmi/test_gnmic.py::test_gnmic_capabilities
+
 # From test_mark_conditions.yaml: Test noisy due to restart issue not relevant to GNOI. Disabling them to rewrite
 gnmi/test_gnoi_killprocess.py
+
+# UDS socket /var/run/gnmi/gnmi.sock does not exist on this device
+gnmi/test_gnoi_system.py::test_system_time[uds]
 
 # Only on smartswitch
 gnmi/test_gnmi_smartswitch.py::test_gnmi_appldb_01
