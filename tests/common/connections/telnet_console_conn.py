@@ -21,8 +21,35 @@ class TelnetConsoleConn(BaseConsoleConn):
         kwargs['device_type'] = "_telnet"
         super(TelnetConsoleConn, self).__init__(**kwargs)
 
+    # Matches ANSI/VT100 CSI sequences and single-char C1 codes (e.g. \x1bE NEL).
+    _ANSI_ESCAPE = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
+    def read_channel(self):
+        """Strip ANSI/VT100 escape sequences from raw channel output.
+
+        The console terminal server injects \x1bE (NEL) mid-word when a command
+        echo wraps at column 80, which breaks netmiko's command_echo_read pattern
+        match and causes ReadTimeout. Stripping here keeps the byte stream clean.
+        """
+        output = super(TelnetConsoleConn, self).read_channel()
+        return self._ANSI_ESCAPE.sub('', output)
+
     def session_preparation(self):
         super(TelnetConsoleConn, self).session_preparation()
+        # SONiC uses KLISH (sonic-cli) as the console login shell, which does not
+        # support Linux shell commands. Detect it by the absence of "user@host" in
+        # base_prompt (netmiko strips the trailing '#'/'$', so don't check for it).
+        clean_prompt = self._ANSI_ESCAPE.sub('', self.base_prompt).strip()
+        if '@' not in clean_prompt:
+            # KLISH detected — drop to bash so send_command works normally.
+            self.write_channel("bash" + self.RETURN)
+            self.read_until_pattern(pattern=r"@[^@\n]*[$#]",
+                                    re_flags=re.MULTILINE, read_timeout=15)
+            self.set_base_prompt()
+
+        # Set a wide terminal column count to prevent TTY-level line wrapping.
+        self.write_channel("stty cols 200" + self.RETURN)
+        self.read_until_pattern(pattern=r"[$#]", read_timeout=10)
 
     def telnet_login(
         self,
