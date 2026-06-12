@@ -393,3 +393,47 @@ telemetry/test_telemetry_show_cli.py::test_telemetry_show_non_get
 # No PTF mapping for DUT port Ethernet64 in this testbed topology
 counter/test_xon_xoff.py::test_xon_xoff_does_not_increase_rx_drop
 
+###################################################################
+### Hash tests: always-skipped parametrized variants
+### Param format: algorithm-field-outer_ip_version-inner_ip_version-encap_type
+### (test_reboot appends a reboot_type at the end, hence the separate patterns)
+
+# DST_MAC, ETHERTYPE, VLAN_ID are unconditionally skipped in all ECMP-path tests
+# via skip_unsupported_field_for_ecmp_test (these fields require L2/LAG topology)
+hash/test_generic_hash.py::test_ecmp_hash[*-DST_MAC-*-None-None]
+hash/test_generic_hash.py::test_ecmp_hash[*-ETHERTYPE-*-None-None]
+hash/test_generic_hash.py::test_ecmp_hash[*-VLAN_ID-*-None-None]
+hash/test_generic_hash.py::test_ecmp_and_lag_hash[*-DST_MAC-*-None-None]
+hash/test_generic_hash.py::test_ecmp_and_lag_hash[*-ETHERTYPE-*-None-None]
+hash/test_generic_hash.py::test_ecmp_and_lag_hash[*-VLAN_ID-*-None-None]
+hash/test_generic_hash.py::test_nexthop_flap[*-DST_MAC-*-None-None]
+hash/test_generic_hash.py::test_nexthop_flap[*-ETHERTYPE-*-None-None]
+hash/test_generic_hash.py::test_nexthop_flap[*-VLAN_ID-*-None-None]
+hash/test_generic_hash.py::test_reboot[*-DST_MAC-*-None-None-*]
+hash/test_generic_hash.py::test_reboot[*-ETHERTYPE-*-None-None-*]
+hash/test_generic_hash.py::test_reboot[*-VLAN_ID-*-None-None-*]
+
+# INNER_SRC_MAC, INNER_DST_MAC, INNER_ETHERTYPE with ipinip are unconditionally skipped
+# via skip_unsupported_packet — IP-in-IP has no inner Ethernet header; vxlan/nvgre variants are valid
+hash/test_generic_hash.py::test_ecmp_hash[*-INNER_SRC_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_ecmp_hash[*-INNER_DST_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_ecmp_hash[*-INNER_ETHERTYPE-*-None-ipinip]
+hash/test_generic_hash.py::test_ecmp_and_lag_hash[*-INNER_SRC_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_ecmp_and_lag_hash[*-INNER_DST_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_ecmp_and_lag_hash[*-INNER_ETHERTYPE-*-None-ipinip]
+hash/test_generic_hash.py::test_nexthop_flap[*-INNER_SRC_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_nexthop_flap[*-INNER_DST_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_nexthop_flap[*-INNER_ETHERTYPE-*-None-ipinip]
+hash/test_generic_hash.py::test_reboot[*-INNER_SRC_MAC-*-*-ipinip-*]
+hash/test_generic_hash.py::test_reboot[*-INNER_DST_MAC-*-*-ipinip-*]
+hash/test_generic_hash.py::test_reboot[*-INNER_ETHERTYPE-*-None-ipinip-*]
+hash/test_generic_hash.py::test_lag_hash[*-INNER_SRC_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_lag_hash[*-INNER_DST_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_lag_hash[*-INNER_ETHERTYPE-*-None-ipinip]
+hash/test_generic_hash.py::test_lag_member_flap[*-INNER_SRC_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_lag_member_flap[*-INNER_DST_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_lag_member_flap[*-INNER_ETHERTYPE-*-None-ipinip]
+hash/test_generic_hash.py::test_lag_member_remove_add[*-INNER_SRC_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_lag_member_remove_add[*-INNER_DST_MAC-*-*-ipinip]
+hash/test_generic_hash.py::test_lag_member_remove_add[*-INNER_ETHERTYPE-*-None-ipinip]
+
