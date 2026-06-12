@@ -509,3 +509,6 @@ r, ".* ERR auditd.*: auditd queue full reporting limit reached - ending dropped 
 # ctrmgrd k8s join warnings (old k8s version incompatibility with Docker 28.x)
 r, ".* ERR ctrmgrd\.py: Refer file .* for troubleshooting tips.*"
 r, ".* ERR ctrmgrd\.py:.*\[WARNING SystemVerification\]:.*Docker version is not on the list of validated versions.*"
+
+# teamsyncd transient errors during LAG initialization (ifindex churn on test setup/teardown)
+r, ".* ERR teamd#teamsyncd: :- addLag: addLag: Failed to initialize team handler for LAG PortChannel\d+ \(ifindex \d+\): 99:Unable to initialize team socket: Cannot assign requested address\. Waiting for next RTM_NEWLINK\."
