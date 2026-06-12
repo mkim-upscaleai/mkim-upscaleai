@@ -40,7 +40,8 @@ CHECK_ITEMS = [
     'check_mux_simulator',
     'check_orchagent_usage',
     'check_bfd_up_count',
-    'check_mac_entry_count']
+    'check_mac_entry_count',
+    'check_container_fatal_processes']
 
 __all__ = CHECK_ITEMS
 
@@ -1366,6 +1367,89 @@ def check_mac_entry_count(duthosts):
                 executor.submit(_check_mac_entry_count_on_asic, asic, dut, check_result)
 
         logger.info("Done checking MAC entry count on {}".format(dut.hostname))
+        results[dut.hostname] = check_result
+
+    return _check
+
+
+@pytest.fixture(scope="module")
+def check_container_fatal_processes(duthosts):
+    """Check that no supervisord-managed process in any running Docker container is in FATAL state.
+
+    Unlike check_processes (which only flags critical processes that are not RUNNING),
+    this check catches ANY process in FATAL state regardless of whether it is in the
+    critical_processes list.
+    """
+    def _check(*args, **kwargs):
+        init_result = {"failed": False, "check_item": "container_fatal_processes"}
+        result = parallel_run(
+            _check_fatal_on_dut, args, kwargs, duthosts, timeout=120, init_result=init_result
+        )
+        return list(result.values())
+
+    @reset_ansible_local_tmp
+    def _check_fatal_on_dut(*args, **kwargs):
+        dut = kwargs['node']
+        results = kwargs['results']
+        logger.info("Checking for FATAL processes in containers on %s..." % dut.hostname)
+
+        check_result = {
+            "failed": False,
+            "check_item": "container_fatal_processes",
+            "host": dut.hostname,
+            "fatal_processes": {}
+        }
+
+        # Get list of running containers
+        try:
+            running = dut.shell(
+                r"docker ps --filter status=running --format \{\{.Names\}\}",
+                module_ignore_errors=True
+            )
+            if running.get('rc', 0) != 0:
+                logger.error("'docker ps' failed on %s (rc=%d): %s"
+                             % (dut.hostname, running['rc'], running.get('stderr', '')))
+                check_result["failed"] = True
+                results[dut.hostname] = check_result
+                return
+            containers = running.get('stdout_lines', [])
+        except Exception as e:
+            logger.error("Failed to list running containers on %s: %s" % (dut.hostname, repr(e)))
+            check_result["failed"] = True
+            results[dut.hostname] = check_result
+            return
+
+        if not containers:
+            logger.error("No running containers on %s — expected at least database" % dut.hostname)
+            check_result["failed"] = True
+            results[dut.hostname] = check_result
+            return
+
+        # Run supervisorctl status in all containers in batch
+        cmds = ['docker exec {} supervisorctl status'.format(c) for c in containers]
+        cmd_results = dut.shell_cmds(
+            cmds=cmds, continue_on_fail=True, module_ignore_errors=True, timeout=60
+        )['results']
+
+        for res in cmd_results:
+            container = res['cmd'].split()[2]
+            fatal_procs = []
+            for line in res.get('stdout_lines', []):
+                parts = re.split(r'\s+', line, 2)
+                if len(parts) >= 2 and parts[1] == 'FATAL':
+                    fatal_procs.append(parts[0])
+
+            if fatal_procs:
+                check_result["fatal_processes"][container] = fatal_procs
+                check_result["failed"] = True
+                logger.error(
+                    "FATAL processes in container '%s' on %s: %s"
+                    % (container, dut.hostname, fatal_procs)
+                )
+
+        if not check_result["failed"]:
+            logger.info("No FATAL processes found on %s" % dut.hostname)
+
         results[dut.hostname] = check_result
 
     return _check
