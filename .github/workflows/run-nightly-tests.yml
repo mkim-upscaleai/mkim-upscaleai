@@ -166,6 +166,7 @@ env:
   ALLURE_PROJECT_ID: 78
   ALLURE_ENDPOINT: https://upscaleai.testops.cloud
   ALLURE_RESULTS: tests/allure-results
+  RESV_IP: ${{ vars.TESTBED_RESERVATION_SYSTEM_IP || '10.9.100.154' }}
 
 jobs:
   normalize-inputs:
@@ -304,7 +305,7 @@ jobs:
             exit 0
           fi
           echo "Reserving testbed ${TESTBED_ID} (host=${{ env.HOST }}) on testbed reservation system"
-          curl -sS --fail --connect-timeout 5 --max-time 30 -X POST "http://192.168.218.28:8001/api/reserve/testbed/${TESTBED_ID}/force" \
+          curl -sS --fail --connect-timeout 5 --max-time 30 -X POST "http://${{ env.RESV_IP }}:8001/api/reserve/testbed/${TESTBED_ID}/force" \
             -H "Content-Type: application/json" \
             -d '{"user":"sonic-mgmt","duration_hours":35,"scope":"all","reason":"sonic-mgmt nightly testing"}' \
             || { echo "ERROR: reserve API call failed for testbed ${TESTBED_ID}"; exit 1; }
