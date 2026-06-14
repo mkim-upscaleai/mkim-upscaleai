@@ -314,18 +314,18 @@ all:
           ansible_ssh_pass: "YourPaSsWoRd"
           ansible_altpassword: "YourPaSsWoRd"
           sonicadmin_password: "YourPaSsWoRd"
-          hwsku: Mellanox-SN5610-O64S2
-          model: SN5610
+          hwsku: 6540-0642-OSEU-AFA
+          model: 6540
           serial: MT2535601GJN
           base_mac: E8:9E:49:74:C4:04
           syseeprom_info:
-            "0x21": "SN5610"
+            "0x21": "6540"
             "0x22": "920-9N42F-00RI-3C1"
             "0x23": "MT2535601GJN"
             "0x24": "E8:9E:49:74:C4:04"
             "0x25":  "08/30/2025 17:38:48"
             "0x26":  "1"
-            "0x28":  "x86_64-nvidia_sn5610-r0"
+            "0x28":  "x86_64-upscaleai_6540-r0"
             "0x29":  "2024.08-5.3.0013-115200"
             "0x2A":  "290"
             "0x2B":  "Nvidia"
@@ -462,18 +462,18 @@ all:
           ansible_ssh_pass: "YourPaSsWoRd"
           ansible_altpassword: "YourPaSsWoRd"
           sonicadmin_password: "YourPaSsWoRd"
-          hwsku: 6540-0642-OSEU-AFA
-          model: 6540
+          hwsku: Mellanox-SN5610-O128
+          model: SN5610
           serial: MT2535601GJN
           base_mac: E8:9E:49:74:C4:04
           syseeprom_info:
-            "0x21": "6540"
+            "0x21": "SN5610"
             "0x22": "920-9N42F-00RI-3C1"
             "0x23": "MT2535601GJN"
             "0x24": "E8:9E:49:74:C4:04"
             "0x25":  "08/30/2025 17:38:48"
             "0x26":  "1"
-            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x28":  "x86_64-nvidia_sn5610-r0"
             "0x29":  "2024.08-5.3.0013-115200"
             "0x2A":  "290"
             "0x2B":  "Nvidia"

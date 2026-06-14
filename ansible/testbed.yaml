@@ -56,7 +56,7 @@
     - upscalelab2-spine6-800
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox
+  comment: Test ptf Vega8 6540 64x800G
 
 - conf-name: caspian_testbed_t1_spine6-800
   group-name: sp6-t1
@@ -71,7 +71,7 @@
     - upscalelab2-spine6-800
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox
+  comment: Test ptf Vega8 6540 64x800G
 
 - conf-name: caspian_testbed_t1-lag_spine6-800
   group-name: sp6t1lag
@@ -86,7 +86,7 @@
     - upscalelab2-spine6-800
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox
+  comment: Test ptf Vega8 6540 64x800G
 
 - conf-name: caspian_testbed_t0-64_spine6-400
   group-name: sp6-t0
