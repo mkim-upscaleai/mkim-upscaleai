@@ -1,11 +1,11 @@
 Hostname,ManagementIp,HwSku,Type,Protocol,Os
-upscalelab2-spine6,10.9.100.122/22,6540-0642-OSEU-AFA,DevSonic,,sonic
+upscalelab2-spine6,10.9.100.143/22,6540-0642-OSEU-AFA,DevSonic,,sonic
 upscalelab2-spine7,192.168.222.10/24,Mellanox-SN5610-C256S2,DevSonic,,sonic
 upscalelab2-spine8,192.168.223.10/24,Mellanox-SN5610-C256S2,DevSonic,,sonic
 upscalelab2-spine9,192.168.211.10/24,Mellanox-SN5610-C256S2,DevSonic,,sonic
 spine10,10.9.100.79/16,Mellanox-SN5600-C256S1,DevSonic,,sonic
-upscalelab2-spine6-800,10.9.100.122/22,6540-0642-OSEU-AFA,DevSonic,,sonic
-upscalelab2-spine6-400,10.9.100.122/22,6540-0642-OSEU-AFA,DevSonic,,sonic
+upscalelab2-spine6-800,10.9.100.143/22,6540-0642-OSEU-AFA,DevSonic,,sonic
+upscalelab2-spine6-400,10.9.100.143/22,6540-0642-OSEU-AFA,DevSonic,,sonic
 upscalelab2-spine7-800,192.168.222.10/24,Mellanox-SN5610-O64S2,DevSonic,,sonic
 upscalelab2-spine7-400,192.168.222.10/24,Mellanox-SN5610-O128,DevSonic,,sonic
 upscalelab2-spine8-800,192.168.223.10/24,Mellanox-SN5610-O64S2,DevSonic,,sonic
