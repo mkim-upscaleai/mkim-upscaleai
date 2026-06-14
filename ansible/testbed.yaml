@@ -11,7 +11,7 @@
     - upscalelab2-spine6
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox
+  comment: Test ptf Vega8 6540 100G fanout links
 
 - conf-name: caspian_testbed_t1_spine6
   group-name: sp6-t1
@@ -26,7 +26,7 @@
     - upscalelab2-spine6
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox
+  comment: Test ptf Vega8 6540 100G fanout links
 
 - conf-name: caspian_testbed_t1-lag_spine6
   group-name: sp6t1lag
@@ -41,7 +41,7 @@
     - upscalelab2-spine6
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox
+  comment: Test ptf Vega8 6540 100G fanout links
 
 - conf-name: caspian_testbed_t0_spine6-800
   group-name: sp6-t0
@@ -101,7 +101,7 @@
     - upscalelab2-spine6-400
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox 2x400G 64-port
+  comment: Test ptf Vega8 6540 400G fanout links
 
 - conf-name: caspian_testbed_t1-64_spine6-400
   group-name: sp6-t1
@@ -116,7 +116,7 @@
     - upscalelab2-spine6-400
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox 2x400G 64-port
+  comment: Test ptf Vega8 6540 400G fanout links
 
 - conf-name: caspian_testbed_t1-64-lag_spine6-400
   group-name: sp6t1lag
@@ -131,7 +131,7 @@
     - upscalelab2-spine6-400
   inv_name: veos
   auto_recover: 'False'
-  comment: Test ptf Mellanox 2x400G 64-port
+  comment: Test ptf Vega8 6540 400G fanout links
 
 - conf-name: caspian_testbed_t0_spine7
   group-name: sp7-t0
