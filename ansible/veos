@@ -315,22 +315,23 @@ all:
           ansible_altpassword: "YourPaSsWoRd"
           sonicadmin_password: "YourPaSsWoRd"
           hwsku: 6540-0642-OSEU-AFA
-          model: 6540
-          serial: MT2535601GJN
-          base_mac: E8:9E:49:74:C4:04
+          model: Vega-6540
+          serial: 0023115261000013
+          base_mac: E8:47:F3:00:12:08
           syseeprom_info:
-            "0x21": "6540"
-            "0x22": "920-9N42F-00RI-3C1"
-            "0x23": "MT2535601GJN"
-            "0x24": "E8:9E:49:74:C4:04"
-            "0x25":  "08/30/2025 17:38:48"
+            "0x21": "6540 2RU 51.2T Fixed"
+            "0x22": "750-000001-01"
+            "0x23": "0023115261000013"
+            "0x24": "E8:47:F3:00:12:08"
+            "0x25":  "06/12/2026 00:00:00"
             "0x26":  "1"
+            "0x27":  "03"
             "0x28":  "x86_64-upscaleai_6540-r0"
-            "0x29":  "2024.08-5.3.0013-115200"
-            "0x2A":  "290"
-            "0x2B":  "Nvidia"
-            "0x2D":  "Nvidia"
-            "0xFE":  "0x0730628D"
+            "0x2A":  "504"
+            "0x2B":  "UPSCALEAI"
+            "0x2C":  "US"
+            "0x2F":  "6540-0642-OSEU-AFA"
+            "0xFE":  "0xC7D636D2"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false

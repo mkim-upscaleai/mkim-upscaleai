@@ -93,6 +93,9 @@ SWITCH_MODELS = {
         }
     },
     "x86_64-upscaleai_6540-r0": {
+        # Vega 6540 Path B: Upscale FPGA sonic_platform (not NVIDIA hw-management).
+        # Mellanox hw-mgmt tests (check_sysfs, etc.) are expected to fail until
+        # Vega-specific cases exist — do not copy SN5610 module/asic_ambient counts.
         "chip_type": "spectrum4",
         "reboot": {
             "cold_reboot": True,
@@ -100,11 +103,11 @@ SWITCH_MODELS = {
             "warm_reboot": True
         },
         "fans": {
-            "number": 5, # There are only 5 fan trays, 10 total fans
+            "number": 4, # 4 fan trays, 8 total fans
             "hot_swappable": True
         },
         "psus": {
-            "number": 4,
+            "number": 2,
             "hot_swappable": True,
             "capabilities": PSU_CAPABILITIES[1]
         },
@@ -112,48 +115,38 @@ SWITCH_MODELS = {
             "number": 1
         },
         "cpu_cores": {
-            "number": 0 # Number of per-core thermal sensors (not physical cores)
+            "number": 8
         },
         "ports": {
-            "number": 64
+            "number": 66
         },
         "thermals": {
             "cpu_core": {
                 "start": 0,
-                "number": 0
+                "number": 8
             },
             "module": {
                 "start": 1,
-                "number": 66
+                "number": 0
             },
             "psu": {
                 "start": 1,
-                "number": 4
+                "number": 2
             },
             "cpu_pack": {
                 "number": 1
             },
-            # "cpu_ambient": {
-            #     "number": 0
-            # },
             "asic_ambient": {
-                "number": 1
+                "number": 0
             },
             "port_ambient": {
-                "number": 1
+                "number": 0
             },
             "fan_ambient": {
-                "number": 1
-            },
-            # "pch": {
-            #     "number": 0
-            # },
-            "sodimm": {
-                "start": 2,
-                "number": 1
+                "number": 0
             },
             "drivetemp": {
-                "number": 1
+                "number": 0
             }
         }
     },
