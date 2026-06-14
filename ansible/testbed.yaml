@@ -3,8 +3,8 @@
   topo: t0
   ptf_image_name: docker-ptf
   ptf: ptf_sp6-t0
-  ptf_ip: 192.168.221.23/24
-  ptf_ipv6: 2001:db8:121::23/64
+  ptf_ip: 10.9.109.23/22
+  ptf_ipv6: 2001:db8:109::23/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -18,8 +18,8 @@
   topo: t1
   ptf_image_name: docker-ptf
   ptf: ptf_sp6-t1
-  ptf_ip: 192.168.221.24/24
-  ptf_ipv6: 2001:db8:121::24/64
+  ptf_ip: 10.9.109.24/22
+  ptf_ipv6: 2001:db8:109::24/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -33,8 +33,8 @@
   topo: t1-lag
   ptf_image_name: docker-ptf
   ptf: ptf_sp6t1lag
-  ptf_ip: 192.168.221.25/24
-  ptf_ipv6: 2001:db8:121::25/64
+  ptf_ip: 10.9.109.25/22
+  ptf_ipv6: 2001:db8:109::25/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -48,8 +48,8 @@
   topo: t0
   ptf_image_name: docker-ptf
   ptf: ptf_sp6-t0
-  ptf_ip: 192.168.221.23/24
-  ptf_ipv6: 2001:db8:121::23/64
+  ptf_ip: 10.9.109.23/22
+  ptf_ipv6: 2001:db8:109::23/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -63,8 +63,8 @@
   topo: t1
   ptf_image_name: docker-ptf
   ptf: ptf_sp6-t1
-  ptf_ip: 192.168.221.24/24
-  ptf_ipv6: 2001:db8:121::24/64
+  ptf_ip: 10.9.109.24/22
+  ptf_ipv6: 2001:db8:109::24/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -78,8 +78,8 @@
   topo: t1-lag
   ptf_image_name: docker-ptf
   ptf: ptf_sp6t1lag
-  ptf_ip: 192.168.221.25/24
-  ptf_ipv6: 2001:db8:121::25/64
+  ptf_ip: 10.9.109.25/22
+  ptf_ipv6: 2001:db8:109::25/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -93,8 +93,8 @@
   topo: t0-64
   ptf_image_name: docker-ptf
   ptf: ptf_sp6-t0
-  ptf_ip: 192.168.221.23/24
-  ptf_ipv6: 2001:db8:121::23/64
+  ptf_ip: 10.9.109.23/22
+  ptf_ipv6: 2001:db8:109::23/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -108,8 +108,8 @@
   topo: t1-64
   ptf_image_name: docker-ptf
   ptf: ptf_sp6-t1
-  ptf_ip: 192.168.221.24/24
-  ptf_ipv6: 2001:db8:121::24/64
+  ptf_ip: 10.9.109.24/22
+  ptf_ipv6: 2001:db8:109::24/64
   server: server_1
   vm_base: VM0101
   dut:
@@ -123,8 +123,8 @@
   topo: t1-64-lag
   ptf_image_name: docker-ptf
   ptf: ptf_sp6t1lag
-  ptf_ip: 192.168.221.25/24
-  ptf_ipv6: 2001:db8:121::25/64
+  ptf_ip: 10.9.109.25/22
+  ptf_ipv6: 2001:db8:109::25/64
   server: server_1
   vm_base: VM0101
   dut:

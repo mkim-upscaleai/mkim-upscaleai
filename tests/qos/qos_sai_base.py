@@ -424,6 +424,7 @@ class QosSaiBase(QosBase):
         if "dynamic_th" in list(bufferProfile.keys()):
             platform_support_nvidia_new_algorithm_cal_buffer_thr = ["x86_64-nvidia_sn5600-r0",
                                                                     "x86_64-nvidia_sn5610-r0",
+                                                                    "x86_64-upscaleai_6540-r0",
                                                                     "x86_64-nvidia_sn5640-r0",
                                                                     "x86_64-nvidia_sn5400-r0"]
             if dut_asic.sonichost.facts['platform'] in platform_support_nvidia_new_algorithm_cal_buffer_thr \

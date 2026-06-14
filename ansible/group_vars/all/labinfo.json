@@ -14,7 +14,8 @@
         "Force10-S6000": "Force10",
         "Mellanox-SN5610-C256S2": "Mellanox",
         "Mellanox-SN5610-O64S2": "Mellanox",
-        "Mellanox-SN5610-O128": "Mellanox"
+        "Mellanox-SN5610-O128": "Mellanox",
+        "6540-0642-OSEU-AFA": "Mellanox"
     },
     "switch_login": {
         "Nexus": {

@@ -1,8 +1,8 @@
 mgmt_bridge: br0
-mgmt_prefixlen: 24
-mgmt_gw: 192.168.221.1
-mgmt_gw_v6: 2001:db8:121::1
-vm_mgmt_gw: 192.168.221.1
+mgmt_prefixlen: 22
+mgmt_gw: 10.9.0.1
+mgmt_gw_v6: 2001:db8:109::1
+vm_mgmt_gw: 10.9.0.1
 external_port: ens25f0np0
 
 ansible_user: casper

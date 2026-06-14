@@ -629,7 +629,7 @@ def get_port_alias_to_name_map(hwsku, asic_name=None):
                 idx += 8
             port_alias_to_name_map['Et65/1'] = "Ethernet512"
             port_alias_to_name_map['Et66/1'] = "Ethernet520"
-        elif hwsku in ["Mellanox-SN5610-O128"]:
+        elif hwsku in ["Mellanox-SN5610-O128", "6540-0642-OSEU-AFA"]:
             for i in range(1, 65):
                 port_alias_to_name_map["Et{}/1".format(i)] = "Ethernet{}".format((i - 1) * 8)
                 port_alias_to_name_map["Et{}/2".format(i)] = "Ethernet{}".format((i - 1) * 8 + 4)
