@@ -298,6 +298,7 @@ jobs:
       # same job that performs setup, guarantees the reservation is held while we
       # actually use the testbed.
       - name: Reserve testbed (pre-setup)
+        if: false  # disabled: reservation system unreachable from runner; parent workflow already holds the reservation
         run: |
           TESTBED_ID=$(echo "${{ env.HOST }}" | sed -E 's/.*spine([0-9]+).*/\1/')
           if ! [[ "$TESTBED_ID" =~ ^[0-9]+$ ]]; then
