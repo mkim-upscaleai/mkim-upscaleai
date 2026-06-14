@@ -78,6 +78,7 @@ jobs:
       # leaving us unreserved by the time we actually use the testbed. Reserving
       # here in the same job guarantees the reservation is held during install.
       - name: Reserve testbed (pre-install)
+        if: false  # disabled: reservation system unreachable from runner; parent workflow already holds the reservation
         run: |
           TESTBED_ID=$(echo "${{ inputs.host }}" | sed -E 's/.*spine([0-9]+).*/\1/')
           if ! [[ "$TESTBED_ID" =~ ^[0-9]+$ ]]; then
