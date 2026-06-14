@@ -86,7 +86,7 @@ all:
         upscalelab2-spine6:
           ansible_host: 10.9.100.143
           ansible_hostv6: 2001:db8:109::10
-          mgmt_subnet_mask_length: 22
+          mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
           ansible_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
@@ -309,7 +309,7 @@ all:
         upscalelab2-spine6-800:
           ansible_host: 10.9.100.143
           ansible_hostv6: 2001:db8:109::10
-          mgmt_subnet_mask_length: 22
+          mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
           ansible_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
@@ -458,7 +458,7 @@ all:
         upscalelab2-spine6-400:
           ansible_host: 10.9.100.143
           ansible_hostv6: 2001:db8:109::10
-          mgmt_subnet_mask_length: 22
+          mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
           ansible_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
