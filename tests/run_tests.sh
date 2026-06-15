@@ -131,6 +131,8 @@ function setup_environment()
     export ANSIBLE_CONNECTION_PLUGINS=${BASE_PATH}/ansible/plugins/connection
     export ANSIBLE_CLICONF_PLUGINS=${BASE_PATH}/ansible/cliconf_plugins
     export ANSIBLE_TERMINAL_PLUGINS=${BASE_PATH}/ansible/terminal_plugins
+    # tests/conftest.py imports from the tests package (e.g. tests.common); repo root must be on PYTHONPATH.
+    export PYTHONPATH=${BASE_PATH}${PYTHONPATH:+:${PYTHONPATH}}
 
     # Kill pytest and ansible-playbook process
     pkill --signal 9 pytest
@@ -190,7 +192,8 @@ function setup_test_options()
         show_help_and_exit 1
     fi
 
-    PYTEST_COMMON_OPTS="--rootdir=${SCRIPT_PATH} \
+    PYTEST_COMMON_OPTS="-c ${SCRIPT_PATH}/pytest.ini \
+                      --rootdir=${SCRIPT_PATH} \
                       --inventory ${INVENTORY} \
                       --host-pattern ${DUT_NAME} \
                       --dpu-pattern ${DPU_NAME} \

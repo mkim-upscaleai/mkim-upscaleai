@@ -54,7 +54,7 @@ on:
         required: false
       skip_topo:
         type: boolean
-        description: "Skip remove-topo and add-topo steps (topology assumed already deployed)"
+        description: "Skip DUT/fanout factory reset, config reload, remove-topo, add-topo, deploy-mg, pretest, and DUT reboot/RPC (topology and switch state assumed ready)"
         required: false
         default: false
       ALLURE_LAUNCH_TAG:
@@ -154,7 +154,7 @@ on:
         required: false
       skip_topo:
         type: boolean
-        description: "Skip remove-topo and add-topo steps (topology assumed already deployed)"
+        description: "Skip DUT/fanout factory reset, config reload, remove-topo, add-topo, deploy-mg, pretest, and DUT reboot/RPC (topology and switch state assumed ready)"
         default: false
         required: false
       ALLURE_LAUNCH_TAG:
@@ -331,7 +331,6 @@ jobs:
           echo "SONIC_MGMT_CONTAINER=sonic-mgmt-ngty-${TOPO}" >> $GITHUB_ENV
 
       - name: Stop ${{ env.SONIC_MGMT_CONTAINER }} docker container
-        if: ${{ env.SKIP_TOPO != 'true' }}
         run: docker stop ${{ env.SONIC_MGMT_CONTAINER }} && docker rm ${{ env.SONIC_MGMT_CONTAINER }} || true
 
       - name: Checkout sonic-mgmt repo
@@ -369,6 +368,39 @@ jobs:
           echo "SWITCH_IPS=$IPS_CSV" >> "$GITHUB_ENV"
           echo "SWITCH_IP=$(echo "$IPS_CSV" | cut -d',' -f1)" >> "$GITHUB_ENV"
           echo "Resolved DUT ansible_host(s): $IPS_CSV"
+
+      - name: Bootstrap sonic-mgmt container (skip topo / no DUT reset)
+        if: ${{ env.SKIP_TOPO == 'true' }}
+        run: |
+          echo "skip_topo=true: starting sonic-mgmt container only (no factory reset, reload, topo, deploy-mg, pretest, or DUT reboot)"
+          echo "SONIC_ROOT=$(pwd)" >> $GITHUB_ENV
+          DEFAULT_INTERFACE=$(ip route | awk '/default/ { print $5 }')
+          DEFAULT_IP=$(ip -4 addr show "$DEFAULT_INTERFACE" | awk '/inet/ {print $2}' | cut -d'/' -f1)
+
+          echo "${{ needs.setup-allure.outputs.allure-env }}" | base64 -d > /tmp/allure-env
+          cat /tmp/allure-env
+          export $(cat /tmp/allure-env)
+
+          docker run -it -d --name ${{ env.SONIC_MGMT_CONTAINER }} \
+            --network host \
+            --cap-add=NET_ADMIN \
+            --privileged \
+            -e ALLURE_ENDPOINT=${{ env.ALLURE_ENDPOINT }} \
+            -e ALLURE_PROJECT_ID=${{ env.ALLURE_PROJECT_ID }} \
+            -e ALLURE_TOKEN=${{ secrets.ALLURE_TOKEN }} \
+            --env-file /tmp/allure-env \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $PWD:/var/AzDevOps \
+            docker-sonic-mgmt-allure:${{ inputs.sonic_version }} bash
+
+          cp ~/.ssh/authorized_keys ~/.ssh/authorized_keys_copy
+          sed -i '/Nightly_github_workflow/d' ~/.ssh/authorized_keys
+
+          docker exec -u root ${{ env.SONIC_MGMT_CONTAINER }} bash -c "rm -f /root/.ssh/id_rsa /root/.ssh/id_rsa.pub && ssh-keygen -t rsa -b 4096 -C 'Nightly_github_workflow' -f /root/.ssh/id_rsa -N '' -q"
+          docker cp ${{ env.SONIC_MGMT_CONTAINER }}:/root/.ssh/id_rsa.pub ./id_rsa.pub
+          cat ./id_rsa.pub | /usr/bin/sshpass -p ${{ secrets.TESTSERVER_PWD }} ssh ${{ env.SSH_OPTS }} ${USER}@${DEFAULT_IP} "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+
+          echo "false" > /tmp/rpc_pull_status.txt
 
       - name: Setup test environment
         if: ${{ env.SKIP_TOPO != 'true' }}
@@ -548,9 +580,12 @@ jobs:
 
       - name: Set RPC pull status output
         id: rpc-pull-status
-        if: ${{ env.SKIP_TOPO != 'true' }}
         run: |
-          RPC_STATUS=$(cat /tmp/rpc_pull_status.txt)
+          if [ -f /tmp/rpc_pull_status.txt ]; then
+            RPC_STATUS=$(cat /tmp/rpc_pull_status.txt)
+          else
+            RPC_STATUS=false
+          fi
           echo "rpc_pull_success=$RPC_STATUS" >> $GITHUB_OUTPUT
           echo "RPC pull status: $RPC_STATUS"
 

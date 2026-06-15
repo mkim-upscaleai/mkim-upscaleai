@@ -627,7 +627,7 @@ all:
     fanout:
       hosts:
         fanout_leaf06:
-          ansible_host: 10.9.100.54
+          ansible_host: 10.9.100.82
           ansible_ssh_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           fanout_sonic_user: admin
@@ -723,7 +723,7 @@ all:
           HwSku: Mellanox-SN5610-O64S2
           Platform: x86_64-nvidia_sn5610-r0
         fanout_leaf06-800:
-          ansible_host: 10.9.100.54
+          ansible_host: 10.9.100.82
           ansible_ssh_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           fanout_sonic_user: admin
@@ -787,7 +787,7 @@ all:
           HwSku: Mellanox-SN5610-O64S2
           Platform: x86_64-nvidia_sn5610-r0
         fanout_leaf06-400:
-          ansible_host: 10.9.100.54
+          ansible_host: 10.9.100.82
           ansible_ssh_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           fanout_sonic_user: admin

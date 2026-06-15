@@ -12,13 +12,13 @@ upscalelab2-spine8-800,192.168.223.10/24,Mellanox-SN5610-O64S2,DevSonic,,sonic
 upscalelab2-spine9-800,192.168.211.10/24,Mellanox-SN5610-O64S2,DevSonic,,sonic
 upscalelab2-spine9-400,192.168.211.10/24,Mellanox-SN5610-O128,DevSonic,,sonic
 spine10-800,10.9.100.79/16,Mellanox-SN5600-O64S1,DevSonic,,sonic
-fanout_leaf06,10.9.100.54/16,Mellanox-SN5610-C256S2,FanoutLeaf,,sonic
+fanout_leaf06,10.9.100.82/16,Mellanox-SN5610-C256S2,FanoutLeaf,,sonic
 fanout_leaf07,192.168.222.11/24,Mellanox-SN5610-C256S2,FanoutLeaf,,sonic
 fanout_leaf08,192.168.223.11/24,Mellanox-SN5610-C256S2,FanoutLeaf,,sonic
 fanout_leaf09,192.168.211.11/24,Mellanox-SN5610-C256S2,FanoutLeaf,,sonic
 fanout10,10.9.100.40/16,Mellanox-SN5600-C256S1,FanoutLeaf,,sonic
-fanout_leaf06-800,10.9.100.54/16,Mellanox-SN5610-O64S2,FanoutLeaf,,sonic
-fanout_leaf06-400,10.9.100.54/16,Mellanox-SN5610-O128,FanoutLeaf,,sonic
+fanout_leaf06-800,10.9.100.82/16,Mellanox-SN5610-O64S2,FanoutLeaf,,sonic
+fanout_leaf06-400,10.9.100.82/16,Mellanox-SN5610-O128,FanoutLeaf,,sonic
 fanout_leaf07-800,192.168.222.11/24,Mellanox-SN5610-O64S2,FanoutLeaf,,sonic
 fanout_leaf07-400,192.168.222.11/24,Mellanox-SN5610-O128,FanoutLeaf,,sonic
 fanout_leaf08-800,192.168.223.11/24,Mellanox-SN5610-O64S2,FanoutLeaf,,sonic
