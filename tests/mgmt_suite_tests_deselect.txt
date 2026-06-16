@@ -5,6 +5,10 @@
 # TODO: need to add back once qinq fanout is available
 acl/test_acl_outer_vlan.py
 
+# Deselect due to unsupported platform
+acl/test_src_mac_rewrite.py::test_range_ip_acl_rule
+acl/test_src_mac_rewrite.py::test_single_ip_acl_rule
+
 # Deselect as dualtor topo is needed
 acl/test_acl.py::TestMultiBindingAcl
 
