@@ -78,6 +78,8 @@ on:
         required: false
       AWS_SECRET_ACCESS_KEY:
         required: false
+      TEAMS_WEBHOOK_URL:
+        required: true
 
   workflow_dispatch:
     inputs:
@@ -552,12 +554,21 @@ jobs:
           echo "rpc_pull_success=$RPC_STATUS" >> $GITHUB_OUTPUT
           echo "RPC pull status: $RPC_STATUS"
 
-      - name: Send error message to slack channel if setup fails
+      - name: Send error message to Teams channel if setup fails
         if: failure()
         run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\": \"Nightly Test Aborted as setup failed\"}" \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-Type: application/json' \
+            --data '{
+              "@type": "MessageCard",
+              "@context": "https://schema.org/extensions",
+              "themeColor": "FF0000",
+              "summary": "Nightly test setup failed",
+              "sections": [{
+                  "activityTitle": "CI Pipeline Alert - Nightly Tests",
+                  "text": "Nightly Test Aborted as setup failed"
+              }]
+            }' \
+            "${{ secrets.TEAMS_WEBHOOK_URL }}"
 
   run-test-and-generate-report:
     needs: [normalize-inputs, setup-allure, setup]

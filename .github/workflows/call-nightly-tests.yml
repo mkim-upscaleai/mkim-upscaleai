@@ -504,6 +504,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       SWITCH_PASSWORD: ${{ secrets.SWITCH_PASSWORD }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
 
   call-reusable-workflow:
     needs: [distribute-test-files, setup-shared-allure, reserve-testbed, install-switch-image]
@@ -535,6 +536,7 @@ jobs:
       SWITCH_PASSWORD: ${{ secrets.SWITCH_PASSWORD }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
 
   call-snappi-reusable-workflow:
     needs: [distribute-snappi-test-files, setup-shared-allure]
@@ -564,6 +566,7 @@ jobs:
       SWITCH_PASSWORD: ${{ secrets.SWITCH_PASSWORD }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
 
   release-testbed:
     name: Release testbed reservation

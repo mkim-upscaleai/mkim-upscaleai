@@ -52,6 +52,8 @@ on:
         required: true
       SWITCH_PASSWORD:
         required: true
+      TEAMS_WEBHOOK_URL:
+        required: true
 
 
 env:
@@ -280,9 +282,18 @@ jobs:
           done
           if [ "$status" == "FAIL" ]; then
             echo "Sanity tests failed"
-            curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\": \" Sanity tests failed. Aborting tests \"}" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+            curl -X POST -H 'Content-Type: application/json' \
+               --data '{
+                 "@type": "MessageCard",
+                 "@context": "https://schema.org/extensions",
+                 "themeColor": "FF0000",
+                 "summary": "Sanity tests failed",
+                 "sections": [{
+                     "activityTitle": "CI Pipeline Alert - Nightly Install Switch Image",
+                     "text": "Sanity tests failed. Aborting tests"
+                 }]
+               }' \
+            "${{ secrets.TEAMS_WEBHOOK_URL }}"
             exit 1
           else
             echo "Sanity tests passed"
