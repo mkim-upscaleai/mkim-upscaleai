@@ -67,6 +67,8 @@ on:
         required: false
       AWS_SECRET_ACCESS_KEY:
         required: false
+      TEAMS_WEBHOOK_URL:
+        required: true
 
 env:
   SSH_OPTS: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
