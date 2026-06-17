@@ -107,6 +107,13 @@ generic_config_updater/test_eth_interface.py::test_update_invalid_index
 generic_config_updater/test_eth_interface.py::test_update_valid_index
 generic_config_updater/test_eth_interface.py::test_update_speed
 
+# Packet trimming not supported
+generic_config_updater/test_packet_trimming_config_symmetric.py
+generic_config_updater/test_packet_trimming_config_asymmetric.py
+
+# Packet-trimming tests are only supported on certain Mellanox SN5640 and Arista 7060X6 SKUs, may not be available on spectrum 4
+packet_trimming
+
 # TEMPORARY: Need Buffer Profile Config info from Nvidia before proceeding
 generic_config_updater/test_ecn_config_update.py
 generic_config_updater/test_incremental_qos.py
