@@ -854,10 +854,10 @@ def test_crm_route(duthosts, enum_rand_one_per_hwsku_frontend_hostname, enum_fro
 
     # Verify thresholds for "IPv[4/6] route" CRM resource
     # Get "crm_stats_ipv[4/6]_route" used and available counter value
-    get_route_stats = "{redis_cli} COUNTERS_DB HMGET \
+    get_route_stats = "sonic-db-cli COUNTERS_DB HMGET \
                             CRM:STATS crm_stats_ipv{ip_ver}_route_used \
                             crm_stats_ipv{ip_ver}_route_available"\
-        .format(redis_cli=asichost.sonic_db_cli, ip_ver=ip_ver)
+        .format(ip_ver=ip_ver)
     verify_thresholds(duthost, asichost, crm_cli_res="ipv{ip_ver} route".format(ip_ver=ip_ver), crm_cmd=get_route_stats)
 
 
@@ -1432,7 +1432,7 @@ def test_crm_fdb_entry(duthosts, enum_rand_one_per_hwsku_frontend_hostname, enum
     asic_type = duthost.facts['asic_type']
     skip_stats_check = True if asic_type == "vs" else False
 
-    get_fdb_stats = "redis-cli --raw -n 2 HMGET CRM:STATS crm_stats_fdb_entry_used crm_stats_fdb_entry_available"
+    get_fdb_stats = "sonic-db-cli COUNTERS_DB HMGET CRM:STATS crm_stats_fdb_entry_used crm_stats_fdb_entry_available"
     topology = tbinfo["topo"]["properties"]["topology"]
     cfg_facts = duthost.config_facts(host=duthost.hostname, source="persistent")['ansible_facts']
     port_dict = dict(list(zip(list(cfg_facts['port_index_map'].values()), list(cfg_facts['port_index_map'].keys()))))
