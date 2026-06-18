@@ -11,7 +11,6 @@ from tests.common.utilities import (
     group_interfaces_by_asic
 )
 from tests.common.helpers.assertions import pytest_assert
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +40,23 @@ def db_instance(duthosts, enum_rand_one_per_hwsku_frontend_hostname):
     appl_db = []
     for asic in duthost.asics:
         appl_db.append(SonicDbCli(asic, APPL_DB))
-    duthost.facts['switch_type'] == "voq"
     is_chassis = duthost.get_facts().get("modular_chassis")
     # For single ASIC fixed system, APPL_DB is already added above. so skip here
     if duthost.facts['switch_type'] == "voq" and (not is_chassis and len(duthost.asics) > 1):
         appl_db.append(SonicDbCli(duthost, APPL_DB))
-    # Cleanup code here
-    return appl_db
+
+    yield appl_db
+
+    # Teardown: wait for LLDP_ENTRY_TABLE and 'show lldp table' to converge before
+    # the next test starts. This prevents stale DB entries from polluting subsequent
+    # tests when a prior test left lldpd or orchagent in a transient state.
+    logger.info("db_instance teardown: waiting for LLDP table to re-converge")
+    converged = wait_until(120, 5, 5, check_lldp_table_keys, duthost, appl_db)
+    if not converged:
+        logger.warning(
+            "LLDP_ENTRY_TABLE did not converge with 'show lldp table' within teardown window; "
+            "the next test may observe stale state"
+        )
 
 
 # Helper function to get the LLDP_ENTRY_TABLE keys
@@ -114,17 +123,38 @@ def get_show_lldp_table_output(duthost):
 
 
 def get_lldp_data(duthost, db_instance):
-    # Fetch interfaces from LLDP_ENTRY_TABLE
-    lldp_entry_keys = get_lldp_entry_keys(db_instance)
-    show_lldp_table_int_list = get_show_lldp_table_output(duthost)
+    # lldpctl is the authoritative source for which interfaces have active LLDP
+    # neighbors. LLDP_ENTRY_TABLE contains counter-only entries (lldp_if_* fields,
+    # no lldp_rem_* fields) for every interface on the device, including ports with
+    # no live neighbor. Filter the DB keys to only those lldpd currently knows about
+    # so that comparisons against 'show lldp table' (which reads from lldpd directly)
+    # are not polluted by those counter-only entries.
     lldpctl_output = get_lldpctl_output(duthost)
+    lldpctl_interfaces = lldpctl_output["lldp"].get("interface", [])
+    if isinstance(lldpctl_interfaces, list):
+        active_ifaces = {list(iface.keys())[0] for iface in lldpctl_interfaces}
+    elif isinstance(lldpctl_interfaces, dict):
+        active_ifaces = set(lldpctl_interfaces.keys())
+    else:
+        active_ifaces = set()
+
+    all_lldp_entry_keys = get_lldp_entry_keys(db_instance)
+    lldp_entry_keys = [k for k in all_lldp_entry_keys if k in active_ifaces]
+    logger.debug(
+        "Filtered LLDP_ENTRY_TABLE from {} to {} entries matching active lldpctl interfaces".format(
+            len(all_lldp_entry_keys), len(lldp_entry_keys)
+        )
+    )
+
+    show_lldp_table_int_list = get_show_lldp_table_output(duthost)
     return lldp_entry_keys, show_lldp_table_int_list, lldpctl_output
 
 
 def check_lldp_table_keys(duthost, db_instance):
-    # Check if LLDP_ENTRY_TABLE keys match show lldp table output
-    lldp_entry_keys = get_lldp_entry_keys(db_instance)
-    show_lldp_table_int_list = get_show_lldp_table_output(duthost)
+    # Use get_lldp_data so the same lldpctl-based filtering applies: counter-only
+    # LLDP_ENTRY_TABLE entries (ports with no live neighbor) are excluded, matching
+    # the behaviour of 'show lldp table' which reads from lldpd directly.
+    lldp_entry_keys, show_lldp_table_int_list, _ = get_lldp_data(duthost, db_instance)
     return set(lldp_entry_keys) == set(show_lldp_table_int_list)
 
 
@@ -161,20 +191,22 @@ def _verify_interface_lldp_recovery(db_instance, interfaces, lldpctl_lookup_map,
     def _verify_lldp_entry_with_cache(db_instance, interfaces: list):
         nonlocal entry_content_dict, pending_interfaces
 
+        all_ready = True
         for interface in interfaces:
             # If content is populated for an interface, skip it in subsequent retries to save time.
             if interface in entry_content_dict:
                 continue
             entry_content = get_lldp_entry_content(db_instance, interface)
-            # Check if LLDP entry content is populated for an interface else return false to trigger wait_until retry
-            if len(entry_content) <= 1:
+            # Check that the remote neighbor fields are present (not just lldp_if_* counters)
+            if "lldp_rem_sys_name" not in entry_content:
                 logger.debug("Interface {} LLDP entry not yet recovered".format(interface))
-                return False
-            # Store the content in dict and move to the next interface
+                all_ready = False
+                continue
+            # Store the content in dict and mark the interface as recovered
             entry_content_dict[interface] = entry_content
-            pending_interfaces.remove(interface)
+            pending_interfaces.discard(interface)
 
-        return True
+        return all_ready
 
     result = wait_until(timeout, interval, delay, _verify_lldp_entry_with_cache, db_instance, interfaces)
     pytest_assert(
@@ -309,7 +341,7 @@ def assert_lldp_entry_content(interface, entry_content, lldpctl_interface):
 def verify_lldp_entry(db_instance, interfaces: list):
     for interface in interfaces:
         entry_content = get_lldp_entry_content(db_instance, interface)
-        if len(entry_content) <= 1:
+        if "lldp_rem_sys_name" not in entry_content:
             logger.debug("Interface {} LLDP entry not yet recovered".format(interface))
             return False
     return True
@@ -327,11 +359,16 @@ def verify_each_interface_lldp_content(db_instance, interface, lldpctl_interface
     def get_lldp_entry_content_with_retry():
         nonlocal entry_content
         entry_content = get_lldp_entry_content(db_instance, interface)
-        return len(entry_content) > 0
+        return "lldp_rem_sys_name" in entry_content
 
     entry_content = ''
 
-    wait_until(30, 1, 0, get_lldp_entry_content_with_retry)
+    result = wait_until(30, 1, 0, get_lldp_entry_content_with_retry)
+    pytest_assert(
+        result,
+        "LLDP_ENTRY_TABLE entry for {} did not contain 'lldp_rem_sys_name' within 30s. "
+        "Last content: {}".format(interface, entry_content),
+    )
 
     logger.debug("Interface {}, entry_content:{}".format(interface, entry_content))
     lldpctl_interface = None
@@ -353,7 +390,7 @@ def verify_all_interfaces_lldp_content(db_instance, lldp_entry_keys, lldpctl_out
     assert_lldp_interfaces(
         lldp_entry_keys, show_lldp_table_int_list, lldpctl_interfaces
     )
-    for interface in get_lldp_entry_keys(db_instance):
+    for interface in lldp_entry_keys:
         verify_each_interface_lldp_content(db_instance, interface, lldpctl_interfaces)
 
 
@@ -362,6 +399,13 @@ def test_lldp_entry_table_content(
     duthosts, enum_rand_one_per_hwsku_frontend_hostname, db_instance
 ):
     duthost = duthosts[enum_rand_one_per_hwsku_frontend_hostname]
+    # Ensure LLDP_ENTRY_TABLE and 'show lldp table' are aligned before reading data,
+    # guarding against stale state left by a prior test or a slow post-boot convergence.
+    keys_match = wait_until(60, 5, 0, check_lldp_table_keys, duthost, db_instance)
+    pytest_assert(
+        keys_match,
+        "LLDP_ENTRY_TABLE keys do not match 'show lldp table' output before test_lldp_entry_table_content",
+    )
     lldp_entry_keys, show_lldp_table_int_list, lldpctl_output = get_lldp_data(duthost, db_instance)
 
     verify_all_interfaces_lldp_content(db_instance, lldp_entry_keys, lldpctl_output, show_lldp_table_int_list)
@@ -379,8 +423,8 @@ def test_lldp_entry_table_after_syncd_orchagent(
     keys_match = wait_until(30, 5, 0, check_lldp_table_keys, duthost, db_instance)
     if not keys_match:
         assert keys_match, "LLDP_ENTRY_TABLE keys do not match 'show lldp table' output"
-    # Get the ldap keys before restart syncd and swss
-    lldp_entry_keys = get_lldp_entry_keys(db_instance)
+    # Get the active (lldpctl-filtered) keys before restart syncd and swss
+    lldp_entry_keys, _, _ = get_lldp_data(duthost, db_instance)
 
     logging.info("Stop and start swss and syncd on DUT")
     # It's found that restart swss container could cause swss service to go down. In most of OC tests
@@ -394,7 +438,10 @@ def test_lldp_entry_table_after_syncd_orchagent(
         duthost.shell("sudo systemctl restart swss")
     assert wait_until(600, 5, 120, duthost.critical_services_fully_started), \
         "Not all critical services are fully started"
-    time.sleep(60)
+    # Poll for LLDP_ENTRY_TABLE and show lldp table to align before checking per-interface
+    # entries. This replaces a hardcoded sleep that was both unreliable under load and
+    # wasteful on fast hardware.
+    wait_until(120, 5, 0, check_lldp_table_keys, duthost, db_instance)
     # Wait until all interfaces are up and lldp entries are populated
     for interface in lldp_entry_keys:
         result = wait_until(300, 2, 0, verify_lldp_entry, db_instance, [interface])
@@ -470,7 +517,6 @@ def test_lldp_entry_table_after_lldp_restart(
     duthosts, enum_rand_one_per_hwsku_frontend_hostname, db_instance
 ):
     duthost = duthosts[enum_rand_one_per_hwsku_frontend_hostname]
-    lldp_entry_keys, show_lldp_table_int_list, lldpctl_output = get_lldp_data(duthost, db_instance)
 
     # Restart the LLDP service
     for asic in duthost.asics:
@@ -487,6 +533,9 @@ def test_lldp_entry_table_after_lldp_restart(
             "active (running)" in result,
             "LLDP service is not running",
         )
+    # Re-snapshot after recovery so we compare against the live post-restart state,
+    # not a stale pre-restart snapshot that may diverge under load.
+    lldp_entry_keys, show_lldp_table_int_list, lldpctl_output = get_lldp_data(duthost, db_instance)
     verify_all_interfaces_lldp_content(db_instance, lldp_entry_keys, lldpctl_output, show_lldp_table_int_list)
 
 
