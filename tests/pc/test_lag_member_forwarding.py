@@ -8,6 +8,7 @@ from ptf.mask import Mask
 import ptf.packet as scapy
 import ptf.testutils as testutils
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.helpers.bgp import _flatten_bgp_neighbors
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +105,12 @@ def test_lag_member_forwarding_packets(duthosts, enum_rand_one_per_hwsku_fronten
     peer_device_ip_set = set()
     peer_device_dest_ip = None
 
+    # Flatten VRF-nested entries (e.g. "default" -> {"10.0.0.57": {...}}) into {neighbor_ip: neighbor_info}
+    bgp_neighbors = _flatten_bgp_neighbors(config_facts['BGP_NEIGHBOR'])
+
     # Find test (1st)  port channel and fetch it's BGP neighbors
     # ipv4 and ipv6 ip address to verify case of ping to neighbor
-    for peer_device_ip, peer_device_bgp_data in config_facts['BGP_NEIGHBOR'].items():
+    for peer_device_ip, peer_device_bgp_data in bgp_neighbors.items():
         if peer_device_bgp_data["name"] == config_facts['DEVICE_NEIGHBOR'][portchannel_members[0]]['name']:
             peer_device_ip_set.add(peer_device_ip)
             # holdtime to wait for BGP session to go down when lag member is marked as disable state.
