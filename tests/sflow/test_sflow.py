@@ -227,6 +227,9 @@ def verify_hsflowd_ready(duthost, collector_ips):
     Verify hsflowd has fully initialized with all specified collector configurations.
     This is done by checking if /etc/hsflowd.auto contains an entry for each collector IP.
 
+    Also handles the case where the sflow container is not yet running — docker exec will
+    fail with a non-zero rc, which is treated as False (keep waiting).
+
     Args:
         duthost: DUT host object
         collector_ips: List of collector IP addresses to check for
@@ -238,7 +241,7 @@ def verify_hsflowd_ready(duthost, collector_ips):
         duthost.shell(
             f"docker exec sflow grep -q 'collector={ip}' /etc/hsflowd.auto 2>/dev/null",
             module_ignore_errors=True
-        )['rc'] == 0
+        ).get('rc', 1) == 0
         for ip in collector_ips
     )
 
@@ -247,27 +250,31 @@ def wait_until_hsflowd_ready(duthost, collector_ips):
     """
     Wait until hsflowd has fully initialized with all specified collector configurations.
 
-    Retries every 10 seconds for up to 240 seconds (4 minutes). This timeout accounts for
-    cases where hsflowd takes over 3 minutes to initialize (e.g., first-time sflow config
-    enable or device reboot).
+    Uses a single 480-second window covering both sflow container startup and hsflowd
+    initialization. The sflow container is not a SONiC critical service so it can start
+    well after critical_services_fully_started returns True. On large switches (e.g.
+    64-port 400G spines) the container itself takes >2 minutes to start, and hsflowd
+    then takes a further >4 minutes to write /etc/hsflowd.auto. verify_hsflowd_ready
+    naturally returns False while the container is still starting (docker exec fails),
+    so no separate container-wait phase is needed.
 
     Args:
         duthost: DUT host object
         collector_ips: List of collector IP addresses that must all be present in hsflowd.auto
 
     Raises:
-        AssertionError: If not all collectors are initialized within 240 seconds
+        AssertionError: If collectors are not initialized within 480 seconds
     """
     logger.info(f"Waiting for hsflowd to initialize with collector(s): {collector_ips}")
     start_time = time.time()
     pytest_assert(
         wait_until(
-            240, 10, 0,  # 4 minutes max, check every 10 seconds
+            480, 10, 0,  # 8 minutes max, check every 10 seconds
             verify_hsflowd_ready,
             duthost,
             collector_ips,
         ),
-        f"hsflowd failed to initialize collector(s) {collector_ips} within 240 seconds. "
+        f"hsflowd failed to initialize collector(s) {collector_ips} within 480 seconds. "
         f"Check /etc/hsflowd.auto in sflow container."
     )
     elapsed = time.time() - start_time
@@ -311,7 +318,7 @@ def verify_show_sflow(duthost, status, **kwargs):
 
 
 def verify_sflow_config_apply(duthost):
-    sflow_sai_config_list = duthost.shell('redis-cli -n 1 keys *SAI_OBJECT_TYPE_SAMPLEPACKET*')['stdout_lines']
+    sflow_sai_config_list = duthost.shell('sonic-db-cli ASIC_DB keys *SAI_OBJECT_TYPE_SAMPLEPACKET*')['stdout_lines']
     for sflow_sai_config in sflow_sai_config_list:
         if 'SAI_OBJECT_TYPE_SAMPLEPACKET' in sflow_sai_config:
             return True
