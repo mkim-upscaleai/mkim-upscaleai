@@ -34,6 +34,8 @@ def ignore_expected_loganalyzer_exceptions(rand_one_dut_hostname, loganalyzer):
     if loganalyzer:
         ignoreRegex = [
             r".*ERR memory_threshold_check: Free memory [.\d]+ is less then free memory threshold [.\d]+",
+            r".* ERR syncd#SDK:.*mlnx_port_state_get: Port is down.*",
+            r".* ERR syncd#SDK: :-.*collectData: Failed to get port attr for VID.*",
         ]
         loganalyzer[rand_one_dut_hostname].ignore_regex.extend(ignoreRegex)
 

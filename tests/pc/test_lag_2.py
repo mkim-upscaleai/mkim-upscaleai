@@ -355,6 +355,8 @@ def ignore_expected_loganalyzer_exceptions_lag(duthosts, rand_one_dut_hostname, 
     ignoreRegex = [
         r".*ERR swss[0-9]*#orchagent: :- getPortOperSpeed.*",
         r".* ERR monit\[\d+\]: 'routeCheck' status failed \(255\) -- Failure results:.*",
+        r".* ERR syncd#SDK:.*mlnx_port_state_get: Port is down.*",
+        r".* ERR syncd#SDK: :-.*collectData: Failed to get port attr for VID.*",
     ]
 
     for duthost in duthosts.frontend_nodes:

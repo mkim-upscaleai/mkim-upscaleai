@@ -17,6 +17,20 @@ logger = logging.getLogger(__name__)
 
 FLUSH_TYPES = ["dynamic", "static", "interface", "mix"]
 
+
+@pytest.fixture(autouse=True)
+def ignore_expected_loganalyzer_exceptions(loganalyzer, duthosts):
+    """Ignore expected failures logs during test execution."""
+    ignore_errors = [
+        r".* ERR syncd#SDK:.*mlnx_port_state_get: Port is down.*",
+        r".* ERR syncd#SDK: :-.*collectData: Failed to get port attr for VID.*",
+    ]
+    if loganalyzer:
+        for duthost in duthosts:
+            loganalyzer[duthost.hostname].ignore_regex.extend(ignore_errors)
+
+    return None
+
 FDB_SET_JSON_FILE = 'fdb_set_test.json'
 FDB_DEL_JSON_FILE = 'fdb_del_test.json'
 FDB_FILES_DIR = '/tmp/'

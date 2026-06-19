@@ -20,10 +20,15 @@ def ignore_expected_loganalyzer_exceptions(duthosts, rand_one_dut_hostname, loga
            duthost: DUT host object
     """
     duthost = duthosts[rand_one_dut_hostname]
-    if loganalyzer and duthost.facts["platform"] == "x86_64-cel_e1031-r0":
+    if loganalyzer:
         loganalyzer_ignore_regex = [
-            ".*ERR swss#orchagent:.*:- doPortTask: .*: autoneg is not supported.*",
+            r".* ERR syncd#SDK:.*mlnx_port_state_get: Port is down.*",
+            r".* ERR syncd#SDK: :-.*collectData: Failed to get port attr for VID.*",
         ]
+        if duthost.facts["platform"] == "x86_64-cel_e1031-r0":
+            loganalyzer_ignore_regex.append(
+                ".*ERR swss#orchagent:.*:- doPortTask: .*: autoneg is not supported.*"
+            )
         loganalyzer[duthost.hostname].ignore_regex.extend(loganalyzer_ignore_regex)
 
     yield
