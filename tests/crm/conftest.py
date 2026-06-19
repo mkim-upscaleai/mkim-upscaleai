@@ -11,7 +11,6 @@ from tests.common.errors import RunAnsibleModuleFail
 from tests.common.utilities import wait_until, recover_acl_rule, is_ipv6_only_topology
 from tests.common.platform.interface_utils import parse_intf_status
 from tests.common.mellanox_data import is_mellanox_device
-from tests.common.helpers.dut_utils import get_sai_sdk_dump_file
 
 logger = logging.getLogger(__name__)
 
@@ -233,8 +232,6 @@ def configure_a_route_with_same_prefix_as_vlan_for_mlnx(duthost, asichost, tbinf
                       network_with_same_prefix_as_vlan_interface, nh_ip, route_check_command), \
            f"Failed to add route {network_with_same_prefix_as_vlan_interface} via {nh_ip}"
 
-    get_sai_sdk_dump_file(duthost, "sai_sdk_dump_before_shutdown_vlan_ports")
-
     return del_dump_route_with_same_prefix_as_vlan_interface_cmd
 
 
@@ -270,10 +267,6 @@ def shutdown_unnecessary_intf(
         duthost.shutdown_multiple(intfs_connect_with_ptf)
         assert wait_until(300, 20, 0, check_interface_status, duthost, intfs_connect_with_ptf, 'down'), \
             "All interfaces should be down!"
-
-        if is_mellanox_device(duthost):
-            # Get sai sdk dump file in case test fail, we can get the LPM tree information
-            get_sai_sdk_dump_file(duthost, "sai_sdk_dump_after_shutdown_vlan_ports")
 
     yield
 

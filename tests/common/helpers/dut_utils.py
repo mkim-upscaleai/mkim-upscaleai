@@ -428,12 +428,46 @@ def ignore_t2_syslog_msgs(duthost):
                 a_dut.loganalyzer.ignore_regex.extend(ignoreRegex)
 
 
+def _list_sdk_dbg_entries(duthost, dump_folder):
+    """Return basenames of files/dirs directly under dump_folder."""
+    result = duthost.shell(
+        f"ls -1 {dump_folder} 2>/dev/null",
+        module_ignore_errors=True)
+    if result["rc"] != 0:
+        return set()
+    return {line.strip() for line in result["stdout_lines"] if line.strip()}
+
+
+def _is_saisdkdump_artifact(entry, dump_file_name):
+    """Return True if entry is an artifact from this saisdkdump invocation."""
+    return (
+        entry == dump_file_name
+        or entry.startswith(f"{dump_file_name}.")
+        or entry.startswith(f"{dump_file_name}_")
+        or entry.startswith("sdk_dump_ext_")
+    )
+
+
+def _cleanup_sdk_dbg_dump(duthost, dump_folder, dump_file_name, existing_entries):
+    """Remove saisdkdump artifacts from the DUT after fetch to Allure."""
+    compressed_dump_file = f"/tmp/{dump_file_name}.tar.gz"
+    new_entries = _list_sdk_dbg_entries(duthost, dump_folder) - existing_entries
+    paths_to_remove = [
+        f"{dump_folder}/{entry}"
+        for entry in new_entries
+        if _is_saisdkdump_artifact(entry, dump_file_name)
+    ]
+    paths_to_remove.append(compressed_dump_file)
+    duthost.shell(f"rm -rf {' '.join(paths_to_remove)}", module_ignore_errors=True)
+
+
 def get_sai_sdk_dump_file(duthost, dump_file_name):
     # a folder mounted from the host to the syncd container
     # visible as /var/log/sdk_dbg for both the host and the syncd container
     # and this won't cause syncd container memory usage to grow
     dump_folder = "/var/log/sdk_dbg"
     full_path_dump_file = f"{dump_folder}/{dump_file_name}"
+    existing_entries = _list_sdk_dbg_entries(duthost, dump_folder)
     logger.info(f"Generating SDK dump file: {full_path_dump_file}")
     cmd_gen_sdk_dump = f"docker exec syncd bash -c 'saisdkdump -f {full_path_dump_file}' "
     # saisdkdump requires the SAI RPC server (syncd-rpc). With regular syncd the tool
@@ -448,10 +482,12 @@ def get_sai_sdk_dump_file(duthost, dump_file_name):
         return
 
     compressed_dump_file = f"/tmp/{dump_file_name}.tar.gz"
-    duthost.archive(path=full_path_dump_file, dest=compressed_dump_file, format='gz')
-
-    duthost.fetch(src=compressed_dump_file, dest="/tmp/", flat=True)
-    allure.attach.file(compressed_dump_file, dump_file_name, extension=".tar.gz")
+    try:
+        duthost.archive(path=full_path_dump_file, dest=compressed_dump_file, format='gz')
+        duthost.fetch(src=compressed_dump_file, dest="/tmp/", flat=True)
+        allure.attach.file(compressed_dump_file, dump_file_name, extension=".tar.gz")
+    finally:
+        _cleanup_sdk_dbg_dump(duthost, dump_folder, dump_file_name, existing_entries)
 
 
 def is_mellanox_devices(hwsku):
