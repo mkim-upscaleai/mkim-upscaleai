@@ -30,6 +30,8 @@ def ignore_expected_loganalyzer_exceptions(duthosts, loganalyzer):
                 [
                     # Interface flaps in test_lldp_entry_table_after_flap can cause routeCheck to fail momentarily
                     r".*ERR.* 'routeCheck' status failed.*",
+                    r".* ERR syncd#SDK:.*mlnx_port_state_get: Port is down.*",
+                    r".* ERR syncd#SDK: :-.*collectData: Failed to get port attr for VID.*",
                 ]
             )
 
