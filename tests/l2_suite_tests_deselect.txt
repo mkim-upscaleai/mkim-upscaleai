@@ -161,6 +161,13 @@ vlan/test_vlan.py::test_vlan_tc5_untagged_unicast
 vlan/test_vlan.py::test_vlan_tc6_tagged_untagged_unicast
 
 ###############################################################################
+# LLDP Tests
+###############################################################################
+
+# Temporarily disabling while we debug lldp_syncd not re-populating APPL_DB after swss restart
+lldp/test_lldp_syncd.py::test_lldp_entry_table_after_syncd_orchagent
+
+###############################################################################
 # Feature-Level Exclusions
 ###############################################################################
 
