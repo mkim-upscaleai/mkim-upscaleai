@@ -31,6 +31,18 @@ pytestmark = [
 logger = logging.getLogger(__name__)
 
 
+@pytest.fixture(autouse=True)
+def ignore_expected_loganalyzer_exceptions(rand_one_dut_hostname, loganalyzer):
+    """Ignore expected failures logs during test execution."""
+    if loganalyzer:
+        ignoreRegex = [
+            r'.* ERR mgmt-framework#sonic_yang: Data Loading Failed:Invalid value "Loopback0" in "agent_id" element.*',
+        ]
+        loganalyzer[rand_one_dut_hostname].ignore_regex.extend(ignoreRegex)
+
+    yield
+
+
 @pytest.fixture(scope='module', autouse=True)
 def setup(duthosts, rand_one_dut_hostname, ptfhost, tbinfo, config_sflow_feature):
     duthost = duthosts[rand_one_dut_hostname]
