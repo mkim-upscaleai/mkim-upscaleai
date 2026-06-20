@@ -1,5 +1,5 @@
 mgmt_bridge: br0
-mgmt_prefixlen: 22
+mgmt_prefixlen: 16
 mgmt_gw: 10.9.0.1
 mgmt_gw_v6: 2001:db8:109::1
 vm_mgmt_gw: 10.9.0.1
