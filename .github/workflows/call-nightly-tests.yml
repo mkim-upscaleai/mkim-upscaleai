@@ -76,7 +76,7 @@ on:
         required: true
       skip_topo:
         type: boolean
-        description: "Skip DUT/fanout factory reset, config reload, remove-topo, add-topo, deploy-mg, pretest, and DUT reboot/RPC (also skips install-switch-image)"
+        description: "Skip remove-topo and add-topo steps (topology assumed already deployed)"
         default: false
         required: false
       ALLURE_LAUNCH_TAG:
@@ -484,7 +484,7 @@ jobs:
 
   install-switch-image:
     needs: [distribute-test-files, reserve-testbed]
-    if: ${{ inputs.test_profile == 'nightly' && inputs.install_image != false && inputs.skip_topo != true }}
+    if: ${{ inputs.test_profile == 'nightly' && inputs.install_image != false }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.distribute-test-files.outputs.matrix) }}
