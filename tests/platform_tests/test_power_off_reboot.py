@@ -21,7 +21,7 @@ INTERFACE_WAIT_TIME = 300
 # Add your platform here if it requires more than 1 PSU to boot
 MIN_REQUIRED_PSUS = {
     'x86_64-nvidia_sn5610-r0': 2,
-    'x86_64-upscaleai_6540-r0': 2,
+    # 'x86_64-upscaleai_6540-r0': 2,
 }
 
 
