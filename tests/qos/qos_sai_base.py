@@ -1,3 +1,4 @@
+import ast
 import ipaddress
 import json
 import logging
@@ -200,10 +201,10 @@ class QosSaiBase(QosBase):
                 Updates bufferProfile with computed buffer threshold
         """
         if self.isBufferInApplDb(dut_asic):
-            db = "0"
+            db = "APPL_DB"
             keystr = "BUFFER_POOL_TABLE:"
         else:
-            db = "4"
+            db = "CONFIG_DB"
             keystr = "BUFFER_POOL|"
         if check_qos_db_fv_reference_with_table(dut_asic):
             if six.PY2:
@@ -214,7 +215,7 @@ class QosSaiBase(QosBase):
             pool = keystr + bufferProfile["pool"]
         bufferSize = int(
             dut_asic.run_redis_cmd(
-                argv=["redis-cli", "-n", db, "HGET", pool, "size"]
+                argv=["sonic-db-cli", db, "HGET", pool, "size"]
             )[0]
         )
         bufferScale = 2 ** float(bufferProfile["dynamic_th"])
@@ -240,23 +241,23 @@ class QosSaiBase(QosBase):
 
         port_table_name = "BUFFER_PORT_EGRESS_PROFILE_LIST_TABLE" if \
             table == "BUFFER_QUEUE_TABLE" else "BUFFER_PORT_INGRESS_PROFILE_LIST_TABLE"
-        db = "0"
+        db = "APPL_DB"
         port_profile_res = dut_asic.run_redis_cmd(
-            argv=["redis-cli", "-n", db, "HGET", f"{port_table_name}: {port}", "profile_list"]
+            argv=["sonic-db-cli", db, "HGET", f"{port_table_name}:{port}", "profile_list"]
         )[0]
         port_profile_list = port_profile_res.split(",")
 
         port_dynamic_th = ''
         for port_profile in port_profile_list:
             buffer_pool_name = dut_asic.run_redis_cmd(
-                argv=["redis-cli", "-n", db, "HGET", f'BUFFER_PROFILE_TABLE:{port_profile}', "pool"]
+                argv=["sonic-db-cli", db, "HGET", f'BUFFER_PROFILE_TABLE:{port_profile}', "pool"]
             )[0]
             if buffer_pool_name == pg_q_buffer_profile["pool"]:
                 port_dynamic_th = dut_asic.run_redis_cmd(
-                    argv=["redis-cli", "-n", db, "HGET", f'BUFFER_PROFILE_TABLE:{port_profile}', "dynamic_th"]
+                    argv=["sonic-db-cli", db, "HGET", f'BUFFER_PROFILE_TABLE:{port_profile}', "dynamic_th"]
                 )[0]
                 port_profile_reserved_size = dut_asic.run_redis_cmd(
-                    argv=["redis-cli", "-n", db, "HGET", f'BUFFER_PROFILE_TABLE:{port_profile}', "size"]
+                    argv=["sonic-db-cli", db, "HGET", f'BUFFER_PROFILE_TABLE:{port_profile}', "size"]
                 )[0]
                 break
         if port_dynamic_th:
@@ -270,10 +271,10 @@ class QosSaiBase(QosBase):
 
             pg_q_alpha = calculate_alpha(pg_q_buffer_profile['dynamic_th'])
             port_alpha = calculate_alpha(port_dynamic_th)
-            pool = f'BUFFER_POOL_TABLE: {pg_q_buffer_profile["pool"]}'
+            pool = f'BUFFER_POOL_TABLE:{pg_q_buffer_profile["pool"]}'
             buffer_size = int(
                 dut_asic.run_redis_cmd(
-                    argv=["redis-cli", "-n", db, "HGET", pool, "size"]
+                    argv=["sonic-db-cli", db, "HGET", pool, "size"]
                 )[0]
             )
 
@@ -345,14 +346,14 @@ class QosSaiBase(QosBase):
 
         bufferPoolVoid = six.text_type(dut_asic.run_redis_cmd(
             argv=[
-                "redis-cli", "-n", "2", "HGET",
+                "sonic-db-cli", "COUNTERS_DB", "HGET",
                 "COUNTERS_BUFFER_POOL_NAME_MAP", bufferPoolName
             ]
         )[0])
         bufferProfile.update({"bufferPoolVoid": bufferPoolVoid})
 
         bufferPoolRoid = six.text_type(dut_asic.run_redis_cmd(
-            argv=["redis-cli", "-n", "1", "HGET", "VIDTORID", bufferPoolVoid]
+            argv=["sonic-db-cli", "ASIC_DB", "HGET", "VIDTORID", bufferPoolVoid]
         )[0]).replace("oid:", '')
         bufferProfile.update({"bufferPoolRoid": bufferPoolRoid})
 
@@ -379,22 +380,22 @@ class QosSaiBase(QosBase):
                 port = "{}:Asic0:{}".format(dut_asic.sonichost.hostname, port)
 
         if self.isBufferInApplDb(dut_asic):
-            db = "0"
+            db = "APPL_DB"
             keystr = "{0}:{1}:{2}".format(table, port, priorityGroup)
             bufkeystr = "BUFFER_PROFILE_TABLE:"
         else:
-            db = "4"
+            db = "CONFIG_DB"
             keystr = "{0}|{1}|{2}".format(table, port, priorityGroup)
             bufkeystr = "BUFFER_PROFILE|"
 
         if check_qos_db_fv_reference_with_table(dut_asic):
-            out = dut_asic.run_redis_cmd(argv=["redis-cli", "-n", db, "HGET", keystr, "profile"])[0]
+            out = dut_asic.run_redis_cmd(argv=["sonic-db-cli", db, "HGET", keystr, "profile"])[0]
             if six.PY2:
                 bufferProfileName = out.encode("utf-8").translate(None, "[]")
             else:
                 bufferProfileName = out.translate({ord(i): None for i in '[]'})
         else:
-            profile_content = dut_asic.run_redis_cmd(argv=["redis-cli", "-n", db, "HGET", keystr, "profile"])
+            profile_content = dut_asic.run_redis_cmd(argv=["sonic-db-cli", db, "HGET", keystr, "profile"])
             if profile_content:
                 bufferProfileName = bufkeystr + profile_content[0]
             else:
@@ -414,10 +415,16 @@ class QosSaiBase(QosBase):
                 return dump_buffer_profile
 
         result = dut_asic.run_redis_cmd(
-            argv=["redis-cli", "-n", db, "HGETALL", bufferProfileName]
+            argv=["sonic-db-cli", db, "HGETALL", bufferProfileName]
         )
-        it = iter(result)
-        bufferProfile = dict(list(zip(it, it)))
+        # sonic-db-cli HGETALL output format changed across SONiC versions:
+        #   Old: alternating key/value lines  -> ['xon', '38912', 'xoff', '257024', ...]
+        #   New: single stringified dict line -> ["{'xon': '38912', 'xoff': '257024', ...}"]
+        if len(result) == 1 and result[0].startswith('{'):
+            bufferProfile = ast.literal_eval(result[0])
+        else:
+            it = iter(result)
+            bufferProfile = dict(list(zip(it, it)))
         bufferProfile.update({"profileName": bufferProfileName})
 
         # Update profile static threshold value if  profile threshold is dynamic
@@ -460,13 +467,13 @@ class QosSaiBase(QosBase):
                 None if shared headroom pool isn't enabled
         """
         if self.isBufferInApplDb(dut_asic):
-            db = "0"
+            db = "APPL_DB"
             keystr = "BUFFER_POOL_TABLE:ingress_lossless_pool"
         else:
-            db = "4"
+            db = "CONFIG_DB"
             keystr = "BUFFER_POOL|ingress_lossless_pool"
         result = dut_asic.run_redis_cmd(
-            argv=["redis-cli", "-n", db, "HGETALL", keystr]
+            argv=["sonic-db-cli", db, "HGETALL", keystr]
         )
         it = iter(result)
         ingressLosslessPool = dict(list(zip(it, it)))
@@ -2339,10 +2346,10 @@ class QosSaiBase(QosBase):
                     # Some platforms store per-queue entries (e.g. :0, :1, :2) instead of a
                     # single range entry (:0-2). Detect this and fall back to per-queue lookup.
                     buf_queue_table = "BUFFER_QUEUE_TABLE" if self.isBufferInApplDb(dut_asic) else "BUFFER_QUEUE"
-                    buf_db = "0" if self.isBufferInApplDb(dut_asic) else "4"
+                    buf_db = "APPL_DB" if self.isBufferInApplDb(dut_asic) else "CONFIG_DB"
                     range_key = "{}:{}:0-2".format(buf_queue_table, srcport)
                     range_profile = dut_asic.run_redis_cmd(
-                        argv=["redis-cli", "-n", buf_db, "HGET", range_key, "profile"])
+                        argv=["sonic-db-cli", buf_db, "HGET", range_key, "profile"])
                     if not range_profile:
                         is_lossy_queue_only = True
                         logger.info(f"{srcport} uses per-queue buffer entries, treating as lossy queue only")
@@ -2447,9 +2454,8 @@ class QosSaiBase(QosBase):
             for a_asic in get_src_dst_asic_and_duts['all_asics']:
                 a_asic.run_redis_cmd(
                     argv=[
-                        "redis-cli",
-                        "-n",
-                        "4",
+                        "sonic-db-cli",
+                        "CONFIG_DB",
                         "HSET",
                         schedParam["profile"],
                         "weight",
@@ -3495,7 +3501,7 @@ def set_queue_pir(interface, queue, rate):
         weights_list = []
         for queue in queue_table_postfix_list:
             key_str = f"BUFFER_PROFILE_TABLE:queue{queue}_downlink_lossy_profile"  # noqa: E231
-            dynamic_th_res = duthost.run_redis_cmd(argv=["redis-cli", "-n", 0, "HGET", key_str, "dynamic_th"])
+            dynamic_th_res = duthost.run_redis_cmd(argv=["sonic-db-cli", "APPL_DB", "HGET", key_str, "dynamic_th"])
             if dynamic_th_res:
                 queue_dynamic_th_map[queue] = dynamic_th_res[0]
         logging.info(f"queue_dynamic_th_map: {queue_dynamic_th_map}")
