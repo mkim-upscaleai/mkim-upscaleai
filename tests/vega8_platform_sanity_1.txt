@@ -1,0 +1,11 @@
+platform_tests/cli
+platform_tests/counterpoll
+platform_tests/daemon
+platform_tests/mellanox
+platform_tests/sfp
+platform_tests/test_auto_negotiation
+platform_tests/test_memory_exhaustion
+platform_tests/test_port_toggle
+platform_tests/test_reboot
+platform_tests/test_sensors
+platform_tests/test_sequential_restart

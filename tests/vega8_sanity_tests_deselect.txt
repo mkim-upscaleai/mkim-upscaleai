@@ -1,0 +1,23 @@
+# Need reachable NTP Servers
+clock/test_clock.py::test_config_clock_date
+
+# Requires T2 topology
+dut_console/test_console_chassis_conn.py
+
+# Requires console switch to be running SONiC
+dut_console/test_console_baud_rate.py::test_baud_rate_sonic_connect
+
+# Unsupported platform (Arista, Nokia)
+dut_console/test_console_baud_rate.py::test_baud_rate_boot_connect
+
+# Test is not supported for 202012 and newer image versions!
+monit/test_monit_status.py::test_monit_reporting_message
+
+# Will revisit, skipped because of https://github.com/sonic-net/sonic-mgmt/issues/16997
+syslog/test_syslog_source_ip.py
+
+# REVISIT skipping because it is turning syslog into directory
+syslog/test_logrotate.py
+
+# Skipped due to open GitHub issue sonic-mgmt #20787
+tacacs/test_ro_disk.py::test_ro_disk
