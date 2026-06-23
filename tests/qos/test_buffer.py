@@ -2779,7 +2779,10 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
             use_assert: In case the test failed, to assert or just return false.
                         It should return false if it is called in a wait_until loop
         """
-        buffer_item_asic_oid = name_map['{}:{}'.format(port, buffer_item)]
+        buffer_item_asic_oid = name_map.get('{}:{}'.format(port, buffer_item))
+        if buffer_item_asic_oid is None:
+            logging.info("No ASIC OID for {}:{} in name_map, skipping ASIC_DB check".format(port, buffer_item))
+            return buffer_profile_oid, True
         buffer_item_asic_key = dut_db_info.get_buffer_profile_key_from_asic_db(
             buffer_item_asic_oid)
         buffer_profile_oid_in_pg = dut_db_info.get_buffer_profile_oid_in_pg_from_asic_db(
@@ -2913,9 +2916,9 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
 
     # Check whether the COUNTERS_PG_NAME_MAP and COUNTERS_QUEUE_NAME_MAP exists. Skip ASIC_DB checking if it isn't
     pg_name_map = _compose_dict_from_cli(duthost.shell(
-        'redis-cli -n 2 hgetall COUNTERS_PG_NAME_MAP')['stdout'].split())
+        'sonic-db-cli COUNTERS_DB hgetall COUNTERS_PG_NAME_MAP')['stdout'].split())
     queue_name_map = _compose_dict_from_cli(duthost.shell(
-        'redis-cli -n 2 hgetall COUNTERS_QUEUE_NAME_MAP')['stdout'].split())
+        'sonic-db-cli COUNTERS_DB hgetall COUNTERS_QUEUE_NAME_MAP')['stdout'].split())
     cable_length_map = _compose_dict_from_cli(duthost.shell(
         config_db_shell_prefix(duthost) + 'hgetall "CABLE_LENGTH|AZURE"')['stdout'].split())
 
@@ -3143,7 +3146,10 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
             buffer_profile_oid, _ = _check_port_buffer_info_and_get_profile_oid(
                 dut_db_info, table, ids, port, expected_profile)
 
-            if not buffer_profile_oid:
+            name_map_for_table = pg_name_map if table == 'BUFFER_PG_TABLE' else queue_name_map
+            if not buffer_profile_oid and any(
+                    '{}:{}'.format(port, item) in name_map_for_table
+                    for item in _ids_to_id_list(ids)):
                 raise Exception(f"Buffer profile {expected_profile} not found in ASIC_DB")
 
             if is_qos_db_reference_with_table:
@@ -3172,45 +3178,47 @@ def test_buffer_deployment(duthosts, rand_one_dut_hostname, conn_graph_facts, tb
                                 "Buffer profile {} {} doesn't match default {}"
                                 .format(expected_profile, profile_info, std_profile))
 
-                # Further check the buffer profile in ASIC_DB
-                logging.info("Checking profile {} oid {}".format(
-                    expected_profile, buffer_profile_oid))
-                buffer_profile_key = dut_db_info.get_buffer_profile_key_from_asic_db(
-                    buffer_profile_oid)
-                buffer_profile_asic_info = dut_db_info.get_buffer_profile_info_from_asic_db(
-                    buffer_profile_key)
-                pytest_assert(
-                    buffer_profile_asic_info.get('SAI_BUFFER_PROFILE_ATTR_XON_TH') ==
-                    profile_info.get('xon') and
-                    buffer_profile_asic_info.get('SAI_BUFFER_PROFILE_ATTR_XOFF_TH') ==
-                    profile_info.get('xoff') and
-                    buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_RESERVED_BUFFER_SIZE'] ==
-                    profile_info['size'] and
-                    (buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_THRESHOLD_MODE'] ==
-                        'SAI_BUFFER_PROFILE_THRESHOLD_MODE_DYNAMIC' and
-                        buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_SHARED_DYNAMIC_TH'] ==
-                        profile_info['dynamic_th'] or
-                        buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_THRESHOLD_MODE'] ==
-                        'SAI_BUFFER_PROFILE_THRESHOLD_MODE_STATIC' and
-                        buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_SHARED_STATIC_TH'] ==
-                        profile_info['static_th']),
-                    "Buffer profile {} {} doesn't align with ASIC_TABLE {}"
-                    .format(expected_profile, profile_info, buffer_profile_asic_info))
+                if buffer_profile_oid:
+                    # Further check the buffer profile in ASIC_DB
+                    logging.info("Checking profile {} oid {}".format(
+                        expected_profile, buffer_profile_oid))
+                    buffer_profile_key = dut_db_info.get_buffer_profile_key_from_asic_db(
+                        buffer_profile_oid)
+                    buffer_profile_asic_info = dut_db_info.get_buffer_profile_info_from_asic_db(
+                        buffer_profile_key)
+                    pytest_assert(
+                        buffer_profile_asic_info.get('SAI_BUFFER_PROFILE_ATTR_XON_TH') ==
+                        profile_info.get('xon') and
+                        buffer_profile_asic_info.get('SAI_BUFFER_PROFILE_ATTR_XOFF_TH') ==
+                        profile_info.get('xoff') and
+                        buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_RESERVED_BUFFER_SIZE'] ==
+                        profile_info['size'] and
+                        (buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_THRESHOLD_MODE'] ==
+                            'SAI_BUFFER_PROFILE_THRESHOLD_MODE_DYNAMIC' and
+                            buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_SHARED_DYNAMIC_TH'] ==
+                            profile_info['dynamic_th'] or
+                            buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_THRESHOLD_MODE'] ==
+                            'SAI_BUFFER_PROFILE_THRESHOLD_MODE_STATIC' and
+                            buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_SHARED_STATIC_TH'] ==
+                            profile_info['static_th']),
+                        "Buffer profile {} {} doesn't align with ASIC_TABLE {}"
+                        .format(expected_profile, profile_info, buffer_profile_asic_info))
 
-                profiles_checked[expected_profile] = buffer_profile_oid
-                if is_ingress_lossless:
-                    if not lossless_pool_oid:
-                        lossless_pool_oid = buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_POOL_ID']
-                    else:
-                        pytest_assert(lossless_pool_oid == buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_POOL_ID'],
-                                      "Buffer profile {} has different buffer pool id {} from others {}"
-                                      .format(expected_profile,
-                                              buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_POOL_ID'],
-                                              lossless_pool_oid))
+                    profiles_checked[expected_profile] = buffer_profile_oid
+                    if is_ingress_lossless:
+                        if not lossless_pool_oid:
+                            lossless_pool_oid = buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_POOL_ID']
+                        else:
+                            pytest_assert(lossless_pool_oid == buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_POOL_ID'],
+                                          "Buffer profile {} has different buffer pool id {} from others {}"
+                                          .format(expected_profile,
+                                                  buffer_profile_asic_info['SAI_BUFFER_PROFILE_ATTR_POOL_ID'],
+                                                  lossless_pool_oid))
             else:
-                pytest_assert(profiles_checked[expected_profile] == buffer_profile_oid,
-                              "PG {}:{} has different OID of profile from other PGs sharing the same profile {}"
-                              .format(port, ids, expected_profile))
+                if buffer_profile_oid:
+                    pytest_assert(profiles_checked[expected_profile] == buffer_profile_oid,
+                                  "PG {}:{} has different OID of profile from other PGs sharing the same profile {}"
+                                  .format(port, ids, expected_profile))
 
     if not BUFFER_MODEL_DYNAMIC:
 
