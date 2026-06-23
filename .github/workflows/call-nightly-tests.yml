@@ -87,6 +87,16 @@ on:
         type: string
         description: "Override ALLURE_LAUNCH_NAME (if set, used verbatim instead of computed name)"
         required: false
+      disable_loganalyzer:
+        type: boolean
+        description: "Disable log analyzer for all test runs"
+        default: false
+        required: false
+      skip_yang:
+        type: boolean
+        description: "Skip YANG validation for all test runs"
+        default: false
+        required: false
 
 env:
   ALLURE_ENDPOINT: https://upscaleai.testops.cloud
@@ -527,6 +537,8 @@ jobs:
       runner_label: ${{ matrix.runner_label }}
       port_count: ${{ inputs.port_count }}
       skip_topo: ${{ inputs.skip_topo }}
+      disable_loganalyzer: ${{ inputs.disable_loganalyzer }}
+      skip_yang: ${{ inputs.skip_yang }}
       ALLURE_ENV: ${{ needs.setup-shared-allure.outputs.allure-env }}
       sonic_version: ${{ inputs.sonic_version }}
     secrets:
@@ -557,6 +569,8 @@ jobs:
       test_files: ${{ matrix.test_files }}
       runner_label: ${{ matrix.runner_label }}
       port_count: ${{ inputs.port_count }}
+      disable_loganalyzer: ${{ inputs.disable_loganalyzer }}
+      skip_yang: ${{ inputs.skip_yang }}
       ALLURE_ENV: ${{ needs.setup-shared-allure.outputs.allure-env }}
       sonic_version: ${{ inputs.sonic_version }}
     secrets:

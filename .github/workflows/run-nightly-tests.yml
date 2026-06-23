@@ -65,6 +65,16 @@ on:
         type: string
         description: "Override ALLURE_LAUNCH_NAME (if set, used verbatim instead of computed name)"
         required: false
+      disable_loganalyzer:
+        type: boolean
+        description: "Disable log analyzer for all test runs"
+        required: false
+        default: false
+      skip_yang:
+        type: boolean
+        description: "Skip YANG validation for all test runs"
+        required: false
+        default: false
     secrets:
       ALLURE_TOKEN:
         required: true
@@ -681,6 +691,12 @@ jobs:
 
             TEST_EXIT_CODE=0
             extra_flags="--skip_sanity --run-stress-tests --deselect-file=${deselect_file} --alluredir=allure-results/${suite_name}"
+            if [ "${{ inputs.disable_loganalyzer }}" = "true" ]; then
+              extra_flags="${extra_flags} --disable_loganalyzer"
+            fi
+            if [ "${{ inputs.skip_yang }}" = "true" ]; then
+              extra_flags="${extra_flags} --skip_yang"
+            fi
             if grep -q 'copp' tests/${file}; then
               extra_flags="${extra_flags} --copp_swap_syncd"
             fi
