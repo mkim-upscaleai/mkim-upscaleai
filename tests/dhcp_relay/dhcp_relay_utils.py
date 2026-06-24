@@ -1,10 +1,50 @@
 import ipaddress
 import logging
 import time
+
 from tests.common.utilities import wait_until
 from tests.common.helpers.assertions import pytest_assert
 
 logger = logging.getLogger(__name__)
+
+SOURCE_PORT_IP_IN_RELAY_DEPLOYMENT_ID = "8"
+
+
+def get_deployment_id(duthost):
+    return duthost.shell(
+        'sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" deployment_id',
+        module_ignore_errors=True
+    )["stdout"].strip()
+
+
+def ensure_deployment_id_for_source_port_ip_in_relay(duthost):
+    """Set deployment_id=8 so dhcrelay runs with -si. Returns prior value if changed."""
+    current = get_deployment_id(duthost)
+    if current == SOURCE_PORT_IP_IN_RELAY_DEPLOYMENT_ID:
+        return None
+
+    duthost.shell(
+        'sonic-db-cli CONFIG_DB hset "DEVICE_METADATA|localhost" deployment_id '
+        + SOURCE_PORT_IP_IN_RELAY_DEPLOYMENT_ID
+    )
+    restart_dhcp_service(duthost)
+    return current
+
+
+def restore_deployment_id_after_source_port_ip_in_relay(duthost, previous_deployment_id):
+    if previous_deployment_id is None:
+        return
+
+    if previous_deployment_id:
+        duthost.shell(
+            'sonic-db-cli CONFIG_DB hset "DEVICE_METADATA|localhost" deployment_id '
+            + previous_deployment_id
+        )
+    else:
+        duthost.shell(
+            'sonic-db-cli CONFIG_DB hdel "DEVICE_METADATA|localhost" deployment_id'
+        )
+    restart_dhcp_service(duthost)
 
 
 def check_routes_to_dhcp_server(duthost, dut_dhcp_relay_data):

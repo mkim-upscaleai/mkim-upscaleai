@@ -97,6 +97,7 @@ def test_dhcp_relay_restart_with_stress(ptfhost, dut_dhcp_relay_data, validate_d
                             "switch_loopback_ip": dut_dhcp_relay_data[0]['switch_loopback_ip'],
                             "uplink_mac": str(dut_dhcp_relay_data[0]['uplink_mac']),
                             "testing_mode": testing_mode,
+                            "enable_source_port_ip_in_relay": True,
                             "kvm_support": True},
                    log_file="/tmp/dhcp_relay_test.stress.DHCPTest.log", is_python3=True)
 

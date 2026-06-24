@@ -2,10 +2,34 @@ import pytest
 
 from tests.common.utilities import wait_until
 from tests.common.helpers.assertions import pytest_assert as py_assert
-from tests.dhcp_relay.dhcp_relay_utils import check_routes_to_dhcp_server
+from tests.dhcp_relay.dhcp_relay_utils import (
+    check_routes_to_dhcp_server,
+    ensure_deployment_id_for_source_port_ip_in_relay,
+    restore_deployment_id_after_source_port_ip_in_relay,
+)
 
 SINGLE_TOR_MODE = 'single'
 DUAL_TOR_MODE = 'dual'
+
+
+@pytest.fixture(scope="module", autouse=True)
+def enable_source_port_ip_in_relay(duthosts, rand_one_dut_hostname, tbinfo):
+    """
+    Set deployment_id=8 for T0 DHCP relay tests so dhcrelay runs with -si.
+    Restored after the module completes.
+    """
+    topo_type = tbinfo['topo']['type']
+    if topo_type in ['t1', 't2', 'm0', 'm1']:
+        yield
+        return
+
+    duthost = duthosts[rand_one_dut_hostname]
+    previous_deployment_id = None
+    try:
+        previous_deployment_id = ensure_deployment_id_for_source_port_ip_in_relay(duthost)
+        yield
+    finally:
+        restore_deployment_id_after_source_port_ip_in_relay(duthost, previous_deployment_id)
 
 
 def pytest_addoption(parser):

@@ -8,9 +8,6 @@ from tests.common.dhcp_relay_utils import init_dhcpcom_relay_counters, validate_
 from tests.common.fixtures.ptfhost_utils import copy_ptftests_directory   # noqa F401
 from tests.common.fixtures.ptfhost_utils import change_mac_addresses      # noqa F401
 from tests.common.dualtor.mux_simulator_control import toggle_all_simulator_ports_to_rand_selected_tor_m    # noqa F401
-from tests.common.gcu_utils import generate_tmpfile, create_checkpoint, \
-    apply_patch, expect_op_success, delete_tmpfile, \
-    rollback_or_reload, delete_checkpoint
 from tests.ptf_runner import ptf_runner
 from tests.common.utilities import wait_until
 from tests.common.helpers.dut_utils import check_link_status
@@ -60,56 +57,6 @@ def check_interface_status(duthost):
         return True
 
     return False
-
-
-@pytest.fixture(scope="function")
-def enable_source_port_ip_in_relay(duthosts, rand_one_dut_hostname, tbinfo):
-    duthost = duthosts[rand_one_dut_hostname]
-
-    """
-    Enable source port ip in relay function
-    -si parameter(Enable source port ip in relay function) will be added if deployment_id is '8', ref:
-    https://github.com/sonic-net/sonic-buildimage/blob/e0e0c0c1b3c58635bc25fde6a77ca3b0849dfde1/dockers/docker-dhcp-relay/dhcpv4-relay.agents.j2#L16
-    """
-
-    json_patch = [
-        {
-            "op": "replace",
-            "path": "/DEVICE_METADATA/localhost/deployment_id",
-            "value": "8"
-        }
-    ]
-
-    tmpfile = generate_tmpfile(duthost)
-    logger.info("tmpfile {}".format(tmpfile))
-    check_point = "dhcp_relay"
-    try:
-        create_checkpoint(duthost, check_point)
-        output = apply_patch(duthost, json_data=json_patch, dest_file=tmpfile)
-        expect_op_success(duthost, output)
-        restart_dhcp_service(duthost)
-
-        def dhcp_ready(enable_source_port_ip_in_relay):
-            dhcp_relay_running = duthost.is_service_fully_started("dhcp_relay")
-            dhcp_relay_process = duthost.shell("ps -ef |grep dhcrelay|grep -v grep",
-                                               module_ignore_errors=True)["stdout"]
-            dhcp_mon_process = duthost.shell("ps -ef |grep dhcpmon|grep -v grep",
-                                             module_ignore_errors=True)["stdout"]
-            dhcp_mon_process_running = "dhcpmon" in dhcp_mon_process
-            if enable_source_port_ip_in_relay:
-                dhcp_relay_process_ready = "-si" in dhcp_relay_process and "dhcrelay" in dhcp_relay_process
-            else:
-                dhcp_relay_process_ready = "-si" not in dhcp_relay_process and "dhcrelay" in dhcp_relay_process
-            return dhcp_relay_running and dhcp_relay_process_ready and dhcp_mon_process_running
-        pytest_assert(wait_until(60, 2, 0, dhcp_ready, True), "Source port ip in relay is not enabled!")
-        yield
-    finally:
-        delete_tmpfile(duthost, tmpfile)
-        logger.info("Rolled back to original checkpoint")
-        rollback_or_reload(duthost, check_point)
-        delete_checkpoint(duthost, check_point)
-        restart_dhcp_service(duthost)
-        pytest_assert(wait_until(60, 2, 0, dhcp_ready, False), "Source port ip in relay is not disabled!")
 
 
 def test_interface_binding(duthosts, rand_one_dut_hostname, dut_dhcp_relay_data):
@@ -259,6 +206,7 @@ def test_dhcp_relay_default(ptfhost, dut_dhcp_relay_data, validate_dut_routes_ex
                                "switch_loopback_ip": dhcp_relay['switch_loopback_ip'],
                                "uplink_mac": str(dhcp_relay['uplink_mac']),
                                "testing_mode": testing_mode,
+                               "enable_source_port_ip_in_relay": True,
                                "kvm_support": True},
                        log_file=("/tmp/dhcp_relay_test.DHCPTest.default.{}.log"
                                  .format(dhcp_relay["downlink_vlan_iface"]["name"])),
@@ -304,7 +252,7 @@ def test_dhcp_relay_with_source_port_ip_in_relay_enabled(ptfhost, dut_dhcp_relay
                                                          validate_dut_routes_exist, testing_config,
                                                          setup_standby_ports_on_rand_unselected_tor,												# noqa F811
                                                          rand_unselected_dut, toggle_all_simulator_ports_to_rand_selected_tor_m,  # noqa F811
-                                                         enable_source_port_ip_in_relay, verify_acl_drop_on_standby_tor):     # noqa F811
+                                                         verify_acl_drop_on_standby_tor):     # noqa F811
     """Test DHCP relay functionality on T0 topology.
        For each DHCP relay agent running on the DuT, verify DHCP packets are relayed properly
     """
@@ -452,6 +400,7 @@ def test_dhcp_relay_after_link_flap(ptfhost, dut_dhcp_relay_data, validate_dut_r
                            "switch_loopback_ip": dhcp_relay['switch_loopback_ip'],
                            "uplink_mac": str(dhcp_relay['uplink_mac']),
                            "testing_mode": testing_mode,
+                           "enable_source_port_ip_in_relay": True,
                            "kvm_support": True},
                    log_file=("/tmp/dhcp_relay_test.DHCPTest.link_flap.{}.log"
                              .format(dhcp_relay["downlink_vlan_iface"]["name"])),
@@ -511,6 +460,7 @@ def test_dhcp_relay_start_with_uplinks_down(ptfhost, dut_dhcp_relay_data, valida
                            "switch_loopback_ip": dhcp_relay['switch_loopback_ip'],
                            "uplink_mac": str(dhcp_relay['uplink_mac']),
                            "testing_mode": testing_mode,
+                           "enable_source_port_ip_in_relay": True,
                            "kvm_support": True},
                    log_file=("/tmp/dhcp_relay_test.DHCPTest.uplinks_down.{}.log"
                              .format(dhcp_relay["downlink_vlan_iface"]["name"])),
@@ -549,6 +499,7 @@ def test_dhcp_relay_unicast_mac(ptfhost, dut_dhcp_relay_data, validate_dut_route
                            "switch_loopback_ip": dhcp_relay['switch_loopback_ip'],
                            "uplink_mac": str(dhcp_relay['uplink_mac']),
                            "testing_mode": testing_mode,
+                           "enable_source_port_ip_in_relay": True,
                            "kvm_support": True},
                    log_file=("/tmp/dhcp_relay_test.DHCPTest.unicast_mac.{}.log"
                              .format(dhcp_relay["downlink_vlan_iface"]["name"])),
@@ -586,6 +537,7 @@ def test_dhcp_relay_random_sport(ptfhost, dut_dhcp_relay_data, validate_dut_rout
                            "switch_loopback_ip": dhcp_relay['switch_loopback_ip'],
                            "uplink_mac": str(dhcp_relay['uplink_mac']),
                            "testing_mode": testing_mode,
+                           "enable_source_port_ip_in_relay": True,
                            "kvm_support": True},
                    log_file=("/tmp/dhcp_relay_test.DHCPTest.random_sport.{}.log"
                              .format(dhcp_relay["downlink_vlan_iface"]["name"])),
@@ -631,6 +583,7 @@ def test_dhcp_relay_monitor_checksum_validation(ptfhost, dut_dhcp_relay_data, va
                                "switch_loopback_ip": dhcp_relay['switch_loopback_ip'],
                                "uplink_mac": str(dhcp_relay['uplink_mac']),
                                "testing_mode": testing_mode,
+                               "enable_source_port_ip_in_relay": True,
                                "kvm_support": True},
                        log_file=("/tmp/dhcp_relay_test.DHCPTest.default.{}.log"
                                  .format(dhcp_relay["downlink_vlan_iface"]["name"])),
