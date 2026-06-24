@@ -13,6 +13,7 @@ from tests.common.dualtor.mux_simulator_control import \
 from ptf.mask import Mask
 from natsort import natsorted
 from tests.common.helpers.assertions import pytest_assert
+from tests.common.helpers.bgp import get_bgp_neighbors_from_config_facts
 from tests.common.utilities import wait_until
 
 pytestmark = [
