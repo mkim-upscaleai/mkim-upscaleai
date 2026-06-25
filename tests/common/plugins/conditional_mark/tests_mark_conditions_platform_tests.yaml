@@ -1125,6 +1125,51 @@ platform_tests/mellanox/test_reboot_cause.py:
       - "platform in ['x86_64-mlnx_msn2010-r0', 'x86_64-mlnx_msn2700-r0', 'x86_64-mlnx_msn2100-r0', 'x86_64-mlnx_msn2410-r0', 'x86_64-nvidia_sn2201-r0', 'x86_64-nvidia_sn4280-r0']"
       - "asic_type not in ['mellanox', 'nvidia-bluefield']"
 
+platform_tests/mellanox/test_check_sysfs.py:
+  skip:
+    reason: "Vega 6540 uses FPGA sonic_platform instead of Mellanox hw-management sysfs (see tests/platform_tests/vega/)"
+    conditions:
+      - "platform in ['x86_64-upscaleai_6540-r0']"
+
+platform_tests/mellanox/test_hw_management_service.py:
+  skip:
+    reason: "Vega 6540 does not use Mellanox hw-management service (see tests/platform_tests/vega/)"
+    conditions:
+      - "platform in ['x86_64-upscaleai_6540-r0']"
+
+platform_tests/mellanox/test_check_sfp_presence.py:
+  skip:
+    reason: "Vega 6540 transceiver tests use tests/platform_tests/vega/test_platform_transceiver.py"
+    conditions:
+      - "platform in ['x86_64-upscaleai_6540-r0']"
+
+platform_tests/mellanox/test_check_sfp_eeprom.py:
+  skip:
+    reason: "Vega 6540 CMIS EEPROM tests use tests/platform_tests/vega/test_platform_transceiver.py"
+    conditions:
+      - "platform in ['x86_64-upscaleai_6540-r0']"
+
+platform_tests/mellanox/test_psu_power_threshold.py:
+  skip:
+    reason: "Vega PSU threshold mockers N/A; use tests/platform_tests/vega/test_platform_psu_detail.py"
+    conditions:
+      - "platform in ['x86_64-upscaleai_6540-r0']"
+
+platform_tests/mellanox/test_reboot_cause.py::test_reboot_cause:
+  skip:
+    reason: "Vega ASIC/BIOS reboot mock N/A; use tests/platform_tests/vega/test_platform_reboot_cause.py"
+    conditions:
+      - "platform in ['x86_64-upscaleai_6540-r0']"
+
+#######################################
+#####             vega            #####
+#######################################
+platform_tests/vega:
+  skip:
+    reason: "Vega platform tests only supported on Vega 6540 (x86_64-upscaleai_6540-r0)"
+    conditions:
+      - "platform not in ['x86_64-upscaleai_6540-r0']"
+
 #######################################
 #####            sfp              #####
 #######################################
