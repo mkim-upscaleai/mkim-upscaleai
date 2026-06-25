@@ -68,8 +68,8 @@ def get_oid_for_interface(duthost, table_name, interface_name):
     :param interface_name: interface name
     :return: oid for specific interface
     """
-    return duthost.command(f"docker exec -i database redis-cli --raw -n 2 HMGET "
-                           f"{table_name} {interface_name}")["stdout"]
+    return duthost.command(
+        f"sonic-db-cli COUNTERS_DB HGET {table_name} {interface_name}")["stdout"]
 
 
 def set_counters_value(duthost, interface_oid, counter_name, counter_value):
@@ -80,7 +80,9 @@ def set_counters_value(duthost, interface_oid, counter_name, counter_value):
     :param counter_name: counter name
     :param counter_value: counter value
     """
-    duthost.command(f"sudo redis-cli -n 2 hset COUNTERS:{interface_oid} {counter_name} {counter_value}")
+    duthost.command(
+        f"sonic-db-cli COUNTERS_DB HSET COUNTERS:{interface_oid} "
+        f"{counter_name} {counter_value}")
 
 
 def get_port_interface_counter(duthost, interface_name):

@@ -14,7 +14,7 @@ import re
 import logging
 from tests.common import config_reload
 from tests.common.helpers.assertions import pytest_assert
-from tests.common.utilities import wait_until
+from tests.common.utilities import compose_dict_from_cli, wait_until
 
 logger = logging.getLogger(__name__)
 
@@ -58,46 +58,25 @@ def get_redis_queue_count_with_types(duthost, interface, asic=None):
     Returns:
         Dictionary with 'total', 'unicast', and 'multicast' queue counts
     """
-    # Build the redis-cli commands with namespace support for multi-ASIC
     if asic is not None and duthost.sonichost.is_multi_asic:
-        name_map_cmd = (
-            "sonic-db-cli -n {} COUNTERS_DB HGETALL COUNTERS_QUEUE_NAME_MAP"
-            .format(asic.namespace))
-        type_map_cmd = (
-            "sonic-db-cli -n {} COUNTERS_DB HGETALL COUNTERS_QUEUE_TYPE_MAP"
-            .format(asic.namespace))
+        sonic_db_prefix = "sonic-db-cli -n {} COUNTERS_DB".format(asic.namespace)
     else:
-        name_map_cmd = "redis-cli -n 2 HGETALL COUNTERS_QUEUE_NAME_MAP"
-        type_map_cmd = "redis-cli -n 2 HGETALL COUNTERS_QUEUE_TYPE_MAP"
+        sonic_db_prefix = "sonic-db-cli COUNTERS_DB"
 
-    # Get queue name map (interface:queue -> SAI OID)
-    name_map_result = duthost.shell(name_map_cmd)['stdout_lines']
+    name_map = compose_dict_from_cli(duthost.shell(
+        "{} HGETALL COUNTERS_QUEUE_NAME_MAP".format(sonic_db_prefix))['stdout'])
+    type_map = compose_dict_from_cli(duthost.shell(
+        "{} HGETALL COUNTERS_QUEUE_TYPE_MAP".format(sonic_db_prefix))['stdout'])
 
-    # Get queue type map (SAI OID -> queue type)
-    type_map_result = duthost.shell(type_map_cmd)['stdout_lines']
-
-    # Build type map dictionary (SAI OID -> type string)
-    type_map = {}
-    for i in range(0, len(type_map_result), 2):
-        if i + 1 < len(type_map_result):
-            sai_oid = type_map_result[i]
-            queue_type = type_map_result[i + 1]
-            type_map[sai_oid] = queue_type
-
-    # Count queues for the interface
     queue_count = {'total': 0, 'unicast': 0, 'multicast': 0}
-
-    for i in range(0, len(name_map_result), 2):
-        if i + 1 < len(name_map_result):
-            key = name_map_result[i]
-            sai_oid = name_map_result[i + 1]
-            if key.startswith("{}:".format(interface)):
-                queue_count['total'] += 1
-                queue_type = type_map.get(sai_oid, "")
-                if queue_type == "SAI_QUEUE_TYPE_UNICAST":
-                    queue_count['unicast'] += 1
-                elif queue_type == "SAI_QUEUE_TYPE_MULTICAST":
-                    queue_count['multicast'] += 1
+    for key, sai_oid in name_map.items():
+        if key.startswith("{}:".format(interface)):
+            queue_count['total'] += 1
+            queue_type = type_map.get(sai_oid, "")
+            if queue_type == "SAI_QUEUE_TYPE_UNICAST":
+                queue_count['unicast'] += 1
+            elif queue_type == "SAI_QUEUE_TYPE_MULTICAST":
+                queue_count['multicast'] += 1
 
     return queue_count
 
