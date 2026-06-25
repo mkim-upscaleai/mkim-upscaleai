@@ -492,12 +492,18 @@ def _verify_gnoi_tls_connectivity(duthost, ptfhost):
     # are blackholed instead of refused.
     grpcurl_timeouts = "-connect-timeout 5 -max-time 10"
 
+    # grpc-go v1.67+ enforces ALPN (h2) on TLS connections. Older SONiC gNMI
+    # server builds do not advertise ALPN, causing an immediate handshake
+    # rejection ("missing selected ALPN property"). The escape hatch introduced
+    # in grpc-go v1.67 is GRPC_ENFORCE_ALPN_ENABLED=false.
+    grpcurl_env = "GRPC_ENFORCE_ALPN_ENABLED=false"
+
     list_cmd = (
-        f"grpcurl {grpcurl_timeouts} {cacert_arg} {cert_arg} {key_arg} "
+        f"{grpcurl_env} grpcurl {grpcurl_timeouts} {cacert_arg} {cert_arg} {key_arg} "
         f"{target} list"
     )
     time_cmd = (
-        f"grpcurl {grpcurl_timeouts} {cacert_arg} {cert_arg} {key_arg} "
+        f"{grpcurl_env} grpcurl {grpcurl_timeouts} {cacert_arg} {cert_arg} {key_arg} "
         f"{target} gnoi.system.System.Time"
     )
 

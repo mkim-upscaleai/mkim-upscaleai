@@ -104,7 +104,14 @@ class PtfGrpc:
         Returns:
             List of command arguments
         """
-        cmd = ["grpcurl"]
+        # grpc-go v1.67+ enforces ALPN (h2) on TLS connections. Older SONiC
+        # gNMI server builds do not advertise ALPN, causing an immediate
+        # handshake rejection ("missing selected ALPN property"). The escape
+        # hatch introduced in grpc-go v1.67 is GRPC_ENFORCE_ALPN_ENABLED=false.
+        # Using "env VAR=val" form because _execute_grpcurl uses the Ansible
+        # command module (no shell), so a bare "VAR=val cmd" prefix would be
+        # interpreted as the executable name rather than an env assignment.
+        cmd = ["env", "GRPC_ENFORCE_ALPN_ENABLED=false", "grpcurl"]
 
         # Connection options
         if self.plaintext:
