@@ -210,3 +210,6 @@ bmp/test_bmp_configdb.py
 bmp/test_bmp_redis_instance.py
 bmp/test_bmp_statedb.py
 bmp/test_docker_restart.py
+
+# Skipped: frrcfgd does not emit "admin state is set to 'down'" to syslog (bgpcfgd-only message)
+log_fidelity/test_bgp_shutdown.py::test_bgp_shutdown
