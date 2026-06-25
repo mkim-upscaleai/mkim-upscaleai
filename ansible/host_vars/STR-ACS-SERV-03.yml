@@ -1,9 +1,9 @@
 mgmt_bridge: br0
-mgmt_prefixlen: 24
-mgmt_gw: 192.168.223.1
+mgmt_prefixlen: 16
+mgmt_gw: 10.9.0.1
 mgmt_gw_v6: 2001:db8:123::1
-vm_mgmt_gw: 192.168.223.1
-external_port: ens25f1
+vm_mgmt_gw: 10.9.0.1
+external_port: ens1np0
 
 ansible_user: casper
 ansible_ssh_private_key_file: /root/.ssh/id_rsa

@@ -84,7 +84,7 @@ all:
     sonic:
       hosts:
         upscalelab2-spine6:
-          ansible_host: 10.9.100.143
+          ansible_host: 10.9.100.66
           ansible_hostv6: 2001:db8:109::10
           mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
@@ -94,22 +94,22 @@ all:
           sonicadmin_password: "YourPaSsWoRd"
           hwsku: 6540-0642-OSEU-AFA
           model: Vega-6540
-          serial: 0023115261000013
-          base_mac: E8:47:F3:00:12:08
+          serial: 00231150000000011
+          base_mac: E8:47:F3:00:0E:08
           syseeprom_info:
             "0x21": "6540 2RU 51.2T Fixed"
             "0x22": "750-000001-01"
-            "0x23": "0023115261000013"
-            "0x24": "E8:47:F3:00:12:08"
-            "0x25":  "06/12/2026 00:00:00"
+            "0x23": "00231150000000011"
+            "0x24": "E8:47:F3:00:0E:08"
+            "0x25":  "06/20/2026 00:00:00"
             "0x26":  "1"
-            "0x27":  "03"
-            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x27":  "00"
+            "0x28":  "vega-8"
             "0x2A":  "504"
             "0x2B":  "UPSCALEAI"
             "0x2C":  "US"
             "0x2F":  "6540-0642-OSEU-AFA"
-            "0xFE":  "0xC7D636D2"
+            "0xFE":  "0xA62B7ED0"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false
@@ -157,35 +157,32 @@ all:
           ansible_become_password: "YourPaSsWoRd"
           console_baudrate: 115200
         upscalelab2-spine8:
-          ansible_host: 192.168.223.10
-          ansible_hostv6: 2001:db8:123::10
-          mgmt_subnet_mask_length: 24
+          ansible_host: 10.9.100.143
+          ansible_hostv6: 2001:db8:100::10
+          mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
           ansible_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           ansible_altpassword: "YourPaSsWoRd"
           sonicadmin_password: "YourPaSsWoRd"
-          hwsku: Mellanox-SN5610-C256S2
-          model: SN5610
-          serial: MT2535601Q8W
-          base_mac: E8:9E:49:78:D4:50
+          hwsku: 6540-0642-OSEU-AFA
+          model: Vega-6540
+          serial: 0023115261000013
+          base_mac: E8:47:F3:00:12:08
           syseeprom_info:
-            "0x21": "SN5610"
-            "0x22": "920-9N42F-00RI-3C1"
-            "0x23": "MT2535601Q8W"
-            "0x24": "E8:9E:49:78:D4:50"
-            "0x25":  "09/04/2025 14:19:28"
+            "0x21": "6540 2RU 51.2T Fixed"
+            "0x22": "750-000001-01"
+            "0x23": "0023115261000013"
+            "0x24": "E8:47:F3:00:12:08"
+            "0x25":  "06/12/2026 00:00:00"
             "0x26":  "1"
-            "0x28":  "x86_64-nvidia_sn5610-r0"
-            "0x29":  "2024.08-5.3.0013-115200"
-            "0x2A":  "290"
-            "0x2B":  "Nvidia"
-            "0x2D":  "Nvidia"
-            "0xFE":  "0xC5941E0B"
-          skip_modules:
-            psus:
-              - PSU 1
-              - PSU 3
+            "0x27":  "03"
+            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x2A":  "504"
+            "0x2B":  "UPSCALEAI"
+            "0x2C":  "US"
+            "0x2F":  "6540-0642-OSEU-AFA"
+            "0xFE":  "0xC7D636D2"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false
@@ -307,7 +304,7 @@ all:
           ansible_become_password: "YourPaSsWoRd"
           console_baudrate: 115200
         upscalelab2-spine6-800:
-          ansible_host: 10.9.100.143
+          ansible_host: 10.9.100.66
           ansible_hostv6: 2001:db8:109::10
           mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
@@ -317,22 +314,22 @@ all:
           sonicadmin_password: "YourPaSsWoRd"
           hwsku: 6540-0642-OSEU-AFA
           model: Vega-6540
-          serial: 0023115261000013
-          base_mac: E8:47:F3:00:12:08
+          serial: 00231150000000011
+          base_mac: E8:47:F3:00:0E:08
           syseeprom_info:
             "0x21": "6540 2RU 51.2T Fixed"
             "0x22": "750-000001-01"
-            "0x23": "0023115261000013"
-            "0x24": "E8:47:F3:00:12:08"
-            "0x25":  "06/12/2026 00:00:00"
+            "0x23": "00231150000000011"
+            "0x24": "E8:47:F3:00:0E:08"
+            "0x25":  "06/20/2026 00:00:00"
             "0x26":  "1"
-            "0x27":  "03"
-            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x27":  "00"
+            "0x28":  "vega-8"
             "0x2A":  "504"
             "0x2B":  "UPSCALEAI"
             "0x2C":  "US"
             "0x2F":  "6540-0642-OSEU-AFA"
-            "0xFE":  "0xC7D636D2"
+            "0xFE":  "0xA62B7ED0"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false
@@ -340,7 +337,7 @@ all:
           ansible_become_method: sudo
           ansible_become_user: root
           ansible_become_password: "YourPaSsWoRd"
-          console_baudrate: 115200
+          console_baudrate: 115200         
         upscalelab2-spine7-800:
           ansible_host: 192.168.222.10
           ansible_hostv6: 2001:db8:122::10
@@ -380,35 +377,32 @@ all:
           ansible_become_password: "YourPaSsWoRd"
           console_baudrate: 115200
         upscalelab2-spine8-800:
-          ansible_host: 192.168.223.10
-          ansible_hostv6: 2001:db8:123::10
-          mgmt_subnet_mask_length: 24
+          ansible_host: 10.9.100.143
+          ansible_hostv6: 2001:db8:100::10
+          mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
           ansible_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           ansible_altpassword: "YourPaSsWoRd"
           sonicadmin_password: "YourPaSsWoRd"
-          hwsku: Mellanox-SN5610-O64S2
-          model: SN5610
-          serial: MT2535601Q8W
-          base_mac: E8:9E:49:78:D4:50
+          hwsku: 6540-0642-OSEU-AFA
+          model: Vega-6540
+          serial: 0023115261000013
+          base_mac: E8:47:F3:00:12:08
           syseeprom_info:
-            "0x21": "SN5610"
-            "0x22": "920-9N42F-00RI-3C1"
-            "0x23": "MT2535601Q8W"
-            "0x24": "E8:9E:49:78:D4:50"
-            "0x25":  "09/04/2025 14:19:28"
+            "0x21": "6540 2RU 51.2T Fixed"
+            "0x22": "750-000001-01"
+            "0x23": "0023115261000013"
+            "0x24": "E8:47:F3:00:12:08"
+            "0x25":  "06/12/2026 00:00:00"
             "0x26":  "1"
-            "0x28":  "x86_64-nvidia_sn5610-r0"
-            "0x29":  "2024.08-5.3.0013-115200"
-            "0x2A":  "290"
-            "0x2B":  "Nvidia"
-            "0x2D":  "Nvidia"
-            "0xFE":  "0xC5941E0B"
-          skip_modules:
-            psus:
-              - PSU 1
-              - PSU 3
+            "0x27":  "03"
+            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x2A":  "504"
+            "0x2B":  "UPSCALEAI"
+            "0x2C":  "US"
+            "0x2F":  "6540-0642-OSEU-AFA"
+            "0xFE":  "0xC7D636D2"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false
@@ -456,7 +450,7 @@ all:
           ansible_become_password: "YourPaSsWoRd"
           console_baudrate: 115200
         upscalelab2-spine6-400:
-          ansible_host: 10.9.100.143
+          ansible_host: 10.9.100.66
           ansible_hostv6: 2001:db8:109::10
           mgmt_subnet_mask_length: 16
           mgmt_subnet_v6_mask_length: 64
@@ -466,22 +460,22 @@ all:
           sonicadmin_password: "YourPaSsWoRd"
           hwsku: 6540-0642-OSEU-AFA
           model: Vega-6540
-          serial: 0023115261000013
-          base_mac: E8:47:F3:00:12:08
+          serial: 00231150000000011
+          base_mac: E8:47:F3:00:0E:08
           syseeprom_info:
             "0x21": "6540 2RU 51.2T Fixed"
             "0x22": "750-000001-01"
-            "0x23": "0023115261000013"
-            "0x24": "E8:47:F3:00:12:08"
-            "0x25":  "06/12/2026 00:00:00"
+            "0x23": "00231150000000011"
+            "0x24": "E8:47:F3:00:0E:08"
+            "0x25":  "06/20/2026 00:00:00"
             "0x26":  "1"
-            "0x27":  "03"
-            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x27":  "00"
+            "0x28":  "vega-8"
             "0x2A":  "504"
             "0x2B":  "UPSCALEAI"
             "0x2C":  "US"
             "0x2F":  "6540-0642-OSEU-AFA"
-            "0xFE":  "0xC7D636D2"
+            "0xFE":  "0xA62B7ED0"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false
@@ -520,6 +514,41 @@ all:
             psus:
               - PSU 1
               - PSU 3
+          ansible_connection: ssh
+          ansible_timeout: 120
+          is_multi_asic: false
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          console_baudrate: 115200
+        upscalelab2-spine8-400:
+          ansible_host: 10.9.100.143
+          ansible_hostv6: 2001:db8:100::10
+          mgmt_subnet_mask_length: 16
+          mgmt_subnet_v6_mask_length: 64
+          ansible_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          ansible_altpassword: "YourPaSsWoRd"
+          sonicadmin_password: "YourPaSsWoRd"
+          hwsku: 6540-0642-OSEU-AFA
+          model: Vega-6540
+          serial: 0023115261000013
+          base_mac: E8:47:F3:00:12:08
+          syseeprom_info:
+            "0x21": "6540 2RU 51.2T Fixed"
+            "0x22": "750-000001-01"
+            "0x23": "0023115261000013"
+            "0x24": "E8:47:F3:00:12:08"
+            "0x25":  "06/12/2026 00:00:00"
+            "0x26":  "1"
+            "0x27":  "03"
+            "0x28":  "x86_64-upscaleai_6540-r0"
+            "0x2A":  "504"
+            "0x2B":  "UPSCALEAI"
+            "0x2C":  "US"
+            "0x2F":  "6540-0642-OSEU-AFA"
+            "0xFE":  "0xC7D636D2"
           ansible_connection: ssh
           ansible_timeout: 120
           is_multi_asic: false
@@ -588,22 +617,22 @@ all:
           ansible_host: 192.168.222.25
           ansible_hostv6: 2001:db8:122::25
         ptf_sp8-t0:
-          ansible_host: 192.168.223.23
+          ansible_host: 10.9.100.23
           ansible_hostv6: 2001:db8:123::23
         ptf_sp8-t1:
-          ansible_host: 192.168.223.24
+          ansible_host: 10.9.100.24
           ansible_hostv6: 2001:db8:123::24
         ptf_sp8t1lag:
-          ansible_host: 192.168.223.25
+          ansible_host: 10.9.100.25
           ansible_hostv6: 2001:db8:123::25
         ptf_sp8-t064:
-          ansible_host: 192.168.223.26
+          ansible_host: 10.9.100.26
           ansible_hostv6: 2001:db8:123::26
         ptf_sp8-t164:
-          ansible_host: 192.168.223.27
+          ansible_host: 10.9.100.27
           ansible_hostv6: 2001:db8:123::27
         ptf_sp8t164l:
-          ansible_host: 192.168.223.28
+          ansible_host: 10.9.100.28
           ansible_hostv6: 2001:db8:123::28
         ptf_sp9-t0:
           ansible_host: 192.168.211.23
@@ -659,7 +688,7 @@ all:
           HwSku: Mellanox-SN5610-C256S2
           Platform: x86_64-nvidia_sn5610-r0
         fanout_leaf08:
-          ansible_host: 192.168.223.11
+          ansible_host: 10.9.100.122
           ansible_ssh_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           fanout_sonic_user: admin
@@ -755,7 +784,7 @@ all:
           HwSku: Mellanox-SN5610-O64S2
           Platform: x86_64-nvidia_sn5610-r0
         fanout_leaf08-800:
-          ansible_host: 192.168.223.11
+          ansible_host: 10.9.100.122
           ansible_ssh_user: admin
           ansible_ssh_pass: "YourPaSsWoRd"
           fanout_sonic_user: admin
@@ -818,6 +847,22 @@ all:
           Type: FanoutLeaf
           HwSku: Mellanox-SN5610-O128
           Platform: x86_64-nvidia_sn5610-r0
+        fanout_leaf08-400:
+          ansible_host: 10.9.100.122
+          ansible_ssh_user: admin
+          ansible_ssh_pass: "YourPaSsWoRd"
+          fanout_sonic_user: admin
+          fanout_sonic_password: "YourPaSsWoRd"
+          ansible_connection: ssh
+          ansible_become: true
+          ansible_become_method: sudo
+          ansible_become_user: root
+          ansible_become_password: "YourPaSsWoRd"
+          device_type: sonic
+          os: sonic
+          Type: FanoutLeaf
+          HwSku: Mellanox-SN5610-O128
+          Platform: x86_64-nvidia_sn5610-r0
         fanout_leaf09-400:
           ansible_host: 192.168.211.11
           ansible_ssh_user: admin
@@ -859,7 +904,7 @@ vm_host_2:
 vm_host_3:
   hosts:
     STR-ACS-SERV-03:
-      ansible_host: 192.168.223.12
+      ansible_host: 10.9.100.88
 
 vm_host_4:
   hosts:
@@ -1007,69 +1052,69 @@ vms_2:
 vms_3:
   hosts:
     VM0301:
-      ansible_host: 192.168.223.101
+      ansible_host: 10.9.100.101
     VM0302:
-      ansible_host: 192.168.223.102
+      ansible_host: 10.9.100.102
     VM0303:
-      ansible_host: 192.168.223.103
+      ansible_host: 10.9.100.103
     VM0304: 
-      ansible_host: 192.168.223.104
+      ansible_host: 10.9.100.104
     VM0305:
-      ansible_host: 192.168.223.105
+      ansible_host: 10.9.100.105
     VM0306:
-      ansible_host: 192.168.223.106
+      ansible_host: 10.9.100.106
     VM0307:
-      ansible_host: 192.168.223.107
+      ansible_host: 10.9.100.107
     VM0308:
-      ansible_host: 192.168.223.108
+      ansible_host: 10.9.100.108
     VM0309:
-      ansible_host: 192.168.223.109
+      ansible_host: 10.9.100.109
     VM0310:
-      ansible_host: 192.168.223.110
+      ansible_host: 10.9.100.110
     VM0311:
-      ansible_host: 192.168.223.111
+      ansible_host: 10.9.100.111
     VM0312:
-      ansible_host: 192.168.223.112
+      ansible_host: 10.9.100.112
     VM0313:
-      ansible_host: 192.168.223.113
+      ansible_host: 10.9.100.113
     VM0314:
-      ansible_host: 192.168.223.114
+      ansible_host: 10.9.100.114
     VM0315:
-      ansible_host: 192.168.223.115
+      ansible_host: 10.9.100.115
     VM0316:
-      ansible_host: 192.168.223.116
+      ansible_host: 10.9.100.116
     VM0317:
-      ansible_host: 192.168.223.117
+      ansible_host: 10.9.100.117
     VM0318:
-      ansible_host: 192.168.223.118
+      ansible_host: 10.9.100.118
     VM0319:
-      ansible_host: 192.168.223.119
+      ansible_host: 10.9.100.119
     VM0320:
-      ansible_host: 192.168.223.120
+      ansible_host: 10.9.100.120
     VM0321:
-      ansible_host: 192.168.223.121
+      ansible_host: 10.9.100.121
     VM0322:
-      ansible_host: 192.168.223.122
+      ansible_host: 10.9.100.122
     VM0323:
-      ansible_host: 192.168.223.123
+      ansible_host: 10.9.100.123
     VM0324:
-      ansible_host: 192.168.223.124
+      ansible_host: 10.9.100.124
     VM0325:
-      ansible_host: 192.168.223.125
+      ansible_host: 10.9.100.125
     VM0326:
-      ansible_host: 192.168.223.126
+      ansible_host: 10.9.100.126
     VM0327:
-      ansible_host: 192.168.223.127
+      ansible_host: 10.9.100.127
     VM0328:
-      ansible_host: 192.168.223.128
+      ansible_host: 10.9.100.128
     VM0329:
-      ansible_host: 192.168.223.129
+      ansible_host: 10.9.100.129
     VM0330:
-      ansible_host: 192.168.223.130
+      ansible_host: 10.9.100.130
     VM0331:
-      ansible_host: 192.168.223.131
+      ansible_host: 10.9.100.131
     VM0332:
-      ansible_host: 192.168.223.132
+      ansible_host: 10.9.100.132
 vms_4:
   hosts:
     VM0401:

@@ -273,7 +273,7 @@
   topo: t0
   ptf_image_name: docker-ptf
   ptf: ptf_sp8-t0
-  ptf_ip: 192.168.223.23/24
+  ptf_ip: 10.9.100.23/16
   ptf_ipv6: 2001:db8:123::23/64
   server: server_3
   vm_base: VM0301
@@ -288,7 +288,7 @@
   topo: t1
   ptf_image_name: docker-ptf
   ptf: ptf_sp8-t1
-  ptf_ip: 192.168.223.24/24
+  ptf_ip: 10.9.100.24/16
   ptf_ipv6: 2001:db8:123::24/64
   server: server_3
   vm_base: VM0301
@@ -303,7 +303,7 @@
   topo: t1-lag
   ptf_image_name: docker-ptf
   ptf: ptf_sp8t1lag
-  ptf_ip: 192.168.223.25/24
+  ptf_ip: 10.9.100.25/16
   ptf_ipv6: 2001:db8:123::25/64
   server: server_3
   vm_base: VM0301
@@ -318,7 +318,7 @@
   topo: t0
   ptf_image_name: docker-ptf
   ptf: ptf_sp8-t0
-  ptf_ip: 192.168.223.23/24
+  ptf_ip: 10.9.100.23/16
   ptf_ipv6: 2001:db8:123::23/64
   server: server_3
   vm_base: VM0301
@@ -333,7 +333,7 @@
   topo: t1
   ptf_image_name: docker-ptf
   ptf: ptf_sp8-t1
-  ptf_ip: 192.168.223.24/24
+  ptf_ip: 10.9.100.24/16
   ptf_ipv6: 2001:db8:123::24/64
   server: server_3
   vm_base: VM0301
@@ -348,7 +348,7 @@
   topo: t1-lag
   ptf_image_name: docker-ptf
   ptf: ptf_sp8t1lag
-  ptf_ip: 192.168.223.25/24
+  ptf_ip: 10.9.100.25/16
   ptf_ipv6: 2001:db8:123::25/64
   server: server_3
   vm_base: VM0301
@@ -363,7 +363,7 @@
   topo: t0-64
   ptf_image_name: docker-ptf
   ptf: ptf_sp8-t064
-  ptf_ip: 192.168.223.26/24
+  ptf_ip: 10.9.100.26/16
   ptf_ipv6: 2001:db8:123::26/64
   server: server_3
   vm_base: VM0301
@@ -378,7 +378,7 @@
   topo: t1-64
   ptf_image_name: docker-ptf
   ptf: ptf_sp8-t164
-  ptf_ip: 192.168.223.27/24
+  ptf_ip: 10.9.100.27/16
   ptf_ipv6: 2001:db8:123::27/64
   server: server_3
   vm_base: VM0301
