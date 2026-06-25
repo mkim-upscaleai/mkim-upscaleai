@@ -28,6 +28,11 @@ dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_counter
 # Requires dual-TOR topology (standby DUT) — spine7-800 is a single T0
 dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_on_dualtor_standby
 
+# isc-dhcp-relay (upstream Debian binary) does not drop packets with bad IP/UDP checksums;
+# skip until sonic-net/sonic-buildimage#24660 is resolved and relay is replaced with a
+# SONiC implementation that enforces checksum validation
+dhcp_relay/test_dhcp_relay.py::test_dhcp_relay_monitor_checksum_validation
+
 ###############################################################################
 # DHCP Server Tests
 ###############################################################################
