@@ -63,7 +63,7 @@ def test_announce_withdraw_route(duthosts, localhost, tbinfo, get_function_compl
 
     # Ignore errors in ignoreRegex for *all* DUTs
     for dut in duthosts.frontend_nodes:
-        if dut.loganalyzer:
+        if loganalyzer and loganalyzer.get(dut.hostname):
             loganalyzer[dut.hostname].ignore_regex.extend(ignoreRegex)
 
     normalized_level = get_function_completeness_level
