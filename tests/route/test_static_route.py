@@ -383,6 +383,9 @@ def run_static_route_test(duthost, unselected_duthost, ptfadapter, ptfhost, tbin
                                          duthost, [prefix], {prefix: {'packets': COUNT}}):
             generate_and_verify_traffic(duthost, ptfadapter, tbinfo, ip_dst, nexthop_devs, ipv6=ipv6)
 
+        # Ensure 'redistribute static' is active in BGP before checking advertisement
+        ensure_static_route_bgp_redistribution(duthost, ipv6)
+
         # Check the route is advertised to the neighbors
         check_route_redistribution(duthost, prefix, ipv6)
 
